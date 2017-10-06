@@ -37,7 +37,7 @@ else
 CFLAGS += -O3
 endif
 
-LIBS += -lvulkan -lX11 -lpng
+LIBS += -lvulkan -lX11
 
 $(TARGET): $(OBJS)
 	$(CC) $(OBJS) $(LDFLAGS) $(LIBDIRS) $(LIBS) -Wall -o $@
