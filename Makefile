@@ -1,8 +1,10 @@
 
 TARGET = test
-DEBUG = 1
+DEBUG = 0
 
-BUILD_DIR = objs/linux
+platform = linux
+
+BUILD_DIR = objs/$(platform)
 
 ifeq ($(DEBUG),1)
    BUILD_DIR := $(BUILD_DIR)-dbg
@@ -13,7 +15,6 @@ all: $(TARGET)
 OBJS :=
 
 OBJS += main.o
-OBJS += linux/display.o
 OBJS += linux/platform.o
 OBJS += vulkan/buffer.o
 OBJS += vulkan/descriptors.o
@@ -28,6 +29,7 @@ OBJS += vulkan/texture.o
 
 OBJS := $(addprefix $(BUILD_DIR)/,$(OBJS))
 
+
 $(BUILD_DIR)/vulkan/main.o: vulkan/main.vert.inc vulkan/main.frag.inc
 
 ifeq ($(DEBUG),1)
@@ -37,14 +39,18 @@ else
 endif
 
 CFLAGS += -Wall -Werror -Werror=implicit-function-declaration -Werror=incompatible-pointer-types
-CFLAGS += -DVK_USE_PLATFORM_XLIB_KHR -DHAVE_X11
+CFLAGS += -DVK_USE_PLATFORM_XLIB_KHR -DHAVE_X11 -fms-extensions
 CFLAGS += -I. -Ivulkan
 
 LIBS += -lvulkan -lX11
 
 
-$(TARGET): $(OBJS)
+$(BUILD_DIR)/$(TARGET): $(OBJS) .lastbuild
+	touch .lastbuild
 	$(CC) $(OBJS) $(LDFLAGS) $(LIBDIRS) $(LIBS) -Wall -o $@
+
+$(TARGET): $(BUILD_DIR)/$(TARGET)
+	cp $< $@
 
 $(BUILD_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
@@ -56,10 +62,12 @@ $(BUILD_DIR)/%.o: %.c
 %.frag.inc: %.frag
 	glslc -c -mfmt=c $< -o $@
 
+.lastbuild: ;
+
 clean:
-	rm -rf objs
-#	rm -f $(OBJS) $(OBJS:.o=.depend)
-	rm -f $(TARGET) vulkan/main.vert.inc vulkan/main.frag.inc
+#	rm -rf objs
+	rm -f $(OBJS) $(OBJS:.o=.depend)
+	rm -f $(BUILD_DIR)/$(TARGET) $(TARGET) vulkan/main.vert.inc vulkan/main.frag.inc .lastbuild
 
 
 -include $(OBJS:.o=.depend)

@@ -4,17 +4,21 @@
 #include <time.h>
 
 #include "common.h"
-#include "display.h"
 #include "platform.h"
 #include "video.h"
+
+
+video_t video;
 
 int main(int argc, char **argv)
 {
    debug_log("main\n");
 
    platform_init();
-   display_init(640,480);
-   video_init();
+
+   video = video_vulkan;
+
+   video.init();
 
    int frames = 0;
    struct timespec start_time;
@@ -23,7 +27,7 @@ int main(int argc, char **argv)
 
    while (platform.running)
    {
-      video_frame();
+      video.frame();
 
       struct timespec end_time;
       clock_gettime(CLOCK_MONOTONIC, &end_time);
@@ -48,8 +52,7 @@ int main(int argc, char **argv)
 
 
 
-   video_destroy();
-   display_destroy();
+   video.destroy();
    platform_destroy();
 
    debug_log("main exit\n");

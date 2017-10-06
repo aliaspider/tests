@@ -1,6 +1,5 @@
 
 #include "vulkan_common.h"
-#include "display.h"
 
 void surface_init(VkInstance instance, const surface_init_info_t* init_info, surface_t *dst)
 {
@@ -12,8 +11,8 @@ void surface_init(VkInstance instance, const surface_init_info_t* init_info, sur
       VkXlibSurfaceCreateInfoKHR info =
       {
          VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR,
-         .dpy = display.display,
-         .window = display.window
+         .dpy = init_info->display,
+         .window = init_info->window
       };
       vkCreateXlibSurfaceKHR(instance, &info, NULL, &dst->handle);
    }

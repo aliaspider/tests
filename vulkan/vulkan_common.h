@@ -49,7 +49,7 @@ typedef struct
 {
    VkSurfaceKHR handle;
    int width;
-   int height;
+   int height;   
 }surface_t;
 
 typedef struct
@@ -58,6 +58,10 @@ typedef struct
    uint32_t queue_family_index;
    int width;
    int height;
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+   Display* display;
+   Window window;
+#endif
 }surface_init_info_t;
 void surface_init(VkInstance instance, const surface_init_info_t* init_info, surface_t *dst);
 void surface_free(VkInstance instance, surface_t *surface);

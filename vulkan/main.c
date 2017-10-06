@@ -1,7 +1,6 @@
 
 #include <string.h>
 
-#include "display.h"
 #include "video.h"
 #include "common.h"
 #include "vulkan_common.h"
@@ -24,6 +23,23 @@ typedef struct
 } vertex_t;
 
 video_t video;
+
+struct
+{
+   instance_t instance;
+   physical_device_t gpu;
+   device_t dev;
+   surface_t surface;
+   swapchain_t chain;
+   texture_t tex;
+   buffer_t vbo;
+//   buffer_t  ubo;
+   descriptor_t desc;
+   pipeline_t pipe;
+   VkCommandBuffer cmd;
+   VkFence queue_fence;
+   VkFence chain_fence;
+}vk;
 
 static instance_t instance;
 static physical_device_t gpu;
@@ -48,13 +64,26 @@ void video_init()
 
    device_init(gpu.handle, &dev);
 
+   video.screen.width = 640;
+   video.screen.height = 480;
+   video.screen.display = XOpenDisplay(NULL);
+   video.screen.window  = XCreateSimpleWindow(video.screen.display, DefaultRootWindow(video.screen.display), 0, 0, video.screen.width, video.screen.height, 0, 0, 0);
+   XStoreName(video.screen.display, video.screen.window, "Vulkan Test");
+   XSelectInput(video.screen.display, video.screen.window, ExposureMask | KeyPressMask);
+   XMapWindow(video.screen.display, video.screen.window);
+
+
    {
       surface_init_info_t info =
       {
          .gpu = gpu.handle,
          .queue_family_index = dev.queue_family_index,
-         .width = display.width,
-         .height = display.height
+         .width = video.screen.width,
+         .height = video.screen.height,
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+         .display = video.screen.display,
+         .window = video.screen.window
+#endif
       };
       surface_init(instance.handle, &info, &surface);
    }
@@ -309,5 +338,17 @@ void video_destroy()
    device_free(&dev);
    physical_device_free(&gpu);
    instance_free(&instance);
+
+   XDestroyWindow(video.screen.display, video.screen.window);
+   XCloseDisplay(video.screen.display);
+   video.screen.display = NULL;
+
 	debug_log("video destroy\n");
 }
+
+const video_t video_vulkan =
+{
+   .init = video_init,
+   .frame = video_frame,
+   .destroy = video_destroy
+};
