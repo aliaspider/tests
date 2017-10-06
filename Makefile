@@ -4,6 +4,10 @@ DEBUG = 1
 
 BUILD_DIR = objs/linux
 
+ifeq ($(DEBUG),1)
+   BUILD_DIR := $(BUILD_DIR)-dbg
+endif
+
 all: $(TARGET)
 
 OBJS :=
@@ -26,18 +30,18 @@ OBJS := $(addprefix $(BUILD_DIR)/,$(OBJS))
 
 $(BUILD_DIR)/vulkan/main.o: vulkan/main.vert.inc vulkan/main.frag.inc
 
+ifeq ($(DEBUG),1)
+   CFLAGS += -g -O0
+else
+   CFLAGS += -O3
+endif
 
 CFLAGS += -Wall -Werror -Werror=implicit-function-declaration -Werror=incompatible-pointer-types
 CFLAGS += -DVK_USE_PLATFORM_XLIB_KHR -DHAVE_X11
 CFLAGS += -I. -Ivulkan
 
-ifeq ($(DEBUG),1)
-CFLAGS += -g -O0
-else
-CFLAGS += -O3
-endif
-
 LIBS += -lvulkan -lX11
+
 
 $(TARGET): $(OBJS)
 	$(CC) $(OBJS) $(LDFLAGS) $(LIBDIRS) $(LIBS) -Wall -o $@
@@ -53,7 +57,9 @@ $(BUILD_DIR)/%.o: %.c
 	glslc -c -mfmt=c $< -o $@
 
 clean:
-	rm -f $(TARGET) $(OBJS) $(OBJS:.o=.depend) vulkan/main.vert.inc vulkan/main.frag.inc
+	rm -rf objs
+#	rm -f $(OBJS) $(OBJS:.o=.depend)
+	rm -f $(TARGET) vulkan/main.vert.inc vulkan/main.frag.inc
 
 
 -include $(OBJS:.o=.depend)
