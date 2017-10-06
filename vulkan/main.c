@@ -1,5 +1,7 @@
 
 #include <string.h>
+
+#include "display.h"
 #include "video.h"
 #include "common.h"
 #include "vulkan_common.h"
@@ -51,14 +53,11 @@ void video_init()
       {
          .gpu = gpu.handle,
          .queue_family_index = dev.queue_family_index,
-         .width = 640,
-         .height = 480
+         .width = display.width,
+         .height = display.height
       };
       surface_init(instance.handle, &info, &surface);
    }
-
-   video.display = surface.display;
-   video.window = surface.window;
 
    {
       swapchain_init_info_t info =

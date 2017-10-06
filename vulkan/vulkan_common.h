@@ -50,10 +50,6 @@ typedef struct
    VkSurfaceKHR handle;
    int width;
    int height;
-#ifdef VK_USE_PLATFORM_XLIB_KHR
-   Display *display;
-   Window   window;
-#endif
 }surface_t;
 
 typedef struct

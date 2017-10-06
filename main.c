@@ -2,25 +2,26 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <time.h>
-#include <X11/Xutil.h>
 
-#include "video.h"
 #include "common.h"
+#include "display.h"
+#include "platform.h"
+#include "video.h"
 
 int main(int argc, char **argv)
 {
    debug_log("main\n");
 
+   platform_init();
+   display_init(640,480);
    video_init();
-
-   bool running = true;
 
    int frames = 0;
    struct timespec start_time;
    clock_gettime(CLOCK_MONOTONIC, &start_time);
 
 
-   while (running)
+   while (platform.running)
    {
       video_frame();
 
@@ -30,12 +31,7 @@ int main(int argc, char **argv)
                    (end_time.tv_nsec - start_time.tv_nsec) / 1000000000.0f;
       frames++;
 
-      XEvent e;
-      if(XCheckWindowEvent(video.display, video.window, ~0, &e) && (e.type == KeyPress))
-      {
-         if(e.xkey.keycode == XKeysymToKeycode(video.display, XK_q))
-            running = false;
-      }
+      platform_handle_events();
 
       if (diff > 0.5f)
       {
@@ -53,6 +49,8 @@ int main(int argc, char **argv)
 
 
    video_destroy();
+   display_destroy();
+   platform_destroy();
 
    debug_log("main exit\n");
    return 0;

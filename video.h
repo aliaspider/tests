@@ -4,8 +4,8 @@
 
 typedef struct
 {
-   Display* display;
-   Window window;
+//   Display* display;
+//   Window window;
 }video_t;
 
 extern video_t video;
