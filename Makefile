@@ -1,6 +1,7 @@
 
 TARGET = test
-MODULE = gambatte/gambatte_module.a
+#MODULE = gambatte/gambatte_module.a
+MODULE = snes9x/snes9x_module.a
 DEBUG = 0
 
 platform = linux
@@ -43,7 +44,7 @@ CFLAGS += -Wall -Werror -Werror=implicit-function-declaration -Werror=incompatib
 CFLAGS += -DVK_USE_PLATFORM_XLIB_KHR -DHAVE_X11 -fms-extensions
 CFLAGS += -I. -Ivulkan
 
-LIBS += -lvulkan -lX11
+LIBS += -lvulkan -lX11 -lasound
 
 
 $(BUILD_DIR)/$(TARGET): $(OBJS) $(MODULE) .lastbuild

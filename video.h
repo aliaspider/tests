@@ -1,6 +1,7 @@
 
 #include <X11/Xutil.h>
 
+#include "interface.h"
 
 typedef struct
 {
@@ -23,7 +24,7 @@ typedef struct
 typedef struct video_t
 {
    void (*init)();
-   void (*frame_set_size)(int width, int height);
+   void (*frame_init)(int width, int height, screen_format_t format);
    void (*frame_update)();
    void (*destroy)();
    screen_t screen;

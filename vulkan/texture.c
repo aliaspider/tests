@@ -13,7 +13,7 @@ void texture_init(VkDevice device, const VkMemoryType *memory_types, const textu
          VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
          .flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
          .imageType = VK_IMAGE_TYPE_2D,
-         .format = VK_FORMAT_R8G8B8A8_SRGB,
+         .format = init_info->format,
          .extent.width = dst->width,
          .extent.height = dst->height,
          .extent.depth = 1,
@@ -71,7 +71,7 @@ void texture_init(VkDevice device, const VkMemoryType *memory_types, const textu
          VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
          .image = dst->image,
          .viewType = VK_IMAGE_VIEW_TYPE_2D,
-         .format = VK_FORMAT_R8G8B8A8_SRGB,
+         .format = init_info->format,
          .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
          .subresourceRange.levelCount = 1,
          .subresourceRange.layerCount = 1

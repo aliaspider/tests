@@ -135,6 +135,7 @@ typedef struct
    uint32_t queue_family_index;
    int width;
    int height;
+   VkFormat format;
 }texture_init_info_t;
 void texture_init(VkDevice device, const VkMemoryType* memory_types, const texture_init_info_t *init_info, vk_texture_t* dst);
 void texture_free(VkDevice device, vk_texture_t* texture);
