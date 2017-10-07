@@ -42,7 +42,8 @@ int main(int argc, char **argv)
       do
       {
          uint32_t dummy_audio[40000 + 2064];
-         video.frame_get_buffer(&info.screen.ptr, &info.pitch);
+         info.screen.ptr = video.frame.data;
+         info.pitch = video.frame.pitch;
          info.max_samples = 40000;
          info.sound_buffer.u32 = dummy_audio;
          module_run(&info);
@@ -50,7 +51,7 @@ int main(int argc, char **argv)
       }
       while(!info.frame_completed);
 
-      video.frame();
+      video.frame_update();
 
       struct timespec end_time;
       clock_gettime(CLOCK_MONOTONIC, &end_time);

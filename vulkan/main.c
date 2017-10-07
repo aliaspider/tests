@@ -218,7 +218,7 @@ void video_init()
 
 }
 
-void video_frame()
+void video_frame_update()
 {
    uint32_t image_index;
    vkWaitForFences(dev.handle, 1, &chain_fence, VK_TRUE, -1);
@@ -321,6 +321,7 @@ void video_destroy()
    XCloseDisplay(video.screen.display);
    video.screen.display = NULL;
 
+   video.frame.data = NULL;
 	debug_log("video destroy\n");
 }
 
@@ -354,20 +355,17 @@ void video_frame_set_size(int width, int height)
       };
       descriptors_update(dev.handle, &info, &desc);
    }
+   video.frame.width = width;
+   video.frame.height = height;
+   video.frame.pitch = tex.staging.mem_layout.rowPitch / 4;
+   video.frame.data = tex.staging.mem.u8 + tex.staging.mem_layout.offset;
 
-}
-
-void video_frame_get_buffer(void** buffer, int* pitch)
-{
-   *buffer = tex.staging.mem.u8 + tex.staging.mem_layout.offset;
-   *pitch = tex.staging.mem_layout.rowPitch / 4;
 }
 
 const video_t video_vulkan =
 {
    .init = video_init,
    .frame_set_size = video_frame_set_size,
-   .frame_get_buffer = video_frame_get_buffer,
-   .frame = video_frame,
+   .frame_update = video_frame_update,
    .destroy = video_destroy
 };
