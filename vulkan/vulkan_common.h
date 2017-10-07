@@ -128,7 +128,7 @@ typedef struct
    int width;
    int height;
    bool dirty;
-}texture_t;
+}vk_texture_t;
 
 typedef struct
 {
@@ -136,16 +136,16 @@ typedef struct
    int width;
    int height;
 }texture_init_info_t;
-void texture_init(VkDevice device, const VkMemoryType* memory_types, const texture_init_info_t *init_info, texture_t* dst);
-void texture_free(VkDevice device, texture_t* texture);
-void texture_update(VkCommandBuffer cmd, texture_t* texture);
+void texture_init(VkDevice device, const VkMemoryType* memory_types, const texture_init_info_t *init_info, vk_texture_t* dst);
+void texture_free(VkDevice device, vk_texture_t* texture);
+void texture_update(VkCommandBuffer cmd, vk_texture_t* texture);
 
 typedef struct
 {
    device_memory_t mem;
    VkBuffer handle;
    VkDeviceSize size;
-}buffer_t;
+}vk_buffer_t;
 
 typedef struct
 {
@@ -153,15 +153,15 @@ typedef struct
    uint32_t size;
    const void* data;
 }buffer_init_info_t;
-void buffer_init(VkDevice device, const VkMemoryType* memory_types, const buffer_init_info_t* init_info, buffer_t *dst);
-void buffer_free(VkDevice device, buffer_t *buffer);
+void buffer_init(VkDevice device, const VkMemoryType* memory_types, const buffer_init_info_t* init_info, vk_buffer_t *dst);
+void buffer_free(VkDevice device, vk_buffer_t *buffer);
 
 typedef struct
 {
    VkDescriptorPool pool;
    VkDescriptorSet set;
    VkDescriptorSetLayout set_layout;
-}descriptor_t;
+}vk_descriptor_t;
 
 typedef struct
 {
@@ -169,15 +169,16 @@ typedef struct
    VkDeviceSize ubo_range;
    VkSampler sampler;
    VkImageView image_view;
-}descriptors_init_info_t;
-void descriptors_init(VkDevice device, const descriptors_init_info_t* init_info, descriptor_t* dst);
-void descriptors_free(VkDevice device, descriptor_t* descriptor);
+}descriptors_update_info_t;
+void descriptors_init(VkDevice device, vk_descriptor_t* dst);
+void descriptors_update(VkDevice device, const descriptors_update_info_t *update_info, vk_descriptor_t* dst);
+void descriptors_free(VkDevice device, vk_descriptor_t* descriptor);
 
 typedef struct
 {
    VkPipeline handle;
    VkPipelineLayout layout;
-}pipeline_t;
+}vk_pipeline_t;
 
 typedef struct
 {
@@ -191,5 +192,5 @@ typedef struct
    const VkViewport* viewport;
    VkRenderPass renderpass;
 }pipeline_init_info_t;
-void pipeline_init(VkDevice device, const pipeline_init_info_t* init_info, pipeline_t* dst);
-void pipeline_free(VkDevice device, pipeline_t* pipe);
+void pipeline_init(VkDevice device, const pipeline_init_info_t* init_info, vk_pipeline_t* dst);
+void pipeline_free(VkDevice device, vk_pipeline_t* pipe);

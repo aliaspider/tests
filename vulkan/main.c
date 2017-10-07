@@ -31,11 +31,11 @@ struct
    device_t dev;
    surface_t surface;
    swapchain_t chain;
-   texture_t tex;
-   buffer_t vbo;
+   vk_texture_t tex;
+   vk_buffer_t vbo;
 //   buffer_t  ubo;
-   descriptor_t desc;
-   pipeline_t pipe;
+   vk_descriptor_t desc;
+   vk_pipeline_t pipe;
    VkCommandBuffer cmd;
    VkFence queue_fence;
    VkFence chain_fence;
@@ -46,11 +46,11 @@ static physical_device_t gpu;
 static device_t dev;
 static surface_t surface;
 static swapchain_t chain;
-static texture_t tex;
-static buffer_t vbo;
+static vk_texture_t tex;
+static vk_buffer_t vbo;
 //static buffer_t  ubo;
-static descriptor_t desc;
-static pipeline_t pipe;
+static vk_descriptor_t desc;
+static vk_pipeline_t pipe;
 static VkCommandBuffer cmd;
 static VkFence queue_fence;
 static VkFence chain_fence;
@@ -94,28 +94,10 @@ void video_init()
          .surface = surface.handle,
          .width = surface.width,
          .height = surface.height,
-         .present_mode = VK_PRESENT_MODE_FIFO_KHR
+//         .present_mode = VK_PRESENT_MODE_FIFO_KHR
 //         .present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR
       };
       swapchain_init(dev.handle, &info, &chain);
-   }
-
-   {
-      {
-         texture_init_info_t info =
-         {
-            .queue_family_index = dev.queue_family_index,
-            .width = surface.width,
-            .height = surface.height,
-         };
-         texture_init(dev.handle, gpu.memoryTypes, &info, &tex);
-      }
-
-      /* texture updates are written to the stating texture then uploaded later */
-      memset(tex.staging.mem.u8 + tex.staging.mem_layout.offset, 0xFF, tex.staging.mem_layout.size - tex.staging.mem_layout.offset);
-
-      device_memory_flush(dev.handle, &tex.staging.mem);
-      tex.dirty = true;
    }
 
    {
@@ -145,16 +127,7 @@ void video_init()
 //      buffer_init(dev.handle, gpu.memoryTypes, &info, &ubo);
 //   }
 
-   {
-      descriptors_init_info_t info =
-      {
-//         .ubo_buffer = ubo.handle,
-//         .ubo_range = ubo.size,
-         .sampler = tex.sampler,
-         .image_view = tex.view,
-      };
-      descriptors_init(dev.handle, &info, &desc);
-   }
+   descriptors_init(dev.handle, &desc);
 
    {
       VkShaderModule vertex_shader;
@@ -264,8 +237,13 @@ void video_frame()
       vkBeginCommandBuffer(cmd, &info);
    }
 
+   device_memory_flush(dev.handle, &tex.staging.mem);
+   tex.dirty = true;
+
    if(tex.dirty)
       texture_update(cmd, &tex);
+
+
 
    /* renderpass */
    {
@@ -346,9 +324,50 @@ void video_destroy()
 	debug_log("video destroy\n");
 }
 
+void video_frame_set_size(int width, int height)
+{
+   {
+      {
+         texture_init_info_t info =
+         {
+            .queue_family_index = dev.queue_family_index,
+            .width = width,
+            .height = height,
+         };
+         texture_init(dev.handle, gpu.memoryTypes, &info, &tex);
+      }
+
+      /* texture updates are written to the stating texture then uploaded later */
+      memset(tex.staging.mem.u8 + tex.staging.mem_layout.offset, 0xFF, tex.staging.mem_layout.size - tex.staging.mem_layout.offset);
+
+      device_memory_flush(dev.handle, &tex.staging.mem);
+      tex.dirty = true;
+   }
+
+   {
+      descriptors_update_info_t info =
+      {
+//         .ubo_buffer = ubo.handle,
+//         .ubo_range = ubo.size,
+         .sampler = tex.sampler,
+         .image_view = tex.view,
+      };
+      descriptors_update(dev.handle, &info, &desc);
+   }
+
+}
+
+void video_frame_get_buffer(void** buffer, int* pitch)
+{
+   *buffer = tex.staging.mem.u8 + tex.staging.mem_layout.offset;
+   *pitch = tex.staging.mem_layout.rowPitch / 4;
+}
+
 const video_t video_vulkan =
 {
    .init = video_init,
+   .frame_set_size = video_frame_set_size,
+   .frame_get_buffer = video_frame_get_buffer,
    .frame = video_frame,
    .destroy = video_destroy
 };

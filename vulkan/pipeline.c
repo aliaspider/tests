@@ -1,7 +1,7 @@
 
 #include "vulkan_common.h"
 
-void pipeline_init(VkDevice device, const pipeline_init_info_t *init_info, pipeline_t* dst)
+void pipeline_init(VkDevice device, const pipeline_init_info_t *init_info, vk_pipeline_t* dst)
 {
    {
 #if 0
@@ -113,7 +113,7 @@ void pipeline_init(VkDevice device, const pipeline_init_info_t *init_info, pipel
    }
 }
 
-void pipeline_free(VkDevice device, pipeline_t *pipe)
+void pipeline_free(VkDevice device, vk_pipeline_t *pipe)
 {
    vkDestroyPipelineLayout(device, pipe->layout, NULL);
    vkDestroyPipeline(device, pipe->handle, NULL);

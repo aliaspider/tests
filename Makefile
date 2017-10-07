@@ -1,5 +1,6 @@
 
 TARGET = test
+MODULE = gambatte/gambatte_module.a
 DEBUG = 0
 
 platform = linux
@@ -45,9 +46,9 @@ CFLAGS += -I. -Ivulkan
 LIBS += -lvulkan -lX11
 
 
-$(BUILD_DIR)/$(TARGET): $(OBJS) .lastbuild
+$(BUILD_DIR)/$(TARGET): $(OBJS) $(MODULE) .lastbuild
 	touch .lastbuild
-	$(CC) $(OBJS) $(LDFLAGS) $(LIBDIRS) $(LIBS) -Wall -o $@
+	$(CXX) $(OBJS) $(MODULE) $(LDFLAGS) $(LIBDIRS) $(LIBS) -Wall -o $@
 
 $(TARGET): $(BUILD_DIR)/$(TARGET)
 	cp $< $@

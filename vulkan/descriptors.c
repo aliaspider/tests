@@ -3,7 +3,7 @@
 #include <string.h>
 #include "vulkan_common.h"
 
-void descriptors_init(VkDevice device, const descriptors_init_info_t *init_info, descriptor_t* dst)
+void descriptors_init(VkDevice device, vk_descriptor_t* dst)
 {
    {
       const VkDescriptorPoolSize sizes[] =
@@ -24,18 +24,18 @@ void descriptors_init(VkDevice device, const descriptors_init_info_t *init_info,
    {
       const VkDescriptorSetLayoutBinding bindings[] =
       {
-//         {
-//            .binding = 0,
-//            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-//            .descriptorCount = 1,
-//            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-//         },
+   //         {
+   //            .binding = 0,
+   //            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+   //            .descriptorCount = 1,
+   //            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+   //         },
          {
             .binding = 1,
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-//            .pImmutableSamplers = &vk.texture_sampler
+   //            .pImmutableSamplers = &vk.texture_sampler
          }
       };
 
@@ -60,6 +60,10 @@ void descriptors_init(VkDevice device, const descriptors_init_info_t *init_info,
       vkAllocateDescriptorSets(device, &info, &dst->set);
    }
 
+}
+
+void descriptors_update(VkDevice device, const descriptors_update_info_t *update_info, vk_descriptor_t* dst)
+{
    {
 //      const VkDescriptorBufferInfo buffer_info =
 //      {
@@ -69,8 +73,8 @@ void descriptors_init(VkDevice device, const descriptors_init_info_t *init_info,
 //      };
       const VkDescriptorImageInfo image_info =
       {
-         .sampler = init_info->sampler,
-         .imageView = init_info->image_view,
+         .sampler = update_info->sampler,
+         .imageView = update_info->image_view,
          .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
       };
 
@@ -99,7 +103,7 @@ void descriptors_init(VkDevice device, const descriptors_init_info_t *init_info,
    }
 }
 
-void descriptors_free(VkDevice device, descriptor_t *descriptor)
+void descriptors_free(VkDevice device, vk_descriptor_t *descriptor)
 {
    vkDestroyDescriptorPool(device, descriptor->pool, NULL);
    vkDestroyDescriptorSetLayout(device, descriptor->set_layout, NULL);

@@ -15,6 +15,8 @@ typedef struct
 typedef struct video_t
 {
    void (*init)();
+   void (*frame_set_size)(int width, int height);
+   void (*frame_get_buffer)(void** buffer, int* pitch);
    void (*frame)();
    void (*destroy)();
    screen_t screen;

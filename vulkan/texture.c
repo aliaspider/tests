@@ -1,7 +1,7 @@
 
 #include "vulkan_common.h"
 
-void texture_init(VkDevice device, const VkMemoryType *memory_types, const texture_init_info_t *init_info, texture_t* dst)
+void texture_init(VkDevice device, const VkMemoryType *memory_types, const texture_init_info_t *init_info, vk_texture_t* dst)
 {
    dst->width = init_info->width;
    dst->height = init_info->height;
@@ -91,7 +91,7 @@ void texture_init(VkDevice device, const VkMemoryType *memory_types, const textu
 }
 
 
-void texture_free(VkDevice device, texture_t *texture)
+void texture_free(VkDevice device, vk_texture_t *texture)
 {
    vkDestroySampler(device, texture->sampler, NULL);
    vkDestroyImageView(device, texture->view, NULL);
@@ -104,7 +104,7 @@ void texture_free(VkDevice device, texture_t *texture)
    texture->image = VK_NULL_HANDLE;
 }
 
-void texture_update(VkCommandBuffer cmd, texture_t *texture)
+void texture_update(VkCommandBuffer cmd, vk_texture_t *texture)
 {
    VkImageMemoryBarrier barrier =
    {

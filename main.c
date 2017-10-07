@@ -4,6 +4,7 @@
 #include <time.h>
 
 #include "common.h"
+#include "interface.h"
 #include "platform.h"
 #include "video.h"
 
@@ -17,16 +18,38 @@ int main(int argc, char **argv)
    platform_init();
 
    video = video_vulkan;
-
    video.init();
+
+   module_info_t module = {};
+   {
+      module_init_info_t info =
+      {
+         .filename = "zz.gb"
+      };
+
+      module_init(&info, &module);
+   }
+
+   video.frame_set_size(module.output_width, module.output_height);
 
    int frames = 0;
    struct timespec start_time;
    clock_gettime(CLOCK_MONOTONIC, &start_time);
 
-
    while (platform.running)
    {
+      module_run_info_t info = {};
+      do
+      {
+         uint32_t dummy_audio[40000 + 2064];
+         video.frame_get_buffer(&info.screen.ptr, &info.pitch);
+         info.max_samples = 40000;
+         info.sound_buffer.u32 = dummy_audio;
+         module_run(&info);
+//         debug_log("info.max_samples : %i", info.max_samples);
+      }
+      while(!info.frame_completed);
+
       video.frame();
 
       struct timespec end_time;
@@ -39,7 +62,7 @@ int main(int argc, char **argv)
 
       if (diff > 0.5f)
       {
-         printf("\r fps: %f", frames / diff);
+         printf("\rfps: %f", frames / diff);
          frames = 0;
          start_time = end_time;
          fflush(stdout);
@@ -52,6 +75,7 @@ int main(int argc, char **argv)
 
 
 
+   module_destroy();
    video.destroy();
    platform_destroy();
 
