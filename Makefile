@@ -18,6 +18,8 @@ OBJS :=
 
 OBJS += main.o
 OBJS += linux/platform.o
+OBJS += linux/audio_alsa.o
+OBJS += linux/input_x11.o
 OBJS += vulkan/buffer.o
 OBJS += vulkan/descriptors.o
 OBJS += vulkan/device.o
@@ -40,7 +42,8 @@ else
    CFLAGS += -O3
 endif
 
-CFLAGS += -Wall -Werror -Werror=implicit-function-declaration -Werror=incompatible-pointer-types
+CFLAGS += -Wall -Werror=implicit-function-declaration -Werror=incompatible-pointer-types
+CFLAGS += -Werror
 CFLAGS += -DVK_USE_PLATFORM_XLIB_KHR -DHAVE_X11 -fms-extensions
 CFLAGS += -I. -Ivulkan
 

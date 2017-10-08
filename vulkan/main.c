@@ -70,7 +70,7 @@ void video_init()
    video.screen.window  = XCreateSimpleWindow(video.screen.display,
                           DefaultRootWindow(video.screen.display), 0, 0, video.screen.width, video.screen.height, 0, 0, 0);
    XStoreName(video.screen.display, video.screen.window, "Vulkan Test");
-   XSelectInput(video.screen.display, video.screen.window, ExposureMask | KeyPressMask);
+   XSelectInput(video.screen.display, video.screen.window, ExposureMask | FocusChangeMask | KeyPressMask | KeyReleaseMask);
    XMapWindow(video.screen.display, video.screen.window);
 
 
@@ -95,7 +95,7 @@ void video_init()
          .surface = surface.handle,
          .width = surface.width,
          .height = surface.height,
-                  .present_mode = VK_PRESENT_MODE_FIFO_KHR
+         .present_mode = VK_PRESENT_MODE_FIFO_KHR
          //         .present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR
       };
       swapchain_init(dev.handle, &info, &chain);

@@ -57,3 +57,7 @@ dkms.conf
 *.creator.user
 *.files
 *.includes
+
+objs/*
+*.vert.inc
+*.frag.inc

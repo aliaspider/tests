@@ -8,7 +8,7 @@ void swapchain_init(VkDevice device, const swapchain_init_info_t *init_info, swa
       VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
       .surface = init_info->surface,
       .minImageCount = 2,
-      .imageFormat = VK_FORMAT_B8G8R8A8_SRGB,
+      .imageFormat = VK_FORMAT_B8G8R8A8_UNORM,
       .imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
       .imageExtent.width = init_info->width,
       .imageExtent.height = init_info->height,
@@ -26,7 +26,7 @@ void swapchain_init(VkDevice device, const swapchain_init_info_t *init_info, swa
    VkAttachmentDescription attachmentDescriptions[] =
    {
       {
-         0, VK_FORMAT_B8G8R8A8_SRGB, VK_SAMPLE_COUNT_1_BIT,
+         0, VK_FORMAT_B8G8R8A8_UNORM, VK_SAMPLE_COUNT_1_BIT,
          VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
          VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
          VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
@@ -70,7 +70,7 @@ void swapchain_init(VkDevice device, const swapchain_init_info_t *init_info, swa
             VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = swapchainImages[i],
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = VK_FORMAT_B8G8R8A8_SRGB,
+            .format = VK_FORMAT_B8G8R8A8_UNORM,
             .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
             .subresourceRange.levelCount = 1,
             .subresourceRange.layerCount = 1
