@@ -31,10 +31,11 @@ struct
    device_t dev;
    surface_t surface;
    swapchain_t chain;
-   vk_texture_t tex;
+   vk_texture_t tex;   
    vk_buffer_t vbo;
    //   buffer_t  ubo;
    vk_descriptor_t desc;
+   VkDescriptorSet frame_desc;
    vk_pipeline_t pipe;
    VkCommandBuffer cmd;
    VkFence queue_fence;
@@ -50,6 +51,7 @@ static vk_texture_t tex;
 static vk_buffer_t vbo;
 //static buffer_t  ubo;
 static vk_descriptor_t desc;
+static VkDescriptorSet frame_desc;
 static vk_pipeline_t pipe;
 static VkCommandBuffer cmd;
 static VkFence queue_fence;
@@ -66,13 +68,14 @@ void video_init()
 
    video.screen.width = 640;
    video.screen.height = 480;
+#ifdef VK_USE_PLATFORM_XLIB_KHR
    video.screen.display = XOpenDisplay(NULL);
    video.screen.window  = XCreateSimpleWindow(video.screen.display,
                           DefaultRootWindow(video.screen.display), 0, 0, video.screen.width, video.screen.height, 0, 0, 0);
    XStoreName(video.screen.display, video.screen.window, "Vulkan Test");
    XSelectInput(video.screen.display, video.screen.window, ExposureMask | FocusChangeMask | KeyPressMask | KeyReleaseMask);
    XMapWindow(video.screen.display, video.screen.window);
-
+#endif
 
    {
       surface_init_info_t info =
@@ -129,6 +132,17 @@ void video_init()
    //   }
 
    descriptors_init(dev.handle, &desc);
+
+   {
+      const VkDescriptorSetAllocateInfo info =
+      {
+         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+         .descriptorPool = desc.pool,
+         .descriptorSetCount = 1, &desc.set_layout
+      };
+      vkAllocateDescriptorSets(dev.handle, &info, &frame_desc);
+   }
+
 
    {
       VkShaderModule vertex_shader;
@@ -263,8 +277,7 @@ void video_frame_update()
       }
 
       vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle);
-      vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.layout, 0, 1, &desc.set, 0 ,
-                              NULL);
+      vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.layout, 0, 1, &frame_desc, 0, NULL);
       //         vkCmdPushConstants(device.cmd, device.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(uniforms_t), mapped_uniforms);
 
       VkDeviceSize offset = 0;
@@ -338,7 +351,8 @@ void video_frame_init(int width, int height, screen_format_t format)
             .height = height,
             .format = format == screen_format_RGB565 ? VK_FORMAT_R5G6B5_UNORM_PACK16 :
                       format == screen_format_ARGB5551 ? VK_FORMAT_R5G5B5A1_UNORM_PACK16 :
-                      VK_FORMAT_R8G8B8A8_SRGB
+                      VK_FORMAT_R8G8B8A8_SRGB,
+            .filter = VK_FILTER_LINEAR
          };
          texture_init(dev.handle, gpu.memoryTypes, &info, &tex);
       }
@@ -359,7 +373,7 @@ void video_frame_init(int width, int height, screen_format_t format)
          .sampler = tex.sampler,
          .image_view = tex.view,
       };
-      descriptors_update(dev.handle, &info, &desc);
+      descriptors_update(dev.handle, &info, frame_desc);
    }
    video.frame.width = width;
    video.frame.height = height;

@@ -24,12 +24,12 @@ void descriptors_init(VkDevice device, vk_descriptor_t* dst)
    {
       const VkDescriptorSetLayoutBinding bindings[] =
       {
-   //         {
-   //            .binding = 0,
-   //            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-   //            .descriptorCount = 1,
-   //            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-   //         },
+         {
+            .binding = 0,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+         },
          {
             .binding = 1,
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -50,19 +50,9 @@ void descriptors_init(VkDevice device, vk_descriptor_t* dst)
       vkCreateDescriptorSetLayout(device, &info[0], NULL, &dst->set_layout);
    }
 
-   {
-      const VkDescriptorSetAllocateInfo info =
-      {
-         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-         .descriptorPool = dst->pool,
-         .descriptorSetCount = 1, &dst->set_layout
-      };
-      vkAllocateDescriptorSets(device, &info, &dst->set);
-   }
-
 }
 
-void descriptors_update(VkDevice device, const descriptors_update_info_t *update_info, vk_descriptor_t* dst)
+void descriptors_update(VkDevice device, const descriptors_update_info_t *update_info, VkDescriptorSet set)
 {
    {
 //      const VkDescriptorBufferInfo buffer_info =
@@ -91,7 +81,7 @@ void descriptors_update(VkDevice device, const descriptors_update_info_t *update
 //         },
          {
             VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = dst->set,
+            .dstSet = set,
             .dstBinding = 1,
             .dstArrayElement = 0,
             .descriptorCount = 1,

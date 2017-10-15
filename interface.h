@@ -117,8 +117,6 @@ void module_init(const module_init_info_t *init_info, module_info_t *module_info
 void module_destroy();
 void module_run(module_run_info_t *run_info);
 
-extern const char* test_file;
-
 extern module_info_t module;
 
 #ifdef __cplusplus

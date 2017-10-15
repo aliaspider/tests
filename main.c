@@ -25,9 +25,7 @@ int main(int argc, char **argv)
    {
       module_init_info_t info =
       {
-         //         .filename = "zz.gb"
-//         .filename = "smw.sfc"
-         .filename = test_file
+         .filename = argv[1]
       };
 
       module_init(&info, &module);

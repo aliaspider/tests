@@ -83,8 +83,8 @@ void texture_init(VkDevice device, const VkMemoryType *memory_types, const textu
       VkSamplerCreateInfo samplerCreateInfo =
       {
          VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-         .magFilter = VK_FILTER_LINEAR,
-         .minFilter = VK_FILTER_LINEAR,
+         .magFilter = init_info->filter,
+         .minFilter = init_info->filter,
       };
       vkCreateSampler(device, &samplerCreateInfo, NULL, &dst->sampler);
    }

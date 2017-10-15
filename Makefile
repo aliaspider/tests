@@ -9,7 +9,7 @@ platform = linux
 BUILD_DIR = objs/$(platform)
 
 ifeq ($(DEBUG),1)
-   BUILD_DIR := $(BUILD_DIR)-dbg
+   BUILD_DIR := $(BUILD_DIR)-debug
 endif
 
 all: $(TARGET)
@@ -52,7 +52,7 @@ LIBS += -lvulkan -lX11 -lasound
 
 $(BUILD_DIR)/$(TARGET): $(OBJS) $(MODULE) .lastbuild
 	touch .lastbuild
-	$(CXX) $(OBJS) $(MODULE) $(LDFLAGS) $(LIBDIRS) $(LIBS) -Wall -o $@
+	$(CXX) $(OBJS) -L$(dir $(MODULE)) -l:$(notdir $(MODULE)) $(LDFLAGS) $(LIBDIRS) $(LIBS) -Wall -o $@
 
 $(TARGET): $(BUILD_DIR)/$(TARGET)
 	cp $< $@

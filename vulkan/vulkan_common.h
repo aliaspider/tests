@@ -136,6 +136,7 @@ typedef struct
    int width;
    int height;
    VkFormat format;
+   VkFilter filter;
 }texture_init_info_t;
 void texture_init(VkDevice device, const VkMemoryType* memory_types, const texture_init_info_t *init_info, vk_texture_t* dst);
 void texture_free(VkDevice device, vk_texture_t* texture);
@@ -160,7 +161,6 @@ void buffer_free(VkDevice device, vk_buffer_t *buffer);
 typedef struct
 {
    VkDescriptorPool pool;
-   VkDescriptorSet set;
    VkDescriptorSetLayout set_layout;
 }vk_descriptor_t;
 
@@ -172,7 +172,7 @@ typedef struct
    VkImageView image_view;
 }descriptors_update_info_t;
 void descriptors_init(VkDevice device, vk_descriptor_t* dst);
-void descriptors_update(VkDevice device, const descriptors_update_info_t *update_info, vk_descriptor_t* dst);
+void descriptors_update(VkDevice device, const descriptors_update_info_t *update_info, VkDescriptorSet set);
 void descriptors_free(VkDevice device, vk_descriptor_t* descriptor);
 
 typedef struct
