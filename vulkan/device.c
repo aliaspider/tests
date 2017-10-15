@@ -20,13 +20,19 @@ void physical_device_init(VkInstance instance, physical_device_t* dst)
 
    vkGetPhysicalDeviceMemoryProperties(dst->handle, &dst->mem);
 
-#if 0
+#if 1
    VkPhysicalDeviceProperties gpu_props;
-   vkGetPhysicalDeviceProperties(vk->gpu, &gpu_props);
+   vkGetPhysicalDeviceProperties(dst->handle, &gpu_props);
    uint32_t deviceExtensionPropertiesCount;
-   vkEnumerateDeviceExtensionProperties(vk->gpu, NULL, &deviceExtensionPropertiesCount, NULL);
+   vkEnumerateDeviceExtensionProperties(dst->handle, NULL, &deviceExtensionPropertiesCount, NULL);
    VkExtensionProperties pDeviceExtensionProperties[deviceExtensionPropertiesCount];
-   vkEnumerateDeviceExtensionProperties(vk->gpu, NULL, &deviceExtensionPropertiesCount, pDeviceExtensionProperties);
+   vkEnumerateDeviceExtensionProperties(dst->handle, NULL, &deviceExtensionPropertiesCount, pDeviceExtensionProperties);
+   int e;
+   for(e = 0; e < deviceExtensionPropertiesCount; e++)
+   {
+      printf("\t%s\n", pDeviceExtensionProperties[e].extensionName);
+   }
+
 #endif
 }
 
@@ -59,7 +65,13 @@ void device_init(VkPhysicalDevice gpu, device_t* dst)
    }
    {
       const float one = 1.0;
-      const char *device_ext[] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+      const char *device_ext[] =
+      {
+         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+         VK_EXT_DISPLAY_CONTROL_EXTENSION_NAME,
+//         VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME,
+      };
+
 
       const VkDeviceQueueCreateInfo queue_info =
       {
@@ -70,6 +82,11 @@ void device_init(VkPhysicalDevice gpu, device_t* dst)
          .pQueuePriorities = &one
       };
 
+      VkPhysicalDeviceFeatures enabledFeatures =
+      {
+         .samplerAnisotropy = VK_TRUE,
+      };
+
       const VkDeviceCreateInfo info =
       {
          VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -77,6 +94,7 @@ void device_init(VkPhysicalDevice gpu, device_t* dst)
          .pQueueCreateInfos = &queue_info,
          .enabledExtensionCount = countof(device_ext),
          .ppEnabledExtensionNames = device_ext,
+         .pEnabledFeatures = &enabledFeatures
       };
       vkCreateDevice(gpu, &info, NULL, &dst->handle);
    }

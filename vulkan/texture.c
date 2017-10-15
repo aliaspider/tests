@@ -44,7 +44,7 @@ void texture_init(VkDevice device, const VkMemoryType *memory_types, const textu
          .mipLevel = 0,
          .arrayLayer = 0
       };
-      vkGetImageSubresourceLayout(device, dst->image, &imageSubresource, &dst->mem_layout);
+//      vkGetImageSubresourceLayout(device, dst->image, &imageSubresource, &dst->mem_layout);
       vkGetImageSubresourceLayout(device, dst->staging.image, &imageSubresource, &dst->staging.mem_layout);
    }
 

@@ -10,6 +10,7 @@
 void input_x11_init()
 {
    memset(&input.pad, 0, sizeof(input.pad));
+   XAutoRepeatOn(video.screen.display);
 }
 
 void input_x11_destroy()

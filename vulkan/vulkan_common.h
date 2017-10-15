@@ -1,12 +1,20 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <vulkan/vulkan.h>
 
 #define MAX_SWAPCHAIN_IMAGES 8
 #define countof(a) (sizeof(a)/ sizeof(*a))
 #define VULKAN_CALL(fname, instance, ...)                                      \
   ((PFN_##fname)vkGetInstanceProcAddr(instance, #fname))(instance, __VA_ARGS__)
+
+#define VULKAN_CALL_NULL(fname, ...)                                      \
+  ((PFN_##fname)vkGetInstanceProcAddr(NULL, #fname))(__VA_ARGS__)
+
+#define VULKAN_CALL_DEV(fname, device, ...)                                      \
+  ((PFN_##fname)vkGetDeviceProcAddr(device, #fname))(device, __VA_ARGS__)
 
 typedef struct
 {
@@ -48,6 +56,7 @@ void device_free(device_t* device);
 typedef struct
 {
    VkSurfaceKHR handle;
+   VkDisplayKHR display;
    int width;
    int height;   
 }surface_t;
@@ -121,7 +130,7 @@ typedef struct
    }staging;
    device_memory_t mem;
    VkImage image;
-   VkSubresourceLayout mem_layout;
+//   VkSubresourceLayout mem_layout;
    VkImageLayout layout;
    VkImageView view;
    VkSampler sampler;
@@ -195,3 +204,52 @@ typedef struct
 }pipeline_init_info_t;
 void pipeline_init(VkDevice device, const pipeline_init_info_t* init_info, vk_pipeline_t* dst);
 void pipeline_free(VkDevice device, vk_pipeline_t* pipe);
+
+
+static inline const char* VkResult_to_str(VkResult res)
+{
+   switch (res)
+   {
+#define CASE_TO_STR(res) case res: return #res;
+      CASE_TO_STR(VK_SUCCESS);
+      CASE_TO_STR(VK_NOT_READY);
+      CASE_TO_STR(VK_TIMEOUT);
+      CASE_TO_STR(VK_EVENT_SET);
+      CASE_TO_STR(VK_EVENT_RESET);
+      CASE_TO_STR(VK_INCOMPLETE);
+      CASE_TO_STR(VK_ERROR_OUT_OF_HOST_MEMORY);
+      CASE_TO_STR(VK_ERROR_OUT_OF_DEVICE_MEMORY);
+      CASE_TO_STR(VK_ERROR_INITIALIZATION_FAILED);
+      CASE_TO_STR(VK_ERROR_DEVICE_LOST);
+      CASE_TO_STR(VK_ERROR_MEMORY_MAP_FAILED);
+      CASE_TO_STR(VK_ERROR_LAYER_NOT_PRESENT);
+      CASE_TO_STR(VK_ERROR_EXTENSION_NOT_PRESENT);
+      CASE_TO_STR(VK_ERROR_FEATURE_NOT_PRESENT);
+      CASE_TO_STR(VK_ERROR_INCOMPATIBLE_DRIVER);
+      CASE_TO_STR(VK_ERROR_TOO_MANY_OBJECTS);
+      CASE_TO_STR(VK_ERROR_FORMAT_NOT_SUPPORTED);
+      CASE_TO_STR(VK_ERROR_FRAGMENTED_POOL);
+      CASE_TO_STR(VK_ERROR_SURFACE_LOST_KHR);
+      CASE_TO_STR(VK_ERROR_NATIVE_WINDOW_IN_USE_KHR);
+      CASE_TO_STR(VK_SUBOPTIMAL_KHR);
+      CASE_TO_STR(VK_ERROR_OUT_OF_DATE_KHR);
+      CASE_TO_STR(VK_ERROR_INCOMPATIBLE_DISPLAY_KHR);
+      CASE_TO_STR(VK_ERROR_VALIDATION_FAILED_EXT);
+      CASE_TO_STR(VK_ERROR_INVALID_SHADER_NV);
+      CASE_TO_STR(VK_ERROR_OUT_OF_POOL_MEMORY_KHR);
+      CASE_TO_STR(VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR);
+#undef CASE_TO_STR
+   default:
+         break;
+   }
+   return "unknown";
+
+}
+
+#define VK_CHECK(vk_call) do{VkResult res = vk_call; if (res != VK_SUCCESS) {printf("%s:%i:%s:%s --> %s(%i)\n", __FILE__, __LINE__, __FUNCTION__, #vk_call, VkResult_to_str(res), res);fflush(stdout);}}while(0)
+
+#ifdef VK_USE_PLATFORM_XLIB_XRANDR_EXT
+extern PFN_vkReleaseDisplayEXT pvkReleaseDisplayEXT;
+extern PFN_vkAcquireXlibDisplayEXT pvkAcquireXlibDisplayEXT;
+extern PFN_vkGetRandROutputDisplayEXT pvkGetRandROutputDisplayEXT;
+#endif

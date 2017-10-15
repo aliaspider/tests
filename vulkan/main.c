@@ -56,6 +56,7 @@ static vk_pipeline_t pipe;
 static VkCommandBuffer cmd;
 static VkFence queue_fence;
 static VkFence chain_fence;
+static VkFence display_fence;
 
 void video_init()
 {
@@ -221,6 +222,15 @@ void video_init()
       vkCreateFence(dev.handle, &info, NULL, &queue_fence);
    }
 
+   {
+      VkDisplayEventInfoEXT displayEventInfo =
+      {
+         VK_STRUCTURE_TYPE_DISPLAY_EVENT_INFO_EXT,
+         .displayEvent = VK_DISPLAY_EVENT_TYPE_FIRST_PIXEL_OUT_EXT
+      };
+      VK_CHECK(vkRegisterDisplayEventEXT(dev.handle, (void*)((uintptr_t)surface.display), &displayEventInfo, NULL, &display_fence));
+   }
+   exit(0);
 
    //   uniforms_t *uniforms = ubo.mem.ptr;
    //   uniforms->center.x = 0.0f;
@@ -230,7 +240,6 @@ void video_init()
    //   uniforms->screen.width  = chain.viewport.width;
    //   uniforms->screen.height = chain.viewport.height;
    //   uniforms->angle = 0.0f;
-
 }
 
 void video_frame_update()
@@ -242,6 +251,9 @@ void video_frame_update()
 
    vkWaitForFences(dev.handle, 1, &queue_fence, VK_TRUE, -1);
    vkResetFences(dev.handle, 1, &queue_fence);
+
+//   vkWaitForFences(dev.handle, 1, &display_fence, VK_TRUE, -1);
+//   vkResetFences(dev.handle, 1, &display_fence);
 
    {
       const VkCommandBufferBeginInfo info =
@@ -310,7 +322,11 @@ void video_frame_update()
       };
       vkQueuePresentKHR(dev.queue, &info);
    }
-
+   {
+      uint64_t vblank_counter = 0;
+      VK_CHECK(vkGetSwapchainCounterEXT(dev.handle, chain.handle, VK_SURFACE_COUNTER_VBLANK_EXT, &vblank_counter));
+      printf("vblank_counter : %lu\n", vblank_counter);
+   }
 }
 
 void video_destroy()
@@ -320,6 +336,9 @@ void video_destroy()
 
    vkWaitForFences(dev.handle, 1, &chain_fence, VK_TRUE, UINT64_MAX);
    vkDestroyFence(dev.handle, chain_fence, NULL);
+
+//   vkWaitForFences(dev.handle, 1, &display_fence, VK_TRUE, UINT64_MAX);
+//   vkDestroyFence(dev.handle, display_fence, NULL);
 
    pipeline_free(dev.handle, &pipe);
    descriptors_free(dev.handle, &desc);

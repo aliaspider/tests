@@ -44,7 +44,10 @@ endif
 
 CFLAGS += -Wall -Werror=implicit-function-declaration -Werror=incompatible-pointer-types
 CFLAGS += -Werror
-CFLAGS += -DVK_USE_PLATFORM_XLIB_KHR -DHAVE_X11 -fms-extensions
+CFLAGS += -DVK_USE_PLATFORM_XLIB_KHR
+CFLAGS += -DVK_USE_PLATFORM_XLIB_XRANDR_EXT
+CFLAGS += -DHAVE_X11
+CFLAGS += -fms-extensions
 CFLAGS += -I. -Ivulkan
 
 LIBS += -lvulkan -lX11 -lasound

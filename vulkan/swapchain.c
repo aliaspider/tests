@@ -1,11 +1,47 @@
 
 #include "vulkan_common.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+
+VKAPI_ATTR VkResult VKAPI_CALL vkGetRefreshCycleDurationGOOGLE(
+    VkDevice                                    device,
+    VkSwapchainKHR                              swapchain,
+    VkRefreshCycleDurationGOOGLE*               pDisplayTimingProperties)
+{
+   return VULKAN_CALL_DEV(vkGetRefreshCycleDurationGOOGLE, device, swapchain, pDisplayTimingProperties);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkGetPastPresentationTimingGOOGLE(
+    VkDevice                                    device,
+    VkSwapchainKHR                              swapchain,
+    uint32_t*                                   pPresentationTimingCount,
+    VkPastPresentationTimingGOOGLE*             pPresentationTimings)
+{
+   return VULKAN_CALL_DEV(vkGetPastPresentationTimingGOOGLE, device, swapchain, pPresentationTimingCount, pPresentationTimings);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainCounterEXT(
+    VkDevice                                    device,
+    VkSwapchainKHR                              swapchain,
+    VkSurfaceCounterFlagBitsEXT                 counter,
+    uint64_t*                                   pCounterValue)
+{
+   return VULKAN_CALL_DEV(vkGetSwapchainCounterEXT, device, swapchain, counter, pCounterValue);
+
+}
 void swapchain_init(VkDevice device, const swapchain_init_info_t *init_info, swapchain_t* dst)
 {
+   VkSwapchainCounterCreateInfoEXT swapchainCounterCreateInfo =
+   {
+      VK_STRUCTURE_TYPE_SWAPCHAIN_COUNTER_CREATE_INFO_EXT,
+      .surfaceCounters = VK_SURFACE_COUNTER_VBLANK_EXT
+   };
+
    VkSwapchainCreateInfoKHR swapchainCreateInfo =
    {
       VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+      .pNext = &swapchainCounterCreateInfo,
       .surface = init_info->surface,
       .minImageCount = 2,
       .imageFormat = VK_FORMAT_B8G8R8A8_UNORM,
@@ -20,7 +56,7 @@ void swapchain_init(VkDevice device, const swapchain_init_info_t *init_info, swa
       .presentMode = init_info->present_mode,
       .clipped = VK_TRUE
    };
-   vkCreateSwapchainKHR(device, &swapchainCreateInfo, NULL, &dst->handle);
+   VK_CHECK(vkCreateSwapchainKHR(device, &swapchainCreateInfo, NULL, &dst->handle));
 
    /* init renderpass */
    VkAttachmentDescription attachmentDescriptions[] =
