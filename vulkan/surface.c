@@ -1,4 +1,5 @@
 
+#include "inttypes.h"
 #include "vulkan_common.h"
 
 
@@ -10,6 +11,16 @@ VKAPI_ATTR VkResult VKAPI_CALL vkRegisterDisplayEventEXT(
     VkFence*                                    pFence)
 {
    return VULKAN_CALL_DEV(vkRegisterDisplayEventEXT, device, display, pDisplayEventInfo, pAllocator, pFence);
+}
+
+PFN_vkGetPhysicalDeviceSurfaceCapabilities2EXT pvkGetPhysicalDeviceSurfaceCapabilities2EXT;
+
+VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceCapabilities2EXT(
+    VkPhysicalDevice                            physicalDevice,
+    VkSurfaceKHR                                surface,
+    VkSurfaceCapabilities2EXT*                  pSurfaceCapabilities)
+{
+   return pvkGetPhysicalDeviceSurfaceCapabilities2EXT(physicalDevice, surface, pSurfaceCapabilities);
 }
 
 #ifdef VK_USE_PLATFORM_XLIB_XRANDR_EXT
@@ -57,10 +68,13 @@ void surface_init(VkInstance instance, const surface_init_info_t* init_info, sur
       };
       vkCreateXlibSurfaceKHR(instance, &info, NULL, &dst->handle);
    }
+#elif defined(VK_USE_PLATFORM_WIN32_KHR)
+
 #else
 #error platform not supported
 #endif
 
+#ifdef __linux__
    {
       {
          uint32_t displayProperties_count;
@@ -71,7 +85,7 @@ void surface_init(VkInstance instance, const surface_init_info_t* init_info, sur
          int i;
          for (i = 0; i < displayProperties_count; i++)
          {
-            printf("0x%08lX : %s\n", (uintptr_t)displayProperties[i].display, displayProperties[i].displayName);
+            printf("0x%08"PRIXPTR" : %s\n", (uintptr_t)displayProperties[i].display, displayProperties[i].displayName);
 
          }
          vkGetPhysicalDeviceDisplayPlanePropertiesKHR(init_info->gpu, &displayProperties_count, NULL);
@@ -79,7 +93,7 @@ void surface_init(VkInstance instance, const surface_init_info_t* init_info, sur
          vkGetPhysicalDeviceDisplayPlanePropertiesKHR(init_info->gpu, &displayProperties_count, displayPlaneProperties);
          for (i = 0; i < displayProperties_count; i++)
          {
-            printf("0x%08lX : %i\n", (uintptr_t)displayPlaneProperties[i].currentDisplay, displayPlaneProperties[i].currentStackIndex);
+            printf("0x%08"PRIXPTR" : %i\n", (uintptr_t)displayPlaneProperties[i].currentDisplay, displayPlaneProperties[i].currentStackIndex);
 
          }
       }
@@ -99,8 +113,12 @@ void surface_init(VkInstance instance, const surface_init_info_t* init_info, sur
       printf("displayModeProperties.visibleRegion.width : %u\n", displayModeProperties[0].parameters.visibleRegion.width);
       printf("displayModeProperties.visibleRegion.height : %u\n", displayModeProperties[0].parameters.visibleRegion.height);
    }
+#endif
    VkSurfaceCapabilitiesKHR surfaceCapabilities;
    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(init_info->gpu, dst->handle, &surfaceCapabilities);
+   VkSurfaceCapabilities2EXT surfaceCapabilities2;
+   vkGetPhysicalDeviceSurfaceCapabilities2EXT(init_info->gpu, dst->handle, &surfaceCapabilities2);
+   printf("surfaceCapabilities2.supportedSurfaceCounters : %i\n", surfaceCapabilities2.supportedSurfaceCounters);
 
    VkBool32 physicalDeviceSurfaceSupport;
    vkGetPhysicalDeviceSurfaceSupportKHR(init_info->gpu, init_info->queue_family_index, dst->handle, &physicalDeviceSurfaceSupport);

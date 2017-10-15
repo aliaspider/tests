@@ -1,6 +1,9 @@
 
 #include <stdbool.h>
+
+#ifdef HAVE_X11
 #include <X11/Xutil.h>
+#endif
 
 typedef struct
 {

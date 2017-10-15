@@ -1,5 +1,7 @@
 
+#ifdef HAVE_X11
 #include <X11/Xutil.h>
+#endif
 
 #include "interface.h"
 

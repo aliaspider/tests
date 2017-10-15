@@ -4,7 +4,8 @@ TARGET = test
 MODULE = snes9x/snes9x_module.a
 DEBUG = 0
 
-platform = linux
+#platform = linux
+platform = win
 
 BUILD_DIR = objs/$(platform)
 
@@ -17,9 +18,15 @@ all: $(TARGET)
 OBJS :=
 
 OBJS += main.o
-OBJS += linux/platform.o
-OBJS += linux/audio_alsa.o
-OBJS += linux/input_x11.o
+ifeq ($(platform),linux)
+   OBJS += linux/platform.o
+   OBJS += linux/audio_alsa.o
+   OBJS += linux/input_x11.o
+else ifeq ($(platform),win)
+   OBJS += win/platform.o
+   OBJS += win/audio.o
+   OBJS += win/input.o
+endif
 OBJS += vulkan/buffer.o
 OBJS += vulkan/descriptors.o
 OBJS += vulkan/device.o
@@ -44,13 +51,19 @@ endif
 
 CFLAGS += -Wall -Werror=implicit-function-declaration -Werror=incompatible-pointer-types
 CFLAGS += -Werror
-CFLAGS += -DVK_USE_PLATFORM_XLIB_KHR
-CFLAGS += -DVK_USE_PLATFORM_XLIB_XRANDR_EXT
-CFLAGS += -DHAVE_X11
 CFLAGS += -fms-extensions
 CFLAGS += -I. -Ivulkan
 
-LIBS += -lvulkan -lX11 -lasound
+ifeq ($(platform),linux)
+   CFLAGS += -DVK_USE_PLATFORM_XLIB_KHR
+   CFLAGS += -DVK_USE_PLATFORM_XLIB_XRANDR_EXT
+   CFLAGS += -DHAVE_X11
+   LIBS += -lvulkan -lX11 -lasound
+else ifeq ($(platform),win)
+CFLAGS += -I$(VULKAN_SDK)/Include -DVK_USE_PLATFORM_WIN32_KHR
+   LIBS +=  -L$(VULKAN_SDK)/Lib -lvulkan-1
+endif
+
 
 
 $(BUILD_DIR)/$(TARGET): $(OBJS) $(MODULE) .lastbuild

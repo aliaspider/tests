@@ -68,7 +68,9 @@ void device_init(VkPhysicalDevice gpu, device_t* dst)
       const char *device_ext[] =
       {
          VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+#ifdef __linux__
          VK_EXT_DISPLAY_CONTROL_EXTENSION_NAME,
+#endif
 //         VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME,
       };
 

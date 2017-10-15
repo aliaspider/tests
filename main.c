@@ -34,10 +34,18 @@ int main(int argc, char **argv)
    video = video_vulkan;
    video.init();
 
+#ifdef __WIN32__
+   audio = audio_win;
+#elif defined(__linux__)
    audio = audio_alsa;
+#endif
    audio.init();
 
+#ifdef __WIN32__
+   input = input_dinput;
+#elif HAVE_X11
    input = input_x11;
+#endif
    input.init();
 
    video.frame_init(module.output_width, module.output_height, module.screen_format);

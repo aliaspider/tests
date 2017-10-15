@@ -44,19 +44,39 @@ void instance_init(instance_t* dst)
    {
       const char *layers[] =
       {
+#ifdef __WIN32__
+//         "VK_LAYER_LUNARG_api_dump",
+         "VK_LAYER_LUNARG_core_validation",
+//         "VK_LAYER_LUNARG_device_simulation",
+//         "VK_LAYER_LUNARG_monitor",
+         "VK_LAYER_LUNARG_object_tracker",
+         "VK_LAYER_LUNARG_parameter_validation",
+//         "VK_LAYER_LUNARG_screenshot",
+         "VK_LAYER_LUNARG_standard_validation",
+         "VK_LAYER_GOOGLE_threading",
+         "VK_LAYER_GOOGLE_unique_objects",
+//         "VK_LAYER_LUNARG_vktrace",
+//         "VK_LAYER_NV_optimus",
+//         "VK_LAYER_VALVE_steam_overlay",
+//         "VK_LAYER_RENDERDOC_Capture"
+#else
 //         "VK_LAYER_LUNARG_standard_validation",
 //         "VK_LAYER_GOOGLE_unique_objects",
 //         "VK_LAYER_LUNARG_core_validation",
 //         "VK_LAYER_LUNARG_object_tracker",
 //         "VK_LAYER_LUNARG_parameter_validation",
 //         "VK_LAYER_GOOGLE_threading"
+#endif
       };
       const char *instance_ext[] =
       {
          VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
          VK_KHR_SURFACE_EXTENSION_NAME,
-         VK_KHR_DISPLAY_EXTENSION_NAME,
+//         VK_KHR_DISPLAY_EXTENSION_NAME,
          VK_EXT_DISPLAY_SURFACE_COUNTER_EXTENSION_NAME,
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+         VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+#endif
 #ifdef VK_USE_PLATFORM_XLIB_KHR
          VK_KHR_XLIB_SURFACE_EXTENSION_NAME,         
 #endif
@@ -70,9 +90,10 @@ void instance_init(instance_t* dst)
          int l,e;
          uint32_t lprop_count;
          vkEnumerateInstanceLayerProperties(&lprop_count, NULL);
-         VkLayerProperties lprops[lprop_count];
+         VkLayerProperties lprops[lprop_count + 1];
          vkEnumerateInstanceLayerProperties(&lprop_count, lprops);
-         for (l = 0; l < lprop_count; l++)
+         lprops[lprop_count].layerName[0] = '\0';
+         for (l = 0; l < lprop_count + 1; l++)
          {
             uint32_t iexprop_count;
             vkEnumerateInstanceExtensionProperties(lprops[l].layerName, &iexprop_count, NULL);
@@ -125,6 +146,7 @@ void instance_init(instance_t* dst)
       vkCreateDebugReportCallbackEXT(dst->handle, &info, NULL, &dst->debug_cb);
    }
 
+   pvkGetPhysicalDeviceSurfaceCapabilities2EXT = (PFN_vkGetPhysicalDeviceSurfaceCapabilities2EXT)vkGetInstanceProcAddr(dst->handle, "vkGetPhysicalDeviceSurfaceCapabilities2EXT");
 #ifdef VK_USE_PLATFORM_XLIB_XRANDR_EXT
    pvkReleaseDisplayEXT = (PFN_vkReleaseDisplayEXT)vkGetInstanceProcAddr(dst->handle, "vkReleaseDisplayEXT");
    pvkAcquireXlibDisplayEXT = (PFN_vkAcquireXlibDisplayEXT)vkGetInstanceProcAddr(dst->handle, "vkAcquireXlibDisplayEXT");

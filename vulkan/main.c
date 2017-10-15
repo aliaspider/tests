@@ -324,7 +324,7 @@ void video_frame_update()
    {
       uint64_t vblank_counter = 0;
       VK_CHECK(vkGetSwapchainCounterEXT(dev.handle, chain.handle, VK_SURFACE_COUNTER_VBLANK_EXT, &vblank_counter));
-      printf("vblank_counter : %lu\n", vblank_counter);
+      printf("vblank_counter : %"PRId64"\n", vblank_counter);
    }
 }
 
@@ -350,9 +350,11 @@ void video_destroy()
    physical_device_free(&gpu);
    instance_free(&instance);
 
+#ifdef HAVE_X11
    XDestroyWindow(video.screen.display, video.screen.window);
    XCloseDisplay(video.screen.display);
    video.screen.display = NULL;
+#endif
 
    video.frame.data = NULL;
    debug_log("video destroy\n");
