@@ -228,9 +228,8 @@ void video_init()
          VK_STRUCTURE_TYPE_DISPLAY_EVENT_INFO_EXT,
          .displayEvent = VK_DISPLAY_EVENT_TYPE_FIRST_PIXEL_OUT_EXT
       };
-      VK_CHECK(vkRegisterDisplayEventEXT(dev.handle, (void*)((uintptr_t)surface.display), &displayEventInfo, NULL, &display_fence));
+      VK_CHECK(vkRegisterDisplayEventEXT(dev.handle, surface.display, &displayEventInfo, NULL, &display_fence));
    }
-   exit(0);
 
    //   uniforms_t *uniforms = ubo.mem.ptr;
    //   uniforms->center.x = 0.0f;
