@@ -22,7 +22,8 @@ static struct
 
 
 void vulkan_frame_init(VkDevice device, uint32_t queue_family_index, VkMemoryType *memory_types,
-                  vk_descriptor_t* desc, int width, int height, VkFormat format,
+                  VkDescriptorPool descriptor_pool, VkDescriptorSetLayout descriptor_set_layout,
+                  int width, int height, VkFormat format,
                   const VkRect2D *scissor, const VkViewport *viewport, VkRenderPass renderpass)
 {
    {
@@ -56,8 +57,8 @@ void vulkan_frame_init(VkDevice device, uint32_t queue_family_index, VkMemoryTyp
       const VkDescriptorSetAllocateInfo info =
       {
          VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-         .descriptorPool = desc->pool,
-         .descriptorSetCount = 1, &desc->set_layout
+         .descriptorPool = descriptor_pool,
+         .descriptorSetCount = 1, &descriptor_set_layout
       };
       vkAllocateDescriptorSets(device, &info, &frame.desc);
    }
@@ -114,7 +115,7 @@ void vulkan_frame_init(VkDevice device, uint32_t queue_family_index, VkMemoryTyp
             const VkPipelineLayoutCreateInfo info =
             {
                VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-               .setLayoutCount = 1, &desc->set_layout,
+               .setLayoutCount = 1, &descriptor_set_layout,
 #if 0
                .pushConstantRangeCount = countof(ranges), ranges
 #endif

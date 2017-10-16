@@ -21,31 +21,6 @@ VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackEXT(VkInstance instance, 
    return VULKAN_CALL(vkDestroyDebugReportCallbackEXT, instance, callback, pAllocator);
 }
 
-VkBool32 vulkan_debug_report_callback(VkDebugReportFlagsEXT flags,
-                                      VkDebugReportObjectTypeEXT objectType,
-                                      uint64_t object, size_t location,
-                                      int32_t messageCode,
-                                      const char *pLayerPrefix,
-                                      const char *pMessage, void *pUserData)
-{
-   static const char* debugFlags_str[] = {"INFORMATION", "WARNING", "PERFORMANCE", "ERROR", "DEBUG"};
-
-   int i;
-   for (i = 0; i < countof(debugFlags_str); i++)
-      if (flags & (1 << i))
-         break;
-
-   printf("[%-14s - %-11s] %s\n", pLayerPrefix, debugFlags_str[i],
-          pMessage);
-
-#ifdef HAVE_X11
-   XAutoRepeatOn(video.screen.display);
-#endif
-
-   assert((flags & VK_DEBUG_REPORT_ERROR_BIT_EXT) == 0);
-   return VK_FALSE;
-}
-
 
 void instance_init(instance_t* dst)
 {
@@ -139,21 +114,21 @@ void instance_init(instance_t* dst)
       VK_CHECK(vkCreateInstance(&info, NULL, &dst->handle));
    }
 
-   {
-      VkDebugReportCallbackCreateInfoEXT info =
-      {
-         VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
-         .flags =
-         VK_DEBUG_REPORT_ERROR_BIT_EXT |
-         VK_DEBUG_REPORT_WARNING_BIT_EXT |
-         //      VK_DEBUG_REPORT_INFORMATION_BIT_EXT |
-         //      VK_DEBUG_REPORT_DEBUG_BIT_EXT |
-         VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
-         .pfnCallback = vulkan_debug_report_callback,
-         .pUserData = NULL
-      };
-      vkCreateDebugReportCallbackEXT(dst->handle, &info, NULL, &dst->debug_cb);
-   }
+//   {
+//      VkDebugReportCallbackCreateInfoEXT info =
+//      {
+//         VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
+//         .flags =
+//         VK_DEBUG_REPORT_ERROR_BIT_EXT |
+//         VK_DEBUG_REPORT_WARNING_BIT_EXT |
+//         //      VK_DEBUG_REPORT_INFORMATION_BIT_EXT |
+//         //      VK_DEBUG_REPORT_DEBUG_BIT_EXT |
+//         VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+//         .pfnCallback = vulkan_debug_report_callback,
+//         .pUserData = NULL
+//      };
+//      vkCreateDebugReportCallbackEXT(dst->handle, &info, NULL, &dst->debug_cb);
+//   }
 
    pvkGetPhysicalDeviceSurfaceCapabilities2EXT = (PFN_vkGetPhysicalDeviceSurfaceCapabilities2EXT)vkGetInstanceProcAddr(dst->handle, "vkGetPhysicalDeviceSurfaceCapabilities2EXT");
 #ifdef VK_USE_PLATFORM_XLIB_XRANDR_EXT
