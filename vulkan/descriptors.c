@@ -8,14 +8,14 @@ void descriptors_init(VkDevice device, vk_descriptor_t* dst)
    {
       const VkDescriptorPoolSize sizes[] =
       {
-         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1},
-         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1}
+         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2},
+         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2}
       };
 
       const VkDescriptorPoolCreateInfo info =
       {
          VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-         .maxSets = 1,
+         .maxSets = 2,
          .poolSizeCount = countof(sizes), sizes
       };
       vkCreateDescriptorPool(device, &info, NULL, &dst->pool);

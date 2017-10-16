@@ -73,7 +73,7 @@ void surface_init(VkInstance instance, const surface_init_info_t* init_info, sur
 #else
 #error platform not supported
 #endif
-
+#if 0
 #ifdef __linux__
    {
       {
@@ -104,6 +104,8 @@ void surface_init(VkInstance instance, const surface_init_info_t* init_info, sur
 //      VK_CHECK(vkGetRandROutputDisplayEXT(init_info->gpu, init_info->display, 0x27e, &dst->display));
 //      VK_CHECK(vkAcquireXlibDisplayEXT(init_info->gpu, init_info->display, dst->display));
 //      VK_CHECK(vkReleaseDisplayEXT(init_info->gpu, dst->display));
+//      exit(0);
+
 
       uint32_t displayModeCount;
       VK_CHECK(vkGetDisplayModePropertiesKHR(init_info->gpu, dst->display, &displayModeCount, NULL));
@@ -114,12 +116,14 @@ void surface_init(VkInstance instance, const surface_init_info_t* init_info, sur
       printf("displayModeProperties.visibleRegion.height : %u\n", displayModeProperties[0].parameters.visibleRegion.height);
    }
 #endif
+#endif
    VkSurfaceCapabilitiesKHR surfaceCapabilities;
    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(init_info->gpu, dst->handle, &surfaceCapabilities);
-   VkSurfaceCapabilities2EXT surfaceCapabilities2;
+#if 0
+   VkSurfaceCapabilities2EXT surfaceCapabilities2 = {VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_EXT};
    vkGetPhysicalDeviceSurfaceCapabilities2EXT(init_info->gpu, dst->handle, &surfaceCapabilities2);
    printf("surfaceCapabilities2.supportedSurfaceCounters : %i\n", surfaceCapabilities2.supportedSurfaceCounters);
-
+#endif
    VkBool32 physicalDeviceSurfaceSupport;
    vkGetPhysicalDeviceSurfaceSupportKHR(init_info->gpu, init_info->queue_family_index, dst->handle, &physicalDeviceSurfaceSupport);
 

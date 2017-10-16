@@ -5,6 +5,10 @@
 
 #include "vulkan_common.h"
 
+#ifdef HAVE_X11
+#include "video.h"
+#endif
+
 VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(
    VkInstance instance, const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
       const VkAllocationCallbacks *pAllocator, VkDebugReportCallbackEXT *pCallback)
@@ -33,6 +37,10 @@ VkBool32 vulkan_debug_report_callback(VkDebugReportFlagsEXT flags,
 
    printf("[%-14s - %-11s] %s\n", pLayerPrefix, debugFlags_str[i],
           pMessage);
+
+#ifdef HAVE_X11
+   XAutoRepeatOn(video.screen.display);
+#endif
 
    assert((flags & VK_DEBUG_REPORT_ERROR_BIT_EXT) == 0);
    return VK_FALSE;
@@ -72,7 +80,8 @@ void instance_init(instance_t* dst)
       {
          VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
          VK_KHR_SURFACE_EXTENSION_NAME,
-//         VK_KHR_DISPLAY_EXTENSION_NAME,
+         VK_KHR_DISPLAY_EXTENSION_NAME,
+//         VK_EXT_DIRECT_MODE_DISPLAY_EXTENSION_NAME,
          VK_EXT_DISPLAY_SURFACE_COUNTER_EXTENSION_NAME,
 #ifdef VK_USE_PLATFORM_WIN32_KHR
          VK_KHR_WIN32_SURFACE_EXTENSION_NAME,

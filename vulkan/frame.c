@@ -1,113 +1,30 @@
 
-#include <ctype.h>
-
-#include <ft2build.h>
-#include FT_FREETYPE_H
+#include <string.h>
 
 #include "vulkan_common.h"
+#include "video.h"
 #include "font.h"
 
-#define VK_ATLAS_WIDTH  640
-#define VK_ATLAS_HEIGHT 480
-static vk_texture_t atlas;
-static VkDescriptorSet atlas_desc;
-static FT_Library ftlib;
-static vk_buffer_t atlas_vbo;
-static vk_pipeline_t pipe;
-
-void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemoryType *memory_types, vk_descriptor_t* desc, const VkRect2D *scissor, const VkViewport *viewport, VkRenderPass renderpass)
+static struct
 {
-      {
-         texture_init_info_t info =
-         {
-            .queue_family_index = queue_family_index,
-            .width = VK_ATLAS_WIDTH,
-            .height = VK_ATLAS_HEIGHT,
-            .format = VK_FORMAT_R8_UNORM,
-            .filter = VK_FILTER_NEAREST
-         };
-         texture_init(device, memory_types, &info, &atlas);
-      }
-
-      {
-         const VkDescriptorSetAllocateInfo info =
-         {
-            VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-            .descriptorPool = desc->pool,
-            .descriptorSetCount = 1, &desc->set_layout
-         };
-         vkAllocateDescriptorSets(device, &info, &atlas_desc);
-      }
-
-      {
-         descriptors_update_info_t info =
-         {
-//         .ubo_buffer = ubo.handle,
-//         .ubo_range = ubo.size,
-            .sampler = atlas.sampler,
-            .image_view = atlas.view,
-         };
-         descriptors_update(device, &info, atlas_desc);
-      }
-
-   memset(atlas.staging.mem.u8 + atlas.staging.mem_layout.offset, 0x0,
-          atlas.staging.mem_layout.size - atlas.staging.mem_layout.offset);
-
-   atlas.dirty = true;
-
+   vk_texture_t tex;
+   vk_buffer_t vbo;
+   vk_buffer_t ubo;
+   VkDescriptorSet desc;
+   vk_pipeline_t pipe;
+   VkCommandBuffer cmd;
+   struct
    {
-      FT_Face ftface;
-      const char* font_path = "/usr/share/fonts/TTF/DejaVuSansMono.ttf";
-//      const char* font_path = "/usr/share/fonts/TTF/LiberationMono-Regular.ttf";
-//      const char* font_path = "/usr/share/fonts/75dpi/charR12.pcf.gz";
-//      const char* font_path = "/usr/share/fonts/WindowsFonts/cour.ttf";
+      float val0;
+      float val1;
+   } uniforms;
+} frame;
 
 
-      FT_UInt font_size = 26;
-
-      FT_Init_FreeType(&ftlib);
-      FT_New_Face(ftlib, font_path, 0, &ftface);
-      FT_Select_Charmap(ftface, FT_ENCODING_UNICODE);
-      FT_Set_Pixel_Sizes(ftface, 0, font_size);
-
-#define FT_LOAD_MODE FT_LOAD_MONOCHROME
-//#define FT_LOAD_MODE 0
-      int i;
-      for (i = 0; i < 256; i++)
-//         if(isalnum(i))
-         {
-            FT_Load_Char(ftface, i, FT_LOAD_RENDER|FT_LOAD_MODE);
-
-//            FT_Render_Glyph(ftface->glyph, FT_RENDER_MODE_MONO);
-
-            uint8_t* src = ftface->glyph->bitmap.buffer;
-            uint8_t* dst = atlas.staging.mem.u8 + atlas.staging.mem_layout.offset +
-                           (i&0xF) * (VK_ATLAS_WIDTH / 16) + ftface->glyph->bitmap_left +
-                           (((i >> 4) * (VK_ATLAS_HEIGHT / 16)) + font_size - ftface->glyph->bitmap_top) * VK_ATLAS_WIDTH;
-            int row;
-            for(row = 0; row < ftface->glyph->bitmap.rows; row++)
-            {
-#if (FT_LOAD_MODE==FT_LOAD_MONOCHROME)
-               int col;
-               for(col = 0; col < ftface->glyph->bitmap.width; col++)
-               {
-                  if(src[col >> 3] & (0x80 >> (col&0x7)))
-                     dst[col] = 255;
-               }
-#else
-               memcpy(dst, src, ftface->glyph->bitmap.width);
-#endif
-               src += ftface->glyph->bitmap.pitch;
-               dst += atlas.staging.mem_layout.rowPitch;
-            }
-         }
-
-      FT_Done_Face(ftface);
-      FT_Done_FreeType(ftlib);
-   }
-
-   device_memory_flush(device, &atlas.staging.mem);
-
+void vulkan_frame_init(VkDevice device, uint32_t queue_family_index, VkMemoryType *memory_types,
+                  vk_descriptor_t* desc, int width, int height, VkFormat format,
+                  const VkRect2D *scissor, const VkViewport *viewport, VkRenderPass renderpass)
+{
    {
       const vertex_t vertices[] =
       {
@@ -123,8 +40,28 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
          .size = sizeof(vertices),
          .data = vertices,
       };
-      buffer_init(device, memory_types, &info, &atlas_vbo);
+      buffer_init(device, memory_types, &info, &frame.vbo);
    }
+
+   {
+      buffer_init_info_t info =
+      {
+         .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+         .size = sizeof(frame.uniforms),
+      };
+      buffer_init(device, memory_types, &info, &frame.ubo);
+   }
+
+   {
+      const VkDescriptorSetAllocateInfo info =
+      {
+         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+         .descriptorPool = desc->pool,
+         .descriptorSetCount = 1, &desc->set_layout
+      };
+      vkAllocateDescriptorSets(device, &info, &frame.desc);
+   }
+
 
    {
       VkShaderModule vertex_shader;
@@ -183,7 +120,7 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
 #endif
             };
 
-            vkCreatePipelineLayout(device, &info, NULL, &pipe.layout);
+            vkCreatePipelineLayout(device, &info, NULL, &frame.pipe.layout);
          }
 
          {
@@ -265,11 +202,11 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
                .pRasterizationState = &rasterization_info,
                .pMultisampleState = &multisample_state,
                .pColorBlendState = &colorblend_state,
-               .layout = pipe.layout,
+               .layout = frame.pipe.layout,
                .renderPass = renderpass,
                .subpass = 0
             };
-            vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &info, NULL, &pipe.handle);
+            vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &info, NULL, &frame.pipe.handle);
          }
 
       }
@@ -278,30 +215,67 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
       vkDestroyShaderModule(device, fragment_shader, NULL);
    }
 
+   {
+      {
+         texture_init_info_t info =
+         {
+            .queue_family_index = queue_family_index,
+            .width = width,
+            .height = height,
+            .format = format,
+            .filter = VK_FILTER_LINEAR
+         };
+         texture_init(device, memory_types, &info, &frame.tex);
+      }
+
+      /* texture updates are written to the stating texture then uploaded later */
+      memset(frame.tex.staging.mem.u8 + frame.tex.staging.mem_layout.offset, 0xFF,
+             frame.tex.staging.mem_layout.size - frame.tex.staging.mem_layout.offset);
+
+      device_memory_flush(device, &frame.tex.staging.mem);
+      frame.tex.dirty = true;
+   }
+
+   {
+      descriptors_update_info_t info =
+      {
+         //         .ubo_buffer = ubo.handle,
+         //         .ubo_range = ubo.size,
+         .sampler = frame.tex.sampler,
+         .image_view = frame.tex.view,
+      };
+      descriptors_update(device, &info, frame.desc);
+   }
+
+   video.frame.width = width;
+   video.frame.height = height;
+   video.frame.pitch = frame.tex.staging.mem_layout.rowPitch / 4;
+   video.frame.data = frame.tex.staging.mem.u8 + frame.tex.staging.mem_layout.offset;
 
 }
 
-void vulkan_font_destroy(VkDevice device, VkDescriptorPool pool)
+void vulkan_frame_update(VkDevice device, VkCommandBuffer cmd)
 {
-   buffer_free(device, &atlas_vbo);
-   texture_free(device, &atlas);
-//   vkFreeDescriptorSets(device, pool, 1, &atlas_desc);
-   atlas_desc = VK_NULL_HANDLE;
+   device_memory_flush(device, &frame.tex.staging.mem);
+   frame.tex.dirty = true;
 
+   if (frame.tex.dirty)
+      texture_update(cmd, &frame.tex);
 }
-
-void vulkan_font_update_assets(VkCommandBuffer cmd)
-{
-   if (atlas.dirty)
-      texture_update(cmd, &atlas);
-}
-void vulkan_font_render(VkCommandBuffer cmd)
+void vulkan_frame_render(VkCommandBuffer cmd)
 {
    VkDeviceSize offset = 0;
-   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle);
-   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.layout, 0, 1, &atlas_desc, 0, NULL);
+   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, frame.pipe.handle);
+   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, frame.pipe.layout, 0, 1, &frame.desc, 0, NULL);
+// vkCmdPushConstants(device.cmd, device.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(uniforms_t), mapped_uniforms);
 
-   vkCmdBindVertexBuffers(cmd, 0, 1, &atlas_vbo.handle, &offset);
+   vkCmdBindVertexBuffers(cmd, 0, 1, &frame.vbo.handle, &offset);
 
-   vkCmdDraw(cmd, atlas_vbo.size / sizeof(vertex_t), 1, 0, 0);
+   vkCmdDraw(cmd, frame.vbo.size / sizeof(vertex_t), 1, 0, 0);
+}
+void vulkan_frame_destroy(VkDevice device)
+{
+   pipeline_free(device, &frame.pipe);
+   buffer_free(device, &frame.vbo);
+   texture_free(device, &frame.tex);
 }

@@ -206,6 +206,22 @@ void pipeline_init(VkDevice device, const pipeline_init_info_t* init_info, vk_pi
 void pipeline_free(VkDevice device, vk_pipeline_t* pipe);
 
 
+typedef struct
+{
+   struct
+   {
+      float x, y, z, w;
+   } position;
+   struct
+   {
+      float u, v;
+   } texcoord;
+   struct
+   {
+      float r, g, b, a;
+   } color;
+} vertex_t;
+
 static inline const char* VkResult_to_str(VkResult res)
 {
    switch (res)

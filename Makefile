@@ -4,8 +4,8 @@ TARGET = test
 MODULE = snes9x/snes9x_module.a
 DEBUG = 0
 
-#platform = linux
-platform = win
+platform = linux
+#platform = win
 
 BUILD_DIR = objs/$(platform)
 
@@ -30,6 +30,8 @@ endif
 OBJS += vulkan/buffer.o
 OBJS += vulkan/descriptors.o
 OBJS += vulkan/device.o
+OBJS += vulkan/font.o
+OBJS += vulkan/frame.o
 OBJS += vulkan/instance.o
 OBJS += vulkan/main.o
 OBJS += vulkan/memory.o
@@ -58,7 +60,8 @@ ifeq ($(platform),linux)
    CFLAGS += -DVK_USE_PLATFORM_XLIB_KHR
    CFLAGS += -DVK_USE_PLATFORM_XLIB_XRANDR_EXT
    CFLAGS += -DHAVE_X11
-   LIBS += -lvulkan -lX11 -lasound
+   CFLAGS += $(shell freetype-config --cflags)
+   LIBS += -lvulkan -lX11 -lasound -lfreetype
 else ifeq ($(platform),win)
 CFLAGS += -I$(VULKAN_SDK)/Include -DVK_USE_PLATFORM_WIN32_KHR
    LIBS +=  -L$(VULKAN_SDK)/Lib -lvulkan-1
