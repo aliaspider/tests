@@ -11,7 +11,8 @@ static struct
    vk_buffer_t vbo;
    vk_buffer_t ubo;
    VkDescriptorSet desc;
-   vk_pipeline_t pipe;
+   VkPipeline pipe;
+   VkPipelineLayout pipe_layout;
    VkCommandBuffer cmd;
    struct
    {
@@ -121,7 +122,7 @@ void vulkan_frame_init(VkDevice device, uint32_t queue_family_index, VkMemoryTyp
 #endif
             };
 
-            vkCreatePipelineLayout(device, &info, NULL, &frame.pipe.layout);
+            vkCreatePipelineLayout(device, &info, NULL, &frame.pipe_layout);
          }
 
          {
@@ -203,11 +204,11 @@ void vulkan_frame_init(VkDevice device, uint32_t queue_family_index, VkMemoryTyp
                .pRasterizationState = &rasterization_info,
                .pMultisampleState = &multisample_state,
                .pColorBlendState = &colorblend_state,
-               .layout = frame.pipe.layout,
+               .layout = frame.pipe_layout,
                .renderPass = renderpass,
                .subpass = 0
             };
-            vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &info, NULL, &frame.pipe.handle);
+            vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &info, NULL, &frame.pipe);
          }
 
       }
@@ -293,8 +294,8 @@ void vulkan_frame_update(VkDevice device, VkCommandBuffer cmd)
 void vulkan_frame_render(VkCommandBuffer cmd)
 {
    VkDeviceSize offset = 0;
-   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, frame.pipe.handle);
-   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, frame.pipe.layout, 0, 1, &frame.desc, 0, NULL);
+   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, frame.pipe);
+   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, frame.pipe_layout, 0, 1, &frame.desc, 0, NULL);
 // vkCmdPushConstants(device.cmd, device.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(uniforms_t), mapped_uniforms);
 
    vkCmdBindVertexBuffers(cmd, 0, 1, &frame.vbo.handle, &offset);
@@ -303,10 +304,10 @@ void vulkan_frame_render(VkCommandBuffer cmd)
 }
 void vulkan_frame_destroy(VkDevice device)
 {
-   vkDestroyPipelineLayout(device, frame.pipe.layout, NULL);
-   vkDestroyPipeline(device, frame.pipe.handle, NULL);
-   frame.pipe.layout = VK_NULL_HANDLE;
-   frame.pipe.handle = VK_NULL_HANDLE;
+   vkDestroyPipelineLayout(device, frame.pipe_layout, NULL);
+   vkDestroyPipeline(device, frame.pipe, NULL);
+   frame.pipe_layout = VK_NULL_HANDLE;
+   frame.pipe = VK_NULL_HANDLE;
 
    buffer_free(device, &frame.vbo);
    texture_free(device, &frame.tex);

@@ -10,86 +10,6 @@
 
 typedef struct
 {
-   VkInstance handle;
-   VkDebugReportCallbackEXT debug_cb;
-}instance_t;
-void instance_init(instance_t* dst);
-void instance_free(instance_t* context);
-
-typedef struct
-{
-   VkPhysicalDevice handle;
-   union
-   {
-      struct
-      {
-         uint32_t        memoryTypeCount;
-         VkMemoryType    memoryTypes[VK_MAX_MEMORY_TYPES];
-         uint32_t        memoryHeapCount;
-         VkMemoryHeap    memoryHeaps[VK_MAX_MEMORY_HEAPS];
-      };
-      VkPhysicalDeviceMemoryProperties mem;
-   };
-}physical_device_t;
-void physical_device_init(VkInstance instance, physical_device_t* dst);
-void physical_device_free(physical_device_t* gpu);
-
-typedef struct
-{
-   VkDevice handle;
-   uint32_t queue_family_index;
-   VkQueue queue;
-   VkCommandPool cmd_pool;
-}device_t;
-void device_init(VkPhysicalDevice gpu, device_t* dst);
-void device_free(device_t* device);
-
-
-typedef struct
-{
-   VkSurfaceKHR handle;
-   VkDisplayKHR display;
-   int width;
-   int height;   
-}surface_t;
-
-typedef struct
-{
-   VkPhysicalDevice gpu;
-   uint32_t queue_family_index;
-   int width;
-   int height;
-#ifdef VK_USE_PLATFORM_XLIB_KHR
-   Display* display;
-   Window window;
-#endif
-}surface_init_info_t;
-void surface_init(VkInstance instance, const surface_init_info_t* init_info, surface_t *dst);
-void surface_free(VkInstance instance, surface_t *surface);
-
-typedef struct
-{
-   VkSwapchainKHR handle;
-   VkRect2D scissor;
-   VkViewport viewport;
-   VkRenderPass renderpass;
-   uint32_t count;
-   VkImageView views[MAX_SWAPCHAIN_IMAGES];
-   VkFramebuffer framebuffers[MAX_SWAPCHAIN_IMAGES];
-}swapchain_t;
-
-typedef struct
-{
-   VkSurfaceKHR surface;
-   int width;
-   int height;
-   VkPresentModeKHR present_mode;
-}swapchain_init_info_t;
-void swapchain_init(VkDevice device, const swapchain_init_info_t* init_info, swapchain_t *dst);
-void swapchain_free(VkDevice device, swapchain_t *chain);
-
-typedef struct
-{
    VkDeviceMemory handle;
    VkMemoryPropertyFlags flags;
    VkDeviceSize size;
@@ -158,45 +78,6 @@ typedef struct
 }buffer_init_info_t;
 void buffer_init(VkDevice device, const VkMemoryType* memory_types, const buffer_init_info_t* init_info, vk_buffer_t *dst);
 void buffer_free(VkDevice device, vk_buffer_t *buffer);
-
-typedef struct
-{
-   VkDescriptorPool pool;
-   VkDescriptorSetLayout set_layout;
-}vk_descriptor_t;
-
-typedef struct
-{
-   VkBuffer ubo_buffer;
-   VkDeviceSize ubo_range;
-   VkSampler sampler;
-   VkImageView image_view;
-}descriptors_update_info_t;
-void descriptors_init(VkDevice device, vk_descriptor_t* dst);
-void descriptors_update(VkDevice device, const descriptors_update_info_t *update_info, VkDescriptorSet set);
-void descriptors_free(VkDevice device, vk_descriptor_t* descriptor);
-
-typedef struct
-{
-   VkPipeline handle;
-   VkPipelineLayout layout;
-}vk_pipeline_t;
-
-typedef struct
-{
-   VkShaderModule vertex_shader;
-   VkShaderModule fragment_shader;
-   int vertex_size;
-   int attrib_count;
-   const VkVertexInputAttributeDescription* attrib_desc;
-   VkDescriptorSetLayout set_layout;
-   const VkRect2D* scissor;
-   const VkViewport* viewport;
-   VkRenderPass renderpass;
-}pipeline_init_info_t;
-void pipeline_init(VkDevice device, const pipeline_init_info_t* init_info, vk_pipeline_t* dst);
-void pipeline_free(VkDevice device, vk_pipeline_t* pipe);
-
 
 typedef struct
 {

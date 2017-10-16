@@ -13,7 +13,9 @@ static vk_texture_t atlas;
 static VkDescriptorSet atlas_desc;
 static FT_Library ftlib;
 static vk_buffer_t atlas_vbo;
-static vk_pipeline_t pipe;
+static VkPipeline pipe;
+static VkPipelineLayout pipe_layout;
+
 
 void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemoryType *memory_types,
                       VkDescriptorPool descriptor_pool, VkDescriptorSetLayout descriptor_set_layout,
@@ -215,7 +217,7 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
 #endif
             };
 
-            vkCreatePipelineLayout(device, &info, NULL, &pipe.layout);
+            vkCreatePipelineLayout(device, &info, NULL, &pipe_layout);
          }
 
          {
@@ -297,11 +299,11 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
                .pRasterizationState = &rasterization_info,
                .pMultisampleState = &multisample_state,
                .pColorBlendState = &colorblend_state,
-               .layout = pipe.layout,
+               .layout = pipe_layout,
                .renderPass = renderpass,
                .subpass = 0
             };
-            vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &info, NULL, &pipe.handle);
+            vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &info, NULL, &pipe);
          }
 
       }
@@ -317,10 +319,10 @@ void vulkan_font_destroy(VkDevice device, VkDescriptorPool pool)
 {
    buffer_free(device, &atlas_vbo);
    texture_free(device, &atlas);
-   vkDestroyPipelineLayout(device, pipe.layout, NULL);
-   vkDestroyPipeline(device, pipe.handle, NULL);
-   pipe.layout = VK_NULL_HANDLE;
-   pipe.handle = VK_NULL_HANDLE;
+   vkDestroyPipelineLayout(device, pipe_layout, NULL);
+   vkDestroyPipeline(device, pipe, NULL);
+   pipe_layout = VK_NULL_HANDLE;
+   pipe = VK_NULL_HANDLE;
 
 //   vkFreeDescriptorSets(device, pool, 1, &atlas_desc);
    atlas_desc = VK_NULL_HANDLE;
@@ -335,8 +337,8 @@ void vulkan_font_update_assets(VkCommandBuffer cmd)
 void vulkan_font_render(VkCommandBuffer cmd)
 {
    VkDeviceSize offset = 0;
-   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle);
-   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.layout, 0, 1, &atlas_desc, 0, NULL);
+   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe);
+   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_layout, 0, 1, &atlas_desc, 0, NULL);
 
    vkCmdBindVertexBuffers(cmd, 0, 1, &atlas_vbo.handle, &offset);
 
