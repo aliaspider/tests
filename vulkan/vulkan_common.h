@@ -7,14 +7,6 @@
 
 #define MAX_SWAPCHAIN_IMAGES 8
 #define countof(a) (sizeof(a)/ sizeof(*a))
-#define VULKAN_CALL(fname, instance, ...)                                      \
-  ((PFN_##fname)vkGetInstanceProcAddr(instance, #fname))(instance, __VA_ARGS__)
-
-#define VULKAN_CALL_NULL(fname, ...)                                      \
-  ((PFN_##fname)vkGetInstanceProcAddr(NULL, #fname))(__VA_ARGS__)
-
-#define VULKAN_CALL_DEV(fname, device, ...)                                      \
-  ((PFN_##fname)vkGetDeviceProcAddr(device, #fname))(device, __VA_ARGS__)
 
 typedef struct
 {
@@ -264,9 +256,5 @@ static inline const char* VkResult_to_str(VkResult res)
 
 #define VK_CHECK(vk_call) do{VkResult res = vk_call; if (res != VK_SUCCESS) {printf("%s:%i:%s:%s --> %s(%i)\n", __FILE__, __LINE__, __FUNCTION__, #vk_call, VkResult_to_str(res), res);fflush(stdout);}}while(0)
 
-extern PFN_vkGetPhysicalDeviceSurfaceCapabilities2EXT pvkGetPhysicalDeviceSurfaceCapabilities2EXT;
-#ifdef VK_USE_PLATFORM_XLIB_XRANDR_EXT
-extern PFN_vkReleaseDisplayEXT pvkReleaseDisplayEXT;
-extern PFN_vkAcquireXlibDisplayEXT pvkAcquireXlibDisplayEXT;
-extern PFN_vkGetRandROutputDisplayEXT pvkGetRandROutputDisplayEXT;
-#endif
+void vk_init_instance_pfn(VkInstance instance);
+void vk_init_device_pfn(VkDevice device);

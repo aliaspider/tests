@@ -19,38 +19,68 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
                       VkDescriptorPool descriptor_pool, VkDescriptorSetLayout descriptor_set_layout,
                       const VkRect2D *scissor, const VkViewport *viewport, VkRenderPass renderpass)
 {
+   {
+      texture_init_info_t info =
       {
-         texture_init_info_t info =
-         {
-            .queue_family_index = queue_family_index,
-            .width = VK_ATLAS_WIDTH,
-            .height = VK_ATLAS_HEIGHT,
-            .format = VK_FORMAT_R8_UNORM,
-            .filter = VK_FILTER_NEAREST
-         };
-         texture_init(device, memory_types, &info, &atlas);
-      }
+         .queue_family_index = queue_family_index,
+         .width = VK_ATLAS_WIDTH,
+         .height = VK_ATLAS_HEIGHT,
+         .format = VK_FORMAT_R8_UNORM,
+         .filter = VK_FILTER_NEAREST
+      };
+      texture_init(device, memory_types, &info, &atlas);
+   }
 
+   {
+      const VkDescriptorSetAllocateInfo info =
       {
-         const VkDescriptorSetAllocateInfo info =
-         {
-            VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-            .descriptorPool = descriptor_pool,
-            .descriptorSetCount = 1, &descriptor_set_layout
-         };
-         vkAllocateDescriptorSets(device, &info, &atlas_desc);
-      }
+         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+         .descriptorPool = descriptor_pool,
+         .descriptorSetCount = 1, &descriptor_set_layout
+      };
+      vkAllocateDescriptorSets(device, &info, &atlas_desc);
+   }
 
+
+
+   {
+//      const VkDescriptorBufferInfo buffer_info =
+//      {
+//         .buffer = init_info->ubo_buffer,
+//         .offset = 0,
+//         .range = init_info->ubo_range
+//      };
+      const VkDescriptorImageInfo image_info =
       {
-         descriptors_update_info_t info =
+         .sampler = atlas.sampler,
+         .imageView = atlas.view,
+         .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+      };
+
+      const VkWriteDescriptorSet write_set[] =
+      {
+//         {
+//            VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+//            .dstSet = dst->set,
+//            .dstBinding = 0,
+//            .dstArrayElement = 0,
+//            .descriptorCount = 1,
+//            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+//            .pBufferInfo = &buffer_info
+//         },
          {
-//         .ubo_buffer = ubo.handle,
-//         .ubo_range = ubo.size,
-            .sampler = atlas.sampler,
-            .image_view = atlas.view,
-         };
-         descriptors_update(device, &info, atlas_desc);
-      }
+            VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = atlas_desc,
+            .dstBinding = 1,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .pImageInfo = &image_info
+         }
+      };
+      vkUpdateDescriptorSets(device, countof(write_set), write_set, 0, NULL);
+   }
+
 
    memset(atlas.staging.mem.u8 + atlas.staging.mem_layout.offset, 0x0,
           atlas.staging.mem_layout.size - atlas.staging.mem_layout.offset);
@@ -287,6 +317,11 @@ void vulkan_font_destroy(VkDevice device, VkDescriptorPool pool)
 {
    buffer_free(device, &atlas_vbo);
    texture_free(device, &atlas);
+   vkDestroyPipelineLayout(device, pipe.layout, NULL);
+   vkDestroyPipeline(device, pipe.handle, NULL);
+   pipe.layout = VK_NULL_HANDLE;
+   pipe.handle = VK_NULL_HANDLE;
+
 //   vkFreeDescriptorSets(device, pool, 1, &atlas_desc);
    atlas_desc = VK_NULL_HANDLE;
 

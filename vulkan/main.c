@@ -174,6 +174,8 @@ void video_init()
       VK_CHECK(vkCreateInstance(&info, NULL, &vk.instance));
    }
 
+   vk_init_instance_pfn(vk.instance);
+
    {
       VkDebugReportCallbackCreateInfoEXT info =
       {
@@ -189,18 +191,6 @@ void video_init()
       };
       vkCreateDebugReportCallbackEXT(vk.instance, &info, NULL, &vk.debug_cb);
    }
-
-   pvkGetPhysicalDeviceSurfaceCapabilities2EXT = (PFN_vkGetPhysicalDeviceSurfaceCapabilities2EXT)
-         vkGetInstanceProcAddr(vk.instance, "vkGetPhysicalDeviceSurfaceCapabilities2EXT");
-#ifdef VK_USE_PLATFORM_XLIB_XRANDR_EXT
-   pvkReleaseDisplayEXT = (PFN_vkReleaseDisplayEXT)vkGetInstanceProcAddr(vk.instance,
-                          "vkReleaseDisplayEXT");
-   pvkAcquireXlibDisplayEXT = (PFN_vkAcquireXlibDisplayEXT)vkGetInstanceProcAddr(vk.instance,
-                              "vkAcquireXlibDisplayEXT");
-   pvkGetRandROutputDisplayEXT = (PFN_vkGetRandROutputDisplayEXT)vkGetInstanceProcAddr(vk.instance,
-                                 "vkGetRandROutputDisplayEXT");
-#endif
-
 
    {
       uint32_t one = 1;
@@ -281,6 +271,8 @@ void video_init()
       };
       vkCreateDevice(vk.gpu, &info, NULL, &vk.device);
    }
+
+   vk_init_device_pfn(vk.device);
 
    /* get a device queue */
    vkGetDeviceQueue(vk.device, vk.queue_family_index, 0, &vk.queue);

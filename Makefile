@@ -28,22 +28,18 @@ else ifeq ($(platform),win)
    OBJS += win/input.o
 endif
 OBJS += vulkan/buffer.o
-OBJS += vulkan/descriptors.o
-OBJS += vulkan/device.o
 OBJS += vulkan/font.o
 OBJS += vulkan/frame.o
-OBJS += vulkan/instance.o
 OBJS += vulkan/main.o
 OBJS += vulkan/memory.o
-OBJS += vulkan/pipeline.o
-OBJS += vulkan/surface.o
-OBJS += vulkan/swapchain.o
+OBJS += vulkan/stubs.o
 OBJS += vulkan/texture.o
 
 OBJS := $(addprefix $(BUILD_DIR)/,$(OBJS))
 
 
-$(BUILD_DIR)/vulkan/main.o: vulkan/main.vert.inc vulkan/main.frag.inc
+$(BUILD_DIR)/vulkan/frame.o: vulkan/main.vert.inc vulkan/main.frag.inc
+$(BUILD_DIR)/vulkan/font.o:  vulkan/main.vert.inc vulkan/main.frag.inc
 
 ifeq ($(DEBUG),1)
    CFLAGS += -g -O0

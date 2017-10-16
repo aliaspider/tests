@@ -238,14 +238,41 @@ void vulkan_frame_init(VkDevice device, uint32_t queue_family_index, VkMemoryTyp
    }
 
    {
-      descriptors_update_info_t info =
+//      const VkDescriptorBufferInfo buffer_info =
+//      {
+//         .buffer = init_info->ubo_buffer,
+//         .offset = 0,
+//         .range = init_info->ubo_range
+//      };
+      const VkDescriptorImageInfo image_info =
       {
-         //         .ubo_buffer = ubo.handle,
-         //         .ubo_range = ubo.size,
          .sampler = frame.tex.sampler,
-         .image_view = frame.tex.view,
+         .imageView = frame.tex.view,
+         .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
       };
-      descriptors_update(device, &info, frame.desc);
+
+      const VkWriteDescriptorSet write_set[] =
+      {
+//         {
+//            VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+//            .dstSet = dst->set,
+//            .dstBinding = 0,
+//            .dstArrayElement = 0,
+//            .descriptorCount = 1,
+//            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+//            .pBufferInfo = &buffer_info
+//         },
+         {
+            VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = frame.desc,
+            .dstBinding = 1,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .pImageInfo = &image_info
+         }
+      };
+      vkUpdateDescriptorSets(device, countof(write_set), write_set, 0, NULL);
    }
 
    video.frame.width = width;
@@ -276,7 +303,11 @@ void vulkan_frame_render(VkCommandBuffer cmd)
 }
 void vulkan_frame_destroy(VkDevice device)
 {
-   pipeline_free(device, &frame.pipe);
+   vkDestroyPipelineLayout(device, frame.pipe.layout, NULL);
+   vkDestroyPipeline(device, frame.pipe.handle, NULL);
+   frame.pipe.layout = VK_NULL_HANDLE;
+   frame.pipe.handle = VK_NULL_HANDLE;
+
    buffer_free(device, &frame.vbo);
    texture_free(device, &frame.tex);
 }
