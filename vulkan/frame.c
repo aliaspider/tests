@@ -14,18 +14,15 @@ static struct
    VkPipeline pipe;
    VkPipelineLayout pipe_layout;
    VkCommandBuffer cmd;
-   struct
-   {
-      float val0;
-      float val1;
-   } uniforms;
 } frame;
 
+typedef struct
+{
+   float val0;
+   float val1;
+} frame_uniforms_t;
 
-void vulkan_frame_init(VkDevice device, uint32_t queue_family_index, VkMemoryType *memory_types,
-                  VkDescriptorPool descriptor_pool, VkDescriptorSetLayout descriptor_set_layout,
-                  int width, int height, VkFormat format,
-                  const VkRect2D *scissor, const VkViewport *viewport, VkRenderPass renderpass)
+void vulkan_frame_init(vk_context_t* vk, vk_render_context_t* vk_render, int width, int height, VkFormat format)
 {
    {
       const vertex_t vertices[] =
@@ -42,26 +39,26 @@ void vulkan_frame_init(VkDevice device, uint32_t queue_family_index, VkMemoryTyp
          .size = sizeof(vertices),
          .data = vertices,
       };
-      buffer_init(device, memory_types, &info, &frame.vbo);
+      buffer_init(vk->device, vk->memoryTypes, &info, &frame.vbo);
    }
 
    {
       buffer_init_info_t info =
       {
          .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-         .size = sizeof(frame.uniforms),
+         .size = sizeof(frame_uniforms_t),
       };
-      buffer_init(device, memory_types, &info, &frame.ubo);
+      buffer_init(vk->device, vk->memoryTypes, &info, &frame.ubo);
    }
 
    {
       const VkDescriptorSetAllocateInfo info =
       {
          VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-         .descriptorPool = descriptor_pool,
-         .descriptorSetCount = 1, &descriptor_set_layout
+         .descriptorPool = vk->pools.desc,
+         .descriptorSetCount = 1, &vk_render->descriptor_set_layout
       };
-      vkAllocateDescriptorSets(device, &info, &frame.desc);
+      vkAllocateDescriptorSets(vk->device, &info, &frame.desc);
    }
 
 
@@ -77,7 +74,7 @@ void vulkan_frame_init(VkDevice device, uint32_t queue_family_index, VkMemoryTyp
             .codeSize = sizeof(code),
             .pCode = code
          };
-         vkCreateShaderModule(device, &info, NULL, &vertex_shader);
+         vkCreateShaderModule(vk->device, &info, NULL, &vertex_shader);
       }
 
       VkShaderModule fragment_shader;
@@ -91,7 +88,7 @@ void vulkan_frame_init(VkDevice device, uint32_t queue_family_index, VkMemoryTyp
             .codeSize = sizeof(code),
             .pCode = code
          };
-         vkCreateShaderModule(device, &info, NULL, &fragment_shader);
+         vkCreateShaderModule(vk->device, &info, NULL, &fragment_shader);
       }
 
       const VkVertexInputAttributeDescription attrib_desc[] =
@@ -109,20 +106,20 @@ void vulkan_frame_init(VkDevice device, uint32_t queue_family_index, VkMemoryTyp
                {
                   .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
                   .offset = 0,
-                  .size = sizeof(uniforms_t)
+                  .size = sizeof(frame_uniforms_t)
                }
             };
 #endif
             const VkPipelineLayoutCreateInfo info =
             {
                VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-               .setLayoutCount = 1, &descriptor_set_layout,
+               .setLayoutCount = 1, &vk_render->descriptor_set_layout,
 #if 0
                .pushConstantRangeCount = countof(ranges), ranges
 #endif
             };
 
-            vkCreatePipelineLayout(device, &info, NULL, &frame.pipe_layout);
+            vkCreatePipelineLayout(vk->device, &info, NULL, &frame.pipe_layout);
          }
 
          {
@@ -164,8 +161,8 @@ void vulkan_frame_init(VkDevice device, uint32_t queue_family_index, VkMemoryTyp
             const VkPipelineViewportStateCreateInfo viewport_state =
             {
                VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-               .viewportCount = 1, viewport,
-               .scissorCount = 1, scissor
+               .viewportCount = 1, &vk_render->viewport,
+               .scissorCount = 1, &vk_render->scissor
             };
 
             const VkPipelineRasterizationStateCreateInfo rasterization_info =
@@ -205,36 +202,36 @@ void vulkan_frame_init(VkDevice device, uint32_t queue_family_index, VkMemoryTyp
                .pMultisampleState = &multisample_state,
                .pColorBlendState = &colorblend_state,
                .layout = frame.pipe_layout,
-               .renderPass = renderpass,
+               .renderPass = vk_render->renderpass,
                .subpass = 0
             };
-            vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &info, NULL, &frame.pipe);
+            vkCreateGraphicsPipelines(vk->device, VK_NULL_HANDLE, 1, &info, NULL, &frame.pipe);
          }
 
       }
 
-      vkDestroyShaderModule(device, vertex_shader, NULL);
-      vkDestroyShaderModule(device, fragment_shader, NULL);
+      vkDestroyShaderModule(vk->device, vertex_shader, NULL);
+      vkDestroyShaderModule(vk->device, fragment_shader, NULL);
    }
 
    {
       {
          texture_init_info_t info =
          {
-            .queue_family_index = queue_family_index,
+            .queue_family_index = vk->queue_family_index,
             .width = width,
             .height = height,
             .format = format,
             .filter = VK_FILTER_LINEAR
          };
-         texture_init(device, memory_types, &info, &frame.tex);
+         texture_init(vk->device, vk->memoryTypes, &info, &frame.tex);
       }
 
       /* texture updates are written to the stating texture then uploaded later */
       memset(frame.tex.staging.mem.u8 + frame.tex.staging.mem_layout.offset, 0xFF,
              frame.tex.staging.mem_layout.size - frame.tex.staging.mem_layout.offset);
 
-      device_memory_flush(device, &frame.tex.staging.mem);
+      device_memory_flush(vk->device, &frame.tex.staging.mem);
       frame.tex.dirty = true;
    }
 
@@ -273,7 +270,7 @@ void vulkan_frame_init(VkDevice device, uint32_t queue_family_index, VkMemoryTyp
             .pImageInfo = &image_info
          }
       };
-      vkUpdateDescriptorSets(device, countof(write_set), write_set, 0, NULL);
+      vkUpdateDescriptorSets(vk->device, countof(write_set), write_set, 0, NULL);
    }
 
    video.frame.width = width;

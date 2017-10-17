@@ -139,3 +139,48 @@ static inline const char* VkResult_to_str(VkResult res)
 
 void vk_init_instance_pfn(VkInstance instance);
 void vk_init_device_pfn(VkDevice device);
+void vk_get_instance_props(void);
+void vk_get_gpu_props(VkPhysicalDevice gpu);
+uint32_t vk_get_queue_family_index(VkPhysicalDevice gpu, VkQueueFlags required_flags);
+
+
+typedef struct
+{
+   VkInstance instance;
+   VkDebugReportCallbackEXT debug_cb;
+   VkPhysicalDevice gpu;
+   union
+   {
+      struct
+      {
+         uint32_t memoryTypeCount;
+         VkMemoryType memoryTypes[VK_MAX_MEMORY_TYPES];
+      };
+      VkPhysicalDeviceMemoryProperties mem;
+   };
+   VkDevice device;
+   uint32_t queue_family_index;
+   VkQueue queue;
+   VkSurfaceKHR surface;
+   VkDisplayKHR display;
+   struct
+   {
+      VkCommandPool cmd;
+      VkDescriptorPool desc;
+   } pools;
+} vk_context_t;
+
+typedef struct
+{
+   VkSwapchainKHR swapchain;
+   VkRect2D scissor;
+   VkViewport viewport;
+   VkRenderPass renderpass;
+   uint32_t swapchain_count;
+   VkImageView views[MAX_SWAPCHAIN_IMAGES];
+   VkFramebuffer framebuffers[MAX_SWAPCHAIN_IMAGES];
+   VkDescriptorSetLayout descriptor_set_layout;
+   VkCommandBuffer cmd;
+   VkFence queue_fence;
+   VkFence chain_fence;
+} vk_render_context_t;

@@ -27,13 +27,11 @@ else ifeq ($(platform),win)
    OBJS += win/audio.o
    OBJS += win/input.o
 endif
-OBJS += vulkan/buffer.o
 OBJS += vulkan/font.o
 OBJS += vulkan/frame.o
 OBJS += vulkan/main.o
-OBJS += vulkan/memory.o
 OBJS += vulkan/stubs.o
-OBJS += vulkan/texture.o
+OBJS += vulkan/vulkan_common.o
 
 OBJS := $(addprefix $(BUILD_DIR)/,$(OBJS))
 
