@@ -36,6 +36,7 @@ void vulkan_frame_init(vk_context_t* vk, vk_render_context_t* vk_render, int wid
       buffer_init_info_t info =
       {
          .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+         .req_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
          .size = sizeof(vertices),
          .data = vertices,
       };
@@ -46,6 +47,7 @@ void vulkan_frame_init(vk_context_t* vk, vk_render_context_t* vk_render, int wid
       buffer_init_info_t info =
       {
          .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+         .req_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
          .size = sizeof(frame_uniforms_t),
       };
       buffer_init(vk->device, vk->memoryTypes, &info, &frame.ubo);
@@ -66,7 +68,7 @@ void vulkan_frame_init(vk_context_t* vk, vk_render_context_t* vk_render, int wid
       VkShaderModule vertex_shader;
       {
          static const uint32_t code [] =
-#include "main.vert.inc"
+#include "frame.vert.inc"
             ;
          const VkShaderModuleCreateInfo info =
          {
@@ -80,7 +82,7 @@ void vulkan_frame_init(vk_context_t* vk, vk_render_context_t* vk_render, int wid
       VkShaderModule fragment_shader;
       {
          static const uint32_t code [] =
-#include "main.frag.inc"
+#include "frame.frag.inc"
             ;
          const VkShaderModuleCreateInfo info =
          {

@@ -6,6 +6,7 @@
 
 #include "vulkan_common.h"
 #include "font.h"
+#include "video.h"
 
 #define VK_ATLAS_WIDTH  640
 #define VK_ATLAS_HEIGHT 480
@@ -13,9 +14,33 @@ static vk_texture_t atlas;
 static VkDescriptorSet atlas_desc;
 static FT_Library ftlib;
 static vk_buffer_t atlas_vbo;
+static vk_buffer_t atlas_g_buffer;
 static VkPipeline pipe;
 static VkPipelineLayout pipe_layout;
 
+
+typedef struct
+{
+   int last_id;
+   int pos_x;
+   int pos_y;
+}font_shader_storage_t;
+
+typedef struct
+{
+   uint8_t id;
+   struct
+   {
+      uint8_t r;
+      uint8_t g;
+      uint8_t b;
+   }color;
+   struct
+   {
+      float x;
+      float y;
+   }position;
+}font_vertex_t;
 
 void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemoryType *memory_types,
                       VkDescriptorPool descriptor_pool, VkDescriptorSetLayout descriptor_set_layout,
@@ -34,6 +59,16 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
    }
 
    {
+      buffer_init_info_t info =
+      {
+         .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+         .req_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+         .size = sizeof(font_shader_storage_t),
+      };
+      buffer_init(device, memory_types, &info, &atlas_g_buffer);
+   }
+
+   {
       const VkDescriptorSetAllocateInfo info =
       {
          VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -44,14 +79,13 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
    }
 
 
-
    {
-//      const VkDescriptorBufferInfo buffer_info =
-//      {
-//         .buffer = init_info->ubo_buffer,
-//         .offset = 0,
-//         .range = init_info->ubo_range
-//      };
+      const VkDescriptorBufferInfo buffer_info =
+      {
+         .buffer = atlas_g_buffer.handle,
+         .offset = 0,
+         .range = sizeof(font_shader_storage_t)
+      };
       const VkDescriptorImageInfo image_info =
       {
          .sampler = atlas.sampler,
@@ -61,15 +95,15 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
 
       const VkWriteDescriptorSet write_set[] =
       {
-//         {
-//            VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-//            .dstSet = dst->set,
-//            .dstBinding = 0,
-//            .dstArrayElement = 0,
-//            .descriptorCount = 1,
-//            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-//            .pBufferInfo = &buffer_info
-//         },
+         {
+            VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = atlas_desc,
+            .dstBinding = 2,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            .pBufferInfo = &buffer_info
+         },
          {
             VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
             .dstSet = atlas_desc,
@@ -104,8 +138,8 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
       FT_Select_Charmap(ftface, FT_ENCODING_UNICODE);
       FT_Set_Pixel_Sizes(ftface, 0, font_size);
 
-#define FT_LOAD_MODE FT_LOAD_MONOCHROME
-//#define FT_LOAD_MODE 0
+//#define FT_LOAD_MODE FT_LOAD_MONOCHROME
+#define FT_LOAD_MODE 0
       int i;
       for (i = 0; i < 256; i++)
 //         if(isalnum(i))
@@ -143,28 +177,21 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
    device_memory_flush(device, &atlas.staging.mem);
 
    {
-      const vertex_t vertices[] =
-      {
-         {{ -1.0f, -1.0f, 0.0f, 1.0f}, {0.0f, 0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}},
-         {{ 1.0f, -1.0f, 0.0f, 1.0f}, {1.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}},
-         {{ 1.0f,  1.0f, 0.0f, 1.0f}, {1.0f, 1.0f}, {0.0f, 0.0f, 1.0f, 1.0f}},
-         {{ -1.0f,  1.0f, 0.0f, 1.0f}, {0.0f, 1.0f}, {1.0f, 0.0f, 0.0f, 1.0f}}
-      };
-
       buffer_init_info_t info =
       {
          .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-         .size = sizeof(vertices),
-         .data = vertices,
+         .req_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+         .size = 4096 * sizeof(font_vertex_t)
       };
-      buffer_init(device, memory_types, &info, &atlas_vbo);
+      buffer_init(device, memory_types, &info, &atlas_vbo);      
+      atlas_vbo.size = 0;
    }
 
    {
       VkShaderModule vertex_shader;
       {
          static const uint32_t code [] =
-#include "main.vert.inc"
+#include "font.vert.inc"
             ;
          const VkShaderModuleCreateInfo info =
          {
@@ -178,7 +205,7 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
       VkShaderModule fragment_shader;
       {
          static const uint32_t code [] =
-#include "main.frag.inc"
+#include "font.frag.inc"
             ;
          const VkShaderModuleCreateInfo info =
          {
@@ -189,11 +216,25 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
          vkCreateShaderModule(device, &info, NULL, &fragment_shader);
       }
 
+      VkShaderModule geometry_shader;
+      {
+         static const uint32_t code [] =
+#include "font.geom.inc"
+            ;
+         const VkShaderModuleCreateInfo info =
+         {
+            VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+            .codeSize = sizeof(code),
+            .pCode = code
+         };
+         vkCreateShaderModule(device, &info, NULL, &geometry_shader);
+      }
+
       const VkVertexInputAttributeDescription attrib_desc[] =
       {
-         {0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(vertex_t, position)},
-         {1, 0, VK_FORMAT_R32G32_SFLOAT,       offsetof(vertex_t, texcoord)},
-         {2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(vertex_t, color)}
+         {0, 0, VK_FORMAT_R8_UINT, offsetof(font_vertex_t, id)},
+         {1, 0, VK_FORMAT_R8G8B8_UNORM, offsetof(font_vertex_t, color)},
+         {2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(font_vertex_t, position)}
       };
 
       {
@@ -234,12 +275,18 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
                   .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
                   .pName = "main",
                   .module = fragment_shader
+               },
+               {
+                  VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+                  .stage = VK_SHADER_STAGE_GEOMETRY_BIT,
+                  .pName = "main",
+                  .module = geometry_shader
                }
             };
 
             const VkVertexInputBindingDescription vertex_description =
             {
-               0, sizeof(vertex_t), VK_VERTEX_INPUT_RATE_VERTEX
+               0, sizeof(font_vertex_t), VK_VERTEX_INPUT_RATE_VERTEX
             };
 
             const VkPipelineVertexInputStateCreateInfo vertex_input_state =
@@ -252,7 +299,7 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
             const VkPipelineInputAssemblyStateCreateInfo input_assembly_state =
             {
                VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-               .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN,
+               .topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
                .primitiveRestartEnable = VK_FALSE
             };
 
@@ -278,6 +325,13 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
             const VkPipelineColorBlendAttachmentState attachement_state =
             {
                .blendEnable = VK_FALSE,
+               .blendEnable = VK_TRUE,
+               .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+               .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+               .colorBlendOp = VK_BLEND_OP_ADD,
+               .srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+               .dstAlphaBlendFactor =VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+               .alphaBlendOp = VK_BLEND_OP_ADD,
                .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
                VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
             };
@@ -310,6 +364,7 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
 
       vkDestroyShaderModule(device, vertex_shader, NULL);
       vkDestroyShaderModule(device, fragment_shader, NULL);
+      vkDestroyShaderModule(device, geometry_shader, NULL);
    }
 
 
@@ -329,10 +384,63 @@ void vulkan_font_destroy(VkDevice device, VkDescriptorPool pool)
 
 }
 
+void vulkan_font_draw_text(const char* text, int x, int y)
+{
+   const char* in = text;
+   font_vertex_t* out = (font_vertex_t*)(atlas_vbo.mem.u8 + atlas_vbo.size);
+   font_vertex_t vertex;
+   vertex.color.r = 255;
+   vertex.color.g = 255;
+   vertex.color.b = 255;
+   vertex.position.x = 8 + x;
+   vertex.position.y = 16 + y;
+   vertex.id = 'p';
+   while(*in)
+   {
+      if(*in == '\n')
+      {
+         vertex.position.x = 8;
+         vertex.position.y += 32;
+         in++;
+         continue;
+      }
+      *out = vertex;
+      vertex.position.x += 16;
+      if((vertex.position.x + 8) > video.screen.width)
+      {
+         vertex.position.x = 8;
+         vertex.position.y += 32;
+      }
+      (out++)->id = *(in++);
+   }
+
+   atlas_vbo.size = (uint8_t*)out - atlas_vbo.mem.u8;
+
+
+}
+
 void vulkan_font_update_assets(VkCommandBuffer cmd)
 {
+   atlas_vbo.size = 0;
+
+   vulkan_font_draw_text("test 1", 0, 0);
+   vulkan_font_draw_text("test 2", 0, 32);
+   vulkan_font_draw_text("test 3", 40, 220);
    if (atlas.dirty)
       texture_update(cmd, &atlas);
+
+   if(atlas_vbo.dirty)
+   {
+      VkMappedMemoryRange range =
+      {
+         VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+         .memory = atlas_vbo.mem.handle,
+         .offset = 0,
+         .size = atlas_vbo.size
+      };
+      extern vk_context_t vk;
+      vkFlushMappedMemoryRanges(vk.device, 1, &range);
+   }
 }
 void vulkan_font_render(VkCommandBuffer cmd)
 {
@@ -341,6 +449,29 @@ void vulkan_font_render(VkCommandBuffer cmd)
    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_layout, 0, 1, &atlas_desc, 0, NULL);
 
    vkCmdBindVertexBuffers(cmd, 0, 1, &atlas_vbo.handle, &offset);
+   {
+      VkMappedMemoryRange range =
+      {
+         VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+         .memory = atlas_g_buffer.mem.handle,
+         .offset = 0,
+         .size = sizeof(font_shader_storage_t)
+      };
+      extern vk_context_t vk;
+      vkFlushMappedMemoryRanges(vk.device, 1, &range);
+   }
 
-   vkCmdDraw(cmd, atlas_vbo.size / sizeof(vertex_t), 1, 0, 0);
+   vkCmdDraw(cmd, atlas_vbo.size / sizeof(font_vertex_t), 1, 0, 0);
+//   {
+//      VkMappedMemoryRange range =
+//      {
+//         VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+//         .memory = atlas_g_buffer.mem.handle,
+//         .offset = 0,
+//         .size = sizeof(font_shader_storage_t)
+//      };
+//      extern vk_context_t vk;
+//      vkInvalidateMappedMemoryRanges(vk.device, 1, &range);
+//   }
+//   printf("(float*)atlas_g_buffer.mem.ptr : %i\n", *(int*)atlas_g_buffer.mem.ptr);
 }

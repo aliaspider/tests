@@ -36,8 +36,8 @@ OBJS += vulkan/vulkan_common.o
 OBJS := $(addprefix $(BUILD_DIR)/,$(OBJS))
 
 
-$(BUILD_DIR)/vulkan/frame.o: vulkan/main.vert.inc vulkan/main.frag.inc
-$(BUILD_DIR)/vulkan/font.o:  vulkan/main.vert.inc vulkan/main.frag.inc
+$(BUILD_DIR)/vulkan/frame.o: vulkan/frame.vert.inc vulkan/frame.frag.inc
+$(BUILD_DIR)/vulkan/font.o:  vulkan/font.vert.inc vulkan/font.frag.inc vulkan/font.geom.inc
 
 ifeq ($(DEBUG),1)
    CFLAGS += -g -O0
@@ -78,6 +78,9 @@ $(BUILD_DIR)/%.o: %.c
 	glslc -c -mfmt=c $< -o $@
 
 %.frag.inc: %.frag
+	glslc -c -mfmt=c $< -o $@
+
+%.geom.inc: %.geom
 	glslc -c -mfmt=c $< -o $@
 
 .lastbuild: ;

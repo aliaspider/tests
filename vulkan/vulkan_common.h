@@ -68,11 +68,13 @@ typedef struct
    device_memory_t mem;
    VkBuffer handle;
    VkDeviceSize size;
+   bool dirty;
 }vk_buffer_t;
 
 typedef struct
 {
    VkBufferUsageFlags usage;
+   VkMemoryPropertyFlags req_flags;
    uint32_t size;
    const void* data;
 }buffer_init_info_t;

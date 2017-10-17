@@ -259,13 +259,13 @@ void buffer_init(VkDevice device, const VkMemoryType *memory_types, const buffer
    {
       memory_init_info_t info =
       {
-         .req_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+         .req_flags = init_info->req_flags,
          .buffer = dst->handle
       };
       device_memory_init(device, memory_types, &info, &dst->mem);
    }
 
-   if (init_info->data)
+   if (init_info->data && dst->mem.ptr)
    {
       memcpy(dst->mem.ptr, init_info->data, init_info->size);
       device_memory_flush(device, &dst->mem);
@@ -319,6 +319,8 @@ void vk_get_gpu_props(VkPhysicalDevice gpu)
    int e;
    for (e = 0; e < deviceExtensionPropertiesCount; e++)
       printf("\t%s\n", pDeviceExtensionProperties[e].extensionName);
+
+
 }
 
 uint32_t vk_get_queue_family_index(VkPhysicalDevice gpu, VkQueueFlags required_flags)

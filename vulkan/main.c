@@ -10,7 +10,7 @@
 
 video_t video;
 
-static vk_context_t        vk;
+vk_context_t        vk;
 static vk_render_context_t vk_render;
 
 static VkBool32 vulkan_debug_report_callback(VkDebugReportFlagsEXT flags,
@@ -157,7 +157,9 @@ void video_init()
 
       VkPhysicalDeviceFeatures enabledFeatures =
       {
+         .geometryShader = VK_TRUE,
          .samplerAnisotropy = VK_TRUE,
+         .vertexPipelineStoresAndAtomics = VK_TRUE
       };
 
       const VkDeviceCreateInfo info =
@@ -189,8 +191,9 @@ void video_init()
    {
       const VkDescriptorPoolSize sizes[] =
       {
-         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,                                                                                                                                 2},
-         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,                                                                                                                         2}
+         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,2},
+         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,2},
+         {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,2}
       };
 
       const VkDescriptorPoolCreateInfo info =
@@ -316,7 +319,7 @@ void video_init()
          .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
          .preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
          .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-         .presentMode = VK_PRESENT_MODE_FIFO_KHR,
+//         .presentMode = VK_PRESENT_MODE_FIFO_KHR,
 //      .present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR
          .clipped = VK_TRUE
       };
@@ -428,7 +431,13 @@ void video_init()
             .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
 //            .pImmutableSamplers = &vk.texture_sampler
-         }
+         },
+         {
+            .binding = 2,
+            .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT,
+         },
       };
 
       const VkDescriptorSetLayoutCreateInfo info [] =
@@ -521,8 +530,8 @@ void video_frame_update()
          vkCmdBeginRenderPass(vk_render.cmd, &info, VK_SUBPASS_CONTENTS_INLINE);
       }
 
-      vulkan_frame_render(vk_render.cmd);
-//      vulkan_font_render(cmd);
+//      vulkan_frame_render(vk_render.cmd);
+      vulkan_font_render(vk_render.cmd);
 
       vkCmdEndRenderPass(vk_render.cmd);
    }
