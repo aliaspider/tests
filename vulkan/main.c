@@ -294,6 +294,9 @@ void video_init()
       vkGetPhysicalDeviceSurfacePresentModesKHR(vk.gpu, vk.surface, &presentModeCount, NULL);
       VkPresentModeKHR presentModes[presentModeCount];
       vkGetPhysicalDeviceSurfacePresentModesKHR(vk.gpu, vk.surface, &presentModeCount, presentModes);
+      int i;
+      for (i = 0; i < presentModeCount; i++)
+         printf("supports present mode %i\n", presentModes[i]);
    }
 
 
@@ -320,6 +323,8 @@ void video_init()
          .preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
          .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
 //         .presentMode = VK_PRESENT_MODE_FIFO_KHR,
+//         .presentMode = VK_PRESENT_MODE_FIFO_RELAXED_KHR,
+//         .presentMode = VK_PRESENT_MODE_MAILBOX_KHR,
 //      .present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR
          .clipped = VK_TRUE
       };
@@ -423,7 +428,7 @@ void video_init()
             .binding = 0,
             .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             .descriptorCount = 1,
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT|VK_SHADER_STAGE_GEOMETRY_BIT,
          },
          {
             .binding = 1,
