@@ -517,7 +517,7 @@ void video_frame_update()
    }
 
    vulkan_frame_update(vk.device, vk_render.cmd);
-   vulkan_font_update_assets(vk_render.cmd);
+   vulkan_font_update_assets(vk.device, vk_render.cmd);
 
    /* renderpass */
    {

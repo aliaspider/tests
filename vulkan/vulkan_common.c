@@ -279,6 +279,12 @@ void buffer_free(VkDevice device, vk_buffer_t *buffer)
    buffer->handle = VK_NULL_HANDLE;
 }
 
+void buffer_flush(VkDevice device, vk_buffer_t *buffer)
+{
+   device_memory_flush(device, &buffer->mem);
+   buffer->dirty = false;
+}
+
 void vk_get_instance_props(void)
 {
    uint32_t lprop_count;

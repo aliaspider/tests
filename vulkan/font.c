@@ -11,49 +11,65 @@
 
 #define VK_ATLAS_WIDTH  512
 #define VK_ATLAS_HEIGHT 512
-static vk_texture_t atlas;
-static VkDescriptorSet atlas_desc;
-static FT_Library ftlib;
-static vk_buffer_t atlas_vbo;
-static vk_buffer_t atlas_ubo;
-static vk_buffer_t atlas_g_buffer;
-static VkPipeline pipe;
-static VkPipelineLayout pipe_layout;
-static int line_height;
-static int ascender;
-static int max_advance;
 
 typedef struct
 {
-   uint8_t id;
-   uint8_t x;
-   uint8_t y;
-   uint8_t w;
-   uint8_t h;
-   uint8_t advance;
-} glyph_t;
-
-
-typedef struct
-{
-   int last_id;
-   int pos_x;
-   int pos_y;
+   int dummy;
 } font_shader_storage_t;
 
-typedef struct
+typedef union
 {
-   float viewport_width;
-   float viewport_height;
-   float texture_width;
-   float texture_height;
+   struct
+   {
+      float r;
+      float g;
+   };
    struct
    {
       float x;
       float y;
-      float w;
-      float h;
-   } glyph_metrics[256];
+   };
+   struct
+   {
+      float width;
+      float height;
+   };
+} vec2;
+
+typedef union
+{
+   struct
+   {
+      float r;
+      float g;
+      float b;
+      float a;
+   };
+   struct
+   {
+      float x;
+      float y;
+      union
+      {
+         struct
+         {
+            float z;
+            float w;
+         };
+         struct
+         {
+            float width;
+            float height;
+         };
+      };
+   };
+} vec4;
+
+typedef struct
+{
+   vec2 vp_size;
+   vec2 tex_size;
+   vec4 glyph_metrics[256];
 
    float advance[256];
 } font_uniforms_t;
@@ -81,11 +97,30 @@ typedef struct atlas_slot
    struct atlas_slot *next;
 } atlas_slot_t;
 
-static atlas_slot_t atlas_slots[256];
-static atlas_slot_t *uc_map[256];
-static unsigned usage_counter;
 
-FT_Face ftface;
+static struct
+{
+   FT_Library ftlib;
+   FT_Face ftface;
+   int line_height;
+   int ascender;
+   int max_advance;
+   struct
+   {
+      vk_texture_t texture;
+      VkDescriptorSet desc;
+      vk_buffer_t vbo;
+      vk_buffer_t ubo;
+      vk_buffer_t ssbo;
+      VkPipeline pipe;
+      VkPipelineLayout pipe_layout;
+      int slot_width;
+      int slot_height;
+      atlas_slot_t slots[256];
+      atlas_slot_t *uc_map[256];
+      unsigned usage_counter;
+   } atlas;
+} font;
 
 static int vulkan_font_get_new_slot(void)
 {
@@ -93,22 +128,22 @@ static int vulkan_font_get_new_slot(void)
    unsigned oldest = 0;
 
    for (i = 1; i < 256; i++)
-      if ((usage_counter - atlas_slots[i].last_used) >
-         (usage_counter - atlas_slots[oldest].last_used))
+      if ((font.atlas.usage_counter - font.atlas.slots[i].last_used) >
+         (font.atlas.usage_counter - font.atlas.slots[oldest].last_used))
          oldest = i;
 
-   map_id = atlas_slots[oldest].charcode & 0xFF;
+   map_id = font.atlas.slots[oldest].charcode & 0xFF;
 
-   if (uc_map[map_id] == &atlas_slots[oldest])
-      uc_map[map_id] = atlas_slots[oldest].next;
-   else if (uc_map[map_id])
+   if (font.atlas.uc_map[map_id] == &font.atlas.slots[oldest])
+      font.atlas.uc_map[map_id] = font.atlas.slots[oldest].next;
+   else if (font.atlas.uc_map[map_id])
    {
-      atlas_slot_t *ptr = uc_map[map_id];
+      atlas_slot_t *ptr = font.atlas.uc_map[map_id];
 
-      while (ptr->next && ptr->next != &atlas_slots[oldest])
+      while (ptr->next && ptr->next != &font.atlas.slots[oldest])
          ptr = ptr->next;
 
-      ptr->next = atlas_slots[oldest].next;
+      ptr->next = font.atlas.slots[oldest].next;
    }
 
    return oldest;
@@ -119,14 +154,14 @@ static int vulkan_font_get_glyph_id(uint32_t charcode)
    unsigned map_id = charcode & 0xFF;
 
    {
-      atlas_slot_t *atlas_slot = uc_map[map_id];
+      atlas_slot_t *atlas_slot = font.atlas.uc_map[map_id];
 
       while (atlas_slot)
       {
          if (atlas_slot->charcode == charcode)
          {
-            atlas_slot->last_used = usage_counter++;
-            return atlas_slot - atlas_slots;
+            atlas_slot->last_used = font.atlas.usage_counter++;
+            return atlas_slot - font.atlas.slots;
          }
 
          atlas_slot = atlas_slot->next;
@@ -134,24 +169,28 @@ static int vulkan_font_get_glyph_id(uint32_t charcode)
    }
 
    int id = vulkan_font_get_new_slot();
-   atlas_slots[id].charcode   = charcode;
-   atlas_slots[id].next       = uc_map[map_id];
-   uc_map[map_id] = &atlas_slots[id];
+   font.atlas.slots[id].charcode   = charcode;
+   font.atlas.slots[id].next       = font.atlas.uc_map[map_id];
+   font.atlas.uc_map[map_id] = &font.atlas.slots[id];
 
-   uint8_t *dst = atlas.staging.mem.u8 + atlas.staging.mem_layout.offset +
-      (id & 0xF) * (VK_ATLAS_WIDTH / 16) + (((id >> 4) * (VK_ATLAS_HEIGHT / 16))) * VK_ATLAS_WIDTH;
+   uint8_t *dst = font.atlas.texture.staging.mem.u8 + font.atlas.texture.staging.mem_layout.offset +
+      (id & 0xF) * font.atlas.slot_width + (((id >> 4) * font.atlas.slot_height)) *
+      font.atlas.texture.staging.mem_layout.rowPitch;
    int row;
 #if 1
-   FT_Load_Char(ftface, charcode, FT_LOAD_RENDER);
+   FT_Load_Char(font.ftface, charcode, FT_LOAD_RENDER);
 //   FT_Render_Glyph(ftface->glyph, FT_RENDER_MODE_NORMAL);
 
-   uint8_t *src = ftface->glyph->bitmap.buffer;
+   uint8_t *src = font.ftface->glyph->bitmap.buffer;
 
-   for (row = 0; row < ftface->glyph->bitmap.rows; row++)
+   assert((dst - font.atlas.texture.staging.mem.u8 + font.atlas.texture.staging.mem_layout.rowPitch *
+         (font.ftface->glyph->bitmap.rows + 1) < font.atlas.texture.staging.mem_layout.size));
+
+   for (row = 0; row < font.ftface->glyph->bitmap.rows; row++)
    {
-      memcpy(dst, src, ftface->glyph->bitmap.width);
-      src += ftface->glyph->bitmap.pitch;
-      dst += atlas.staging.mem_layout.rowPitch;
+      memcpy(dst, src, font.ftface->glyph->bitmap.width);
+      src += font.ftface->glyph->bitmap.pitch;
+      dst += font.atlas.texture.staging.mem_layout.rowPitch;
    }
 
 #else
@@ -176,16 +215,18 @@ static int vulkan_font_get_glyph_id(uint32_t charcode)
 
 #endif
 
-   atlas.dirty = true;
+   font.atlas.texture.dirty = true;
 
-   ((font_uniforms_t *)atlas_ubo.mem.ptr)->glyph_metrics[id].x = ftface->glyph->metrics.horiBearingX >> 6;
-   ((font_uniforms_t *)atlas_ubo.mem.ptr)->glyph_metrics[id].y = -ftface->glyph->metrics.horiBearingY >> 6;
-   ((font_uniforms_t *)atlas_ubo.mem.ptr)->glyph_metrics[id].w = ftface->glyph->metrics.width >> 6;
-   ((font_uniforms_t *)atlas_ubo.mem.ptr)->glyph_metrics[id].h = ftface->glyph->metrics.height >> 6;
-   ((font_uniforms_t *)atlas_ubo.mem.ptr)->advance[id] = ftface->glyph->metrics.horiAdvance >> 6;
+   font_uniforms_t *uniforms = (font_uniforms_t *)font.atlas.ubo.mem.ptr;
 
-   atlas_ubo.dirty = true;
-   atlas_slots[id].last_used = usage_counter++;
+   uniforms->glyph_metrics[id].x = font.ftface->glyph->metrics.horiBearingX >> 6;
+   uniforms->glyph_metrics[id].y = -font.ftface->glyph->metrics.horiBearingY >> 6;
+   uniforms->glyph_metrics[id].width = font.ftface->glyph->metrics.width >> 6;
+   uniforms->glyph_metrics[id].height = font.ftface->glyph->metrics.height >> 6;
+   uniforms->advance[id] = font.ftface->glyph->metrics.horiAdvance >> 6;
+
+   font.atlas.ubo.dirty = true;
+   font.atlas.slots[id].last_used = font.atlas.usage_counter++;
    return id;
 }
 
@@ -194,107 +235,6 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
    VkDescriptorPool descriptor_pool, VkDescriptorSetLayout descriptor_set_layout,
    const VkRect2D *scissor, const VkViewport *viewport, VkRenderPass renderpass)
 {
-   {
-      texture_init_info_t info =
-      {
-         .queue_family_index = queue_family_index,
-         .width = VK_ATLAS_WIDTH,
-         .height = VK_ATLAS_HEIGHT,
-         .format = VK_FORMAT_R8_UNORM,
-         .filter = VK_FILTER_NEAREST
-      };
-      texture_init(device, memory_types, &info, &atlas);
-   }
-
-   {
-      buffer_init_info_t info =
-      {
-         .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-         .req_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-         .size = sizeof(font_shader_storage_t),
-      };
-      buffer_init(device, memory_types, &info, &atlas_g_buffer);
-   }
-
-   {
-      buffer_init_info_t info =
-      {
-         .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-         .req_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-         .size = sizeof(font_uniforms_t),
-      };
-      buffer_init(device, memory_types, &info, &atlas_ubo);
-   }
-
-   {
-      const VkDescriptorSetAllocateInfo info =
-      {
-         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-         .descriptorPool = descriptor_pool,
-         .descriptorSetCount = 1, &descriptor_set_layout
-      };
-      vkAllocateDescriptorSets(device, &info, &atlas_desc);
-   }
-
-
-   {
-      const VkDescriptorBufferInfo buffer_info =
-      {
-         .buffer = atlas_g_buffer.handle,
-         .offset = 0,
-         .range = sizeof(font_shader_storage_t)
-      };
-      const VkDescriptorBufferInfo uniform_buffer_info =
-      {
-         .buffer = atlas_ubo.handle,
-         .offset = 0,
-         .range = sizeof(font_uniforms_t)
-      };
-      const VkDescriptorImageInfo image_info =
-      {
-         .sampler = atlas.sampler,
-         .imageView = atlas.view,
-         .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-      };
-
-      const VkWriteDescriptorSet write_set[] =
-      {
-         {
-            VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = atlas_desc,
-            .dstBinding = 0,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .pBufferInfo = &uniform_buffer_info
-         },
-         {
-            VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = atlas_desc,
-            .dstBinding = 1,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .pImageInfo = &image_info
-         },
-         {
-            VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = atlas_desc,
-            .dstBinding = 2,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            .pBufferInfo = &buffer_info
-         },
-      };
-      vkUpdateDescriptorSets(device, countof(write_set), write_set, 0, NULL);
-   }
-
-
-   memset(atlas.staging.mem.u8 + atlas.staging.mem_layout.offset, 0x0,
-      atlas.staging.mem_layout.size - atlas.staging.mem_layout.offset);
-
-   atlas.dirty = true;
 
    {
 //      const char *font_path = "/usr/share/fonts/TTF/DejaVuSansMono.ttf";
@@ -307,27 +247,128 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
 
       FT_UInt font_size = 26;
 
-      FT_Init_FreeType(&ftlib);
-      FT_New_Face(ftlib, font_path, 0, &ftface);
+      FT_Init_FreeType(&font.ftlib);
+      FT_New_Face(font.ftlib, font_path, 0, &font.ftface);
 
-      FT_Select_Charmap(ftface, FT_ENCODING_UNICODE);
-      FT_Set_Pixel_Sizes(ftface, 0, font_size);
+      FT_Select_Charmap(font.ftface, FT_ENCODING_UNICODE);
+      FT_Set_Pixel_Sizes(font.ftface, 0, font_size);
 
-      line_height = ftface->size->metrics.height >> 6;
-      ascender = ftface->size->metrics.ascender >> 6;
-      max_advance = ftface->size->metrics.max_advance >> 6;
-//      atlas_ubo.dirty = true;
+      font.line_height = font.ftface->size->metrics.height >> 6;
+      font.ascender = font.ftface->size->metrics.ascender >> 6;
+      font.max_advance = font.ftface->size->metrics.max_advance >> 6;
+      font.atlas.slot_width = font.max_advance;
+      font.atlas.slot_height = font.line_height;
 
    }
 
-   ((font_uniforms_t *)atlas_ubo.mem.ptr)->viewport_width = video.screen.width;
-   ((font_uniforms_t *)atlas_ubo.mem.ptr)->viewport_height = video.screen.height;
-   ((font_uniforms_t *)atlas_ubo.mem.ptr)->texture_width = atlas.width;
-   ((font_uniforms_t *)atlas_ubo.mem.ptr)->texture_height = atlas.height;
-   atlas_ubo.dirty = true;
+   {
+      texture_init_info_t info =
+      {
+         .queue_family_index = queue_family_index,
+         .width = font.atlas.slot_width << 4,
+            .height = font.atlas.slot_height << 4,
+            .format = VK_FORMAT_R8_UNORM,
+            .filter = VK_FILTER_NEAREST
+      };
+      texture_init(device, memory_types, &info, &font.atlas.texture);
+   }
 
-//   device_memory_flush(device, &atlas_ubo.mem);
-   device_memory_flush(device, &atlas.staging.mem);
+   {
+      buffer_init_info_t info =
+      {
+         .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+         .req_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+         .size = sizeof(font_shader_storage_t),
+      };
+      buffer_init(device, memory_types, &info, &font.atlas.ssbo);
+   }
+   {
+      buffer_init_info_t info =
+      {
+         .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+         .req_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+         .size = sizeof(font_uniforms_t),
+      };
+      buffer_init(device, memory_types, &info, &font.atlas.ubo);
+   }
+
+   {
+      const VkDescriptorSetAllocateInfo info =
+      {
+         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+         .descriptorPool = descriptor_pool,
+         .descriptorSetCount = 1, &descriptor_set_layout
+      };
+      vkAllocateDescriptorSets(device, &info, &font.atlas.desc);
+   }
+
+
+   {
+      const VkDescriptorBufferInfo buffer_info =
+      {
+         .buffer = font.atlas.ssbo.handle,
+         .offset = 0,
+         .range = sizeof(font_shader_storage_t)
+      };
+      const VkDescriptorBufferInfo uniform_buffer_info =
+      {
+         .buffer = font.atlas.ubo.handle,
+         .offset = 0,
+         .range = sizeof(font_uniforms_t)
+      };
+      const VkDescriptorImageInfo image_info =
+      {
+         .sampler = font.atlas.texture.sampler,
+         .imageView = font.atlas.texture.view,
+         .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+      };
+
+      const VkWriteDescriptorSet write_set[] =
+      {
+         {
+            VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = font.atlas.desc,
+            .dstBinding = 0,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .pBufferInfo = &uniform_buffer_info
+         },
+         {
+            VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = font.atlas.desc,
+            .dstBinding = 1,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .pImageInfo = &image_info
+         },
+         {
+            VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = font.atlas.desc,
+            .dstBinding = 2,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            .pBufferInfo = &buffer_info
+         },
+      };
+      vkUpdateDescriptorSets(device, countof(write_set), write_set, 0, NULL);
+   }
+
+
+   memset(font.atlas.texture.staging.mem.u8 + font.atlas.texture.staging.mem_layout.offset, 0x0,
+      font.atlas.texture.staging.mem_layout.size - font.atlas.texture.staging.mem_layout.offset);
+
+   device_memory_flush(device, &font.atlas.texture.staging.mem);
+   font.atlas.texture.dirty = true;
+
+   font_uniforms_t *uniforms = (font_uniforms_t *)font.atlas.ubo.mem.ptr;
+   uniforms->vp_size.width = video.screen.width;
+   uniforms->vp_size.height = video.screen.height;
+   uniforms->tex_size.width = font.atlas.texture.width;
+   uniforms->tex_size.height = font.atlas.texture.height;
+   font.atlas.ubo.dirty = true;
 
    {
       buffer_init_info_t info =
@@ -336,8 +377,8 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
          .req_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
          .size = 4096 * sizeof(font_vertex_t)
       };
-      buffer_init(device, memory_types, &info, &atlas_vbo);
-      atlas_vbo.size = 0;
+      buffer_init(device, memory_types, &info, &font.atlas.vbo);
+      font.atlas.vbo.size = 0;
    }
 
    {
@@ -411,7 +452,7 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
 #endif
             };
 
-            vkCreatePipelineLayout(device, &info, NULL, &pipe_layout);
+            vkCreatePipelineLayout(device, &info, NULL, &font.atlas.pipe_layout);
          }
 
          {
@@ -506,11 +547,11 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
                .pRasterizationState = &rasterization_info,
                .pMultisampleState = &multisample_state,
                .pColorBlendState = &colorblend_state,
-               .layout = pipe_layout,
+               .layout = font.atlas.pipe_layout,
                .renderPass = renderpass,
                .subpass = 0
             };
-            vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &info, NULL, &pipe);
+            vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &info, NULL, &font.atlas.pipe);
          }
 
       }
@@ -525,31 +566,32 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
 
 void vulkan_font_destroy(VkDevice device)
 {
-   FT_Done_Face(ftface);
-   FT_Done_FreeType(ftlib);
-   buffer_free(device, &atlas_vbo);
-   texture_free(device, &atlas);
-   vkDestroyPipelineLayout(device, pipe_layout, NULL);
-   vkDestroyPipeline(device, pipe, NULL);
-   pipe_layout = VK_NULL_HANDLE;
-   pipe = VK_NULL_HANDLE;
+   FT_Done_Face(font.ftface);
+   FT_Done_FreeType(font.ftlib);
+   buffer_free(device, &font.atlas.vbo);
+   texture_free(device, &font.atlas.texture);
+   vkDestroyPipelineLayout(device, font.atlas.pipe_layout, NULL);
+   vkDestroyPipeline(device, font.atlas.pipe, NULL);
+   font.atlas.pipe_layout = VK_NULL_HANDLE;
+   font.atlas.pipe = VK_NULL_HANDLE;
 
 //   vkFreeDescriptorSets(device, pool, 1, &atlas_desc);
-   atlas_desc = VK_NULL_HANDLE;
+   font.atlas.desc = VK_NULL_HANDLE;
 
 }
 
 void vulkan_font_draw_text(const char *text, int x, int y)
 {
-   const unsigned char *in = (const unsigned char*)text;
+   const unsigned char *in = (const unsigned char *)text;
+   font_vertex_t *last_space = NULL;
 
-   font_vertex_t *out = (font_vertex_t *)(atlas_vbo.mem.u8 + atlas_vbo.size);
+   font_vertex_t *out = (font_vertex_t *)(font.atlas.vbo.mem.u8 + font.atlas.vbo.size);
    font_vertex_t vertex;
    vertex.color.r = 0;
    vertex.color.g = 0;
    vertex.color.b = 0;
    vertex.position.x = x;
-   vertex.position.y = y + ascender;
+   vertex.position.y = y + font.ascender;
    vertex.id = 'p';
 
    while (*in)
@@ -559,132 +601,129 @@ void vulkan_font_draw_text(const char *text, int x, int y)
       if (charcode == '\n')
       {
          vertex.position.x = 0;
-         vertex.position.y += line_height;
+         vertex.position.y += font.line_height;
          continue;
       }
 
-      if((charcode & 0xC0) == 0xC0)
+      if (charcode == ' ')
+         last_space = out;
+
+      if ((charcode & 0xC0) == 0xC0)
       {
          int marker = charcode & 0xE0;
          charcode = ((charcode & ~0xE0) << 6) | (*(in++) & ~0xC0);
-         if(marker == 0xE0)
+
+         if (marker == 0xE0)
          {
             charcode = (charcode << 6) | (*(in++) & ~0xC0);
-            if(charcode & 1 << (4 + 6 + 6))
-               charcode = (charcode & ~(1 << (4 + 6 + 6)) << 6) | (*(in++) & ~0xC0);
+
+            if (charcode & 0x10000)
+               charcode = (charcode & 0xFFFF << 6) | (*(in++) & ~0xC0);
+         }
+      }
+
+      int id = vulkan_font_get_glyph_id(charcode);
+
+      if ((vertex.position.x + ((font_uniforms_t *)font.atlas.ubo.mem.ptr)->advance[id]) > video.screen.width)
+//      if ((vertex.position.x + max_advance) > video.screen.width)
+      {
+         vertex.position.x = 0;
+         vertex.position.y += font.line_height;
+
+         if (last_space && (last_space + (video.screen.width / (2 * font.max_advance))) > out)
+         {
+            font_vertex_t *ptr = last_space + 1;
+
+            while (ptr < out)
+            {
+               ptr->position.x = vertex.position.x;
+               ptr->position.y = vertex.position.y;
+               vertex.position.x += ((font_uniforms_t *)font.atlas.ubo.mem.ptr)->advance[ptr->id];
+               ptr++;
+            }
+
+            last_space = NULL;
          }
       }
 
       *out = vertex;
-      int id = vulkan_font_get_glyph_id(charcode);
-      vertex.position.x += ((font_uniforms_t *)atlas_ubo.mem.ptr)->advance[id];
+      vertex.position.x += ((font_uniforms_t *)font.atlas.ubo.mem.ptr)->advance[id];
 
-      if ((vertex.position.x + max_advance) > video.screen.width)
-      {
-         vertex.position.x = 0;
-         vertex.position.y += line_height;
-      }
 
       (out++)->id = id;
    }
 
-   atlas_vbo.size = (uint8_t *)out - atlas_vbo.mem.u8;
+   font.atlas.vbo.size = (uint8_t *)out - font.atlas.vbo.mem.u8;
 
 
 }
 
-void vulkan_font_update_assets(VkCommandBuffer cmd)
+void vulkan_font_update_assets(VkDevice device, VkCommandBuffer cmd)
 {
-   atlas_vbo.size = 0;
+   font.atlas.vbo.size = 0;
 
 //   vulkan_font_draw_text("Backward compatibility: Backwards compatibility with ASCII and the enormous "
-//                         "amount of software designed to process ASCII-encoded text was the main driving "
-//                         "force behind the design of UTF-8. In UTF-8, single bytes with values in the range "
-//                         "of 0 to 127 map directly to Unicode code points in the ASCII range. Single bytes "
-//                         "in this range represent characters, as they do in ASCII.\n\nMoreover, 7-bit bytes "
-//                         "(bytes where the most significant bit is 0) never appear in a multi-byte sequence, "
-//                         "and no valid multi-byte sequence decodes to an ASCII code-point. A sequence of 7-bit "
-//                         "bytes is both valid ASCII and valid UTF-8, and under either interpretation represents "
-//                         "the same sequence of characters.\n\nTherefore, the 7-bit bytes in a UTF-8 stream represent "
-//                         "all and only the ASCII characters in the stream. Thus, many text processors, parsers, "
-//                         "protocols, file formats, text display programs etc., which use ASCII characters for "
-//                         "formatting and control purposes will continue to work as intended by treating the UTF-8 "
-//                         "byte stream as a sequence of single-byte characters, without decoding the multi-byte sequences. "
-//                         "ASCII characters on which the processing turns, such as punctuation, whitespace, and control "
-//                         "characters will never be encoded as multi-byte sequences. It is therefore safe for such "
-//                         "processors to simply ignore or pass-through the multi-byte sequences, without decoding them. "
-//                         "For example, ASCII whitespace may be used to tokenize a UTF-8 stream into words; "
-//                         "ASCII line-feeds may be used to split a UTF-8 stream into lines; and ASCII NUL ", 0, 0);
+//      "amount of software designed to process ASCII-encoded text was the main driving "
+//      "force behind the design of UTF-8. In UTF-8, single bytes with values in the range "
+//      "of 0 to 127 map directly to Unicode code points in the ASCII range. Single bytes "
+//      "in this range represent characters, as they do in ASCII.\n\nMoreover, 7-bit bytes "
+//      "(bytes where the most significant bit is 0) never appear in a multi-byte sequence, "
+//      "and no valid multi-byte sequence decodes to an ASCII code-point. A sequence of 7-bit "
+//      "bytes is both valid ASCII and valid UTF-8, and under either interpretation represents "
+//      "the same sequence of characters.\n\nTherefore, the 7-bit bytes in a UTF-8 stream represent "
+//      "all and only the ASCII characters in the stream. Thus, many text processors, parsers, "
+//      "protocols, file formats, text display programs etc., which use ASCII characters for "
+//      "formatting and control purposes will continue to work as intended by treating the UTF-8 "
+//      "byte stream as a sequence of single-byte characters, without decoding the multi-byte sequences. "
+//      "ASCII characters on which the processing turns, such as punctuation, whitespace, and control "
+//      "characters will never be encoded as multi-byte sequences. It is therefore safe for such "
+//      "processors to simply ignore or pass-through the multi-byte sequences, without decoding them. "
+//      "For example, ASCII whitespace may be used to tokenize a UTF-8 stream into words; "
+//      "ASCII line-feeds may be used to split a UTF-8 stream into lines; and ASCII NUL ", 0, 0);
 
    vulkan_font_draw_text("北海道の有名なかん光地、知床半島で、黒いキツネがさつえいされました。"
       "地元斜里町の町立知床博物館が、タヌキをかんさつするためにおいていた自動さつえいカメラがき重なすがたをとらえました＝"
-      "写真・同館ていきょう。同館の学芸員も「はじめて見た」とおどろいています。 "
+      "写真・同館ていきょう。同館の学芸員も「はじめて見た」とおどろいています。"
       "黒い毛皮のために昔、ゆ入したキツネの子そんとも言われてますが、はっきりしません。"
-      "北海道の先住みん族、アイヌのみん話にも黒いキツネが登場し、神せいな生き物とされているそうです。", 0, 0);
+      "北海道の先住みん族、アイヌのみん話にも黒いキツネが登場し、神せいな生き物とされているそうです。",
+      0, 0);
+
 //   vulkan_font_draw_text("gl_Position.xy = pos + 2.0 * vec2(0.0, glyph_metrics[c].w) / vp_size;", 0, 32);
 
 //   vulkan_font_draw_text("test 3", 40, 220);
-   if (atlas.dirty)
-      texture_update(cmd, &atlas);
+   if (font.atlas.texture.dirty)
+      texture_update(cmd, &font.atlas.texture);
 
-   if (atlas_vbo.dirty)
-   {
-      VkMappedMemoryRange range =
-      {
-         VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
-         .memory = atlas_vbo.mem.handle,
-         .offset = 0,
-         .size = atlas_vbo.size
-      };
-      extern vk_context_t vk;
-      vkFlushMappedMemoryRanges(vk.device, 1, &range);
-      atlas_vbo.dirty = false;
-   }
+   if (font.atlas.vbo.dirty)
+      buffer_flush(device, &font.atlas.vbo);
 
-   if (atlas_ubo.dirty)
-   {
-      VkMappedMemoryRange range =
-      {
-         VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
-         .memory = atlas_ubo.mem.handle,
-         .offset = 0,
-         .size = atlas_ubo.size
-      };
-      extern vk_context_t vk;
-      vkFlushMappedMemoryRanges(vk.device, 1, &range);
-      atlas_ubo.dirty = false;
-   }
+   if (font.atlas.ubo.dirty)
+      buffer_flush(device, &font.atlas.ubo);
+
+   if (font.atlas.ssbo.dirty)
+      buffer_flush(device, &font.atlas.ssbo);
 }
 void vulkan_font_render(VkCommandBuffer cmd)
 {
+   if (!font.atlas.vbo.size)
+      return;
+
    VkDeviceSize offset = 0;
-   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe);
-   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_layout, 0, 1, &atlas_desc, 0, NULL);
+   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, font.atlas.pipe);
+   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, font.atlas.pipe_layout, 0, 1, &font.atlas.desc, 0, NULL);
 
-   vkCmdBindVertexBuffers(cmd, 0, 1, &atlas_vbo.handle, &offset);
-   {
-      VkMappedMemoryRange range =
-      {
-         VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
-         .memory = atlas_g_buffer.mem.handle,
-         .offset = 0,
-         .size = sizeof(font_shader_storage_t)
-      };
-      extern vk_context_t vk;
-      vkFlushMappedMemoryRanges(vk.device, 1, &range);
-   }
-
-   vkCmdDraw(cmd, atlas_vbo.size / sizeof(font_vertex_t), 1, 0, 0);
+   vkCmdBindVertexBuffers(cmd, 0, 1, &font.atlas.vbo.handle, &offset);
+   vkCmdDraw(cmd, font.atlas.vbo.size / sizeof(font_vertex_t), 1, 0, 0);
 //   {
 //      VkMappedMemoryRange range =
 //      {
 //         VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
-//         .memory = atlas_g_buffer.mem.handle,
+//         .memory = atlas_ssbo.mem.handle,
 //         .offset = 0,
 //         .size = sizeof(font_shader_storage_t)
 //      };
 //      extern vk_context_t vk;
 //      vkInvalidateMappedMemoryRanges(vk.device, 1, &range);
 //   }
-//   printf("(float*)atlas_g_buffer.mem.ptr : %i\n", *(int*)atlas_g_buffer.mem.ptr);
+//   printf("(float*)atlas_ssbo.mem.ptr : %i\n", *(int*)atlas_ssbo.mem.ptr);
 }

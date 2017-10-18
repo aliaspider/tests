@@ -79,6 +79,7 @@ typedef struct
    const void* data;
 }buffer_init_info_t;
 void buffer_init(VkDevice device, const VkMemoryType* memory_types, const buffer_init_info_t* init_info, vk_buffer_t *dst);
+void buffer_flush(VkDevice device, vk_buffer_t *buffer);
 void buffer_free(VkDevice device, vk_buffer_t *buffer);
 
 typedef struct
