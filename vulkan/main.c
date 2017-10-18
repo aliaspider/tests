@@ -585,7 +585,7 @@ void video_destroy()
 //   vkWaitForFences(vk.device, 1, &display_fence, VK_TRUE, UINT64_MAX);
 //   vkDestroyFence(vk.device, display_fence, NULL);
 
-   vulkan_font_destroy(vk.device, vk.pools.desc);
+   vulkan_font_destroy(vk.device);
    vulkan_frame_destroy(vk.device);
 
    vkDestroyDescriptorPool(vk.device, vk.pools.desc, NULL);

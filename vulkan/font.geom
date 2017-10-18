@@ -36,7 +36,7 @@ void main()
    vColor = vec4(color[0], 1.0);
    vec2 pos = (2.0 * ((position[0] + glyph_metrics[c].xy) / vp_size)) - vec2(1.0);
    vec2 coords = vec2(float(col) / 16.0, float(row) / 16.0);
-
+#if 1
    gl_Position.xy = pos + 2.0 * vec2(glyph_metrics[c].z, 0.0) / vp_size;
    vTexCoord      = coords +    vec2(glyph_metrics[c].z, 0.0) / tex_size;
    EmitVertex();
@@ -52,6 +52,22 @@ void main()
    gl_Position.xy = pos + 2.0 * vec2(0.0, glyph_metrics[c].w) / vp_size;
    vTexCoord      = coords +    vec2(0.0, glyph_metrics[c].w) / tex_size;
    EmitVertex();
+#else
+   gl_Position.xy = vec2(1.0, -1.0) * tex_size / vp_size;
+   vTexCoord      = vec2(1.0, 0.0);
+   EmitVertex();
 
+   gl_Position.xy = vec2(-1.0, -1.0)* tex_size / vp_size;
+   vTexCoord      = vec2(0.0, 0.0);
+   EmitVertex();
+
+   gl_Position.xy = vec2(1.0, 1.0)* tex_size / vp_size;
+   vTexCoord      = vec2(1.0, 1.0);
+   EmitVertex();
+
+   gl_Position.xy = vec2(-1.0, 1.0)* tex_size / vp_size;
+   vTexCoord      = vec2(0.0, 1.0);
+   EmitVertex();
+#endif
    EndPrimitive();
 }

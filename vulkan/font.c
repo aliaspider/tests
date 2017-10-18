@@ -9,8 +9,8 @@
 #include "font.h"
 #include "video.h"
 
-#define VK_ATLAS_WIDTH  256
-#define VK_ATLAS_HEIGHT 256
+#define VK_ATLAS_WIDTH  512
+#define VK_ATLAS_HEIGHT 512
 static vk_texture_t atlas;
 static VkDescriptorSet atlas_desc;
 static FT_Library ftlib;
@@ -31,7 +31,7 @@ typedef struct
    uint8_t w;
    uint8_t h;
    uint8_t advance;
-}glyph_t;
+} glyph_t;
 
 
 typedef struct
@@ -39,7 +39,7 @@ typedef struct
    int last_id;
    int pos_x;
    int pos_y;
-}font_shader_storage_t;
+} font_shader_storage_t;
 
 typedef struct
 {
@@ -53,10 +53,10 @@ typedef struct
       float y;
       float w;
       float h;
-   }glyph_metrics[256];
+   } glyph_metrics[256];
 
    float advance[256];
-}font_uniforms_t;
+} font_uniforms_t;
 
 typedef struct
 {
@@ -66,18 +66,134 @@ typedef struct
       uint8_t r;
       uint8_t g;
       uint8_t b;
-   }color;
+   } color;
    struct
    {
       float x;
       float y;
-   }position;
-}font_vertex_t;
+   } position;
+} font_vertex_t;
+
+typedef struct atlas_slot
+{
+   unsigned charcode;
+   unsigned last_used;
+   struct atlas_slot *next;
+} atlas_slot_t;
+
+static atlas_slot_t atlas_slots[256];
+static atlas_slot_t *uc_map[256];
+static unsigned usage_counter;
+
+FT_Face ftface;
+
+static int vulkan_font_get_new_slot(void)
+{
+   int i, map_id;
+   unsigned oldest = 0;
+
+   for (i = 1; i < 256; i++)
+      if ((usage_counter - atlas_slots[i].last_used) >
+         (usage_counter - atlas_slots[oldest].last_used))
+         oldest = i;
+
+   map_id = atlas_slots[oldest].charcode & 0xFF;
+
+   if (uc_map[map_id] == &atlas_slots[oldest])
+      uc_map[map_id] = atlas_slots[oldest].next;
+   else if (uc_map[map_id])
+   {
+      atlas_slot_t *ptr = uc_map[map_id];
+
+      while (ptr->next && ptr->next != &atlas_slots[oldest])
+         ptr = ptr->next;
+
+      ptr->next = atlas_slots[oldest].next;
+   }
+
+   return oldest;
+}
+
+static int vulkan_font_get_glyph_id(uint32_t charcode)
+{
+   unsigned map_id;
+   atlas_slot_t *atlas_slot;
+
+   map_id     = charcode & 0xFF;
+   atlas_slot = uc_map[map_id];
+
+   while (atlas_slot)
+   {
+      if (atlas_slot->charcode == charcode)
+      {
+         atlas_slot->last_used = usage_counter++;
+         return atlas_slot - atlas_slots;
+      }
+
+      atlas_slot = atlas_slot->next;
+   }
+
+   int slot_id = vulkan_font_get_new_slot();
+   atlas_slot             = &atlas_slots[slot_id];
+   atlas_slot->charcode   = charcode;
+   atlas_slot->next       = uc_map[map_id];
+   uc_map[map_id] = atlas_slot;
+
+   uint8_t *dst = atlas.staging.mem.u8 + atlas.staging.mem_layout.offset +
+      (slot_id & 0xF) * (VK_ATLAS_WIDTH / 16) + (((slot_id >> 4) * (VK_ATLAS_HEIGHT / 16))) * VK_ATLAS_WIDTH;
+   int row;
+#if 1
+   FT_Load_Char(ftface, charcode, FT_LOAD_RENDER);
+//   FT_Render_Glyph(ftface->glyph, FT_RENDER_MODE_NORMAL);
+
+   uint8_t *src = ftface->glyph->bitmap.buffer;
+
+   for (row = 0; row < ftface->glyph->bitmap.rows; row++)
+   {
+      memcpy(dst, src, ftface->glyph->bitmap.width);
+      src += ftface->glyph->bitmap.pitch;
+      dst += atlas.staging.mem_layout.rowPitch;
+   }
+
+#else
+   FT_Load_Char(ftface, charcode, FT_LOAD_RENDER | FT_LOAD_MONOCHROME);
+//      FT_Render_Glyph(ftface->glyph, FT_RENDER_MODE_MONO);
+
+   uint8_t *src = ftface->glyph->bitmap.buffer;
+
+   for (row = 0; row < ftface->glyph->bitmap.rows; row++)
+   {
+      int col;
+
+      for (col = 0; col < ftface->glyph->bitmap.width; col++)
+      {
+         if (src[col >> 3] & (0x80 >> (col & 0x7)))
+            dst[col] = 255;
+      }
+
+      src += ftface->glyph->bitmap.pitch;
+      dst += atlas.staging.mem_layout.rowPitch;
+   }
+
+#endif
+
+   atlas.dirty = true;
+
+   ((font_uniforms_t *)atlas_ubo.mem.ptr)->glyph_metrics[slot_id].x = ftface->glyph->metrics.horiBearingX >> 6;
+   ((font_uniforms_t *)atlas_ubo.mem.ptr)->glyph_metrics[slot_id].y = -ftface->glyph->metrics.horiBearingY >> 6;
+   ((font_uniforms_t *)atlas_ubo.mem.ptr)->glyph_metrics[slot_id].w = ftface->glyph->metrics.width >> 6;
+   ((font_uniforms_t *)atlas_ubo.mem.ptr)->glyph_metrics[slot_id].h = ftface->glyph->metrics.height >> 6;
+   ((font_uniforms_t *)atlas_ubo.mem.ptr)->advance[slot_id] = ftface->glyph->metrics.horiAdvance >> 6;
+
+   atlas_ubo.dirty = true;
+   atlas_slot->last_used = usage_counter++;
+   return slot_id;
+}
 
 
 void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemoryType *memory_types,
-                      VkDescriptorPool descriptor_pool, VkDescriptorSetLayout descriptor_set_layout,
-                      const VkRect2D *scissor, const VkViewport *viewport, VkRenderPass renderpass)
+   VkDescriptorPool descriptor_pool, VkDescriptorSetLayout descriptor_set_layout,
+   const VkRect2D *scissor, const VkViewport *viewport, VkRenderPass renderpass)
 {
    {
       texture_init_info_t info =
@@ -177,99 +293,37 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
 
 
    memset(atlas.staging.mem.u8 + atlas.staging.mem_layout.offset, 0x0,
-          atlas.staging.mem_layout.size - atlas.staging.mem_layout.offset);
+      atlas.staging.mem_layout.size - atlas.staging.mem_layout.offset);
 
    atlas.dirty = true;
 
    {
-      FT_Face ftface;
-      const char* font_path = "/usr/share/fonts/TTF/DejaVuSansMono.ttf";
+//      const char *font_path = "/usr/share/fonts/TTF/DejaVuSansMono.ttf";
+      const char *font_path = "/usr/share/fonts/TTF/HanaMinA.ttf";
 //      const char* font_path = "/usr/share/fonts/TTF/LiberationMono-Regular.ttf";
 //      const char* font_path = "/usr/share/fonts/75dpi/charR12.pcf.gz";
 //      const char* font_path = "/usr/share/fonts/WindowsFonts/cour.ttf";
 
 
-      FT_UInt font_size = 16;
+      FT_UInt font_size = 30;
 
       FT_Init_FreeType(&ftlib);
       FT_New_Face(ftlib, font_path, 0, &ftface);
+
       FT_Select_Charmap(ftface, FT_ENCODING_UNICODE);
       FT_Set_Pixel_Sizes(ftface, 0, font_size);
 
       line_height = ftface->size->metrics.height >> 6;
       ascender = ftface->size->metrics.ascender >> 6;
       max_advance = ftface->size->metrics.max_advance >> 6;
-//#define FT_LOAD_MODE FT_LOAD_MONOCHROME
-#define FT_LOAD_MODE 0
-//      DEBUG_FTSHORT(ftface->ascender);
-//      DEBUG_FTSHORT(ftface->descender);
-//      DEBUG_FTSHORT(ftface->height);
-      int i;
-      for (i = 0; i < 256; i++)
-//         if(isalnum(i))
-         {
-            FT_Load_Char(ftface, i, FT_LOAD_RENDER|FT_LOAD_MODE);
-
-//            FT_Render_Glyph(ftface->glyph, FT_RENDER_MODE_MONO);
-
-            uint8_t* src = ftface->glyph->bitmap.buffer;
-            uint8_t* dst = atlas.staging.mem.u8 + atlas.staging.mem_layout.offset +
-                           (i&0xF) * (VK_ATLAS_WIDTH / 16) +
-                           (((i >> 4) * (VK_ATLAS_HEIGHT / 16)) ) * VK_ATLAS_WIDTH
-//                           + ftface->glyph->bitmap_left + ( font_size - ftface->glyph->bitmap_top)* VK_ATLAS_WIDTH
-                           ;
-            int row;
-            for(row = 0; row < ftface->glyph->bitmap.rows; row++)
-            {
-#if (FT_LOAD_MODE==FT_LOAD_MONOCHROME)
-               int col;
-               for(col = 0; col < ftface->glyph->bitmap.width; col++)
-               {
-                  if(src[col >> 3] & (0x80 >> (col&0x7)))
-                     dst[col] = 255;
-               }
-#else
-               memcpy(dst, src, ftface->glyph->bitmap.width);
-#endif
-               src += ftface->glyph->bitmap.pitch;
-               dst += atlas.staging.mem_layout.rowPitch;
-            }
-//            if (i > 40 && i < 50)
-//            {
-//               DEBUG_CHAR((char)i);
-//               DEBUG_FTPOS(ftface->glyph->advance.x);
-//               DEBUG_FTPOS(ftface->glyph->advance.y);
-//               DEBUG_INT(ftface->glyph->bitmap.width);
-//               DEBUG_INT(ftface->glyph->bitmap.rows);
-//               DEBUG_INT(ftface->glyph->bitmap_left);
-//               DEBUG_INT(ftface->glyph->bitmap_top);
-//               DEBUG_FTPOS(ftface->glyph->metrics.width);
-//               DEBUG_FTPOS(ftface->glyph->metrics.height);
-//               DEBUG_FTPOS(ftface->glyph->metrics.horiAdvance);
-//               DEBUG_FTPOS(ftface->glyph->metrics.horiBearingX);
-//               DEBUG_FTPOS(ftface->glyph->metrics.horiBearingY);
-//               DEBUG_FTPOS(ftface->glyph->metrics.vertAdvance);
-//               DEBUG_FTPOS(ftface->glyph->metrics.vertBearingX);
-//               DEBUG_FTPOS(ftface->glyph->metrics.vertBearingY);
-//            }
-
-            ((font_uniforms_t*)atlas_ubo.mem.ptr)->glyph_metrics[i].x = ftface->glyph->metrics.horiBearingX >> 6;
-            ((font_uniforms_t*)atlas_ubo.mem.ptr)->glyph_metrics[i].y = -ftface->glyph->metrics.horiBearingY >> 6;
-            ((font_uniforms_t*)atlas_ubo.mem.ptr)->glyph_metrics[i].w = ftface->glyph->metrics.width >> 6;
-            ((font_uniforms_t*)atlas_ubo.mem.ptr)->glyph_metrics[i].h = ftface->glyph->metrics.height >> 6;
-            ((font_uniforms_t*)atlas_ubo.mem.ptr)->advance[i]= ftface->glyph->metrics.horiAdvance >> 6;
-         }
-
-      FT_Done_Face(ftface);
-      FT_Done_FreeType(ftlib);
-      atlas_ubo.dirty = true;
+//      atlas_ubo.dirty = true;
 
    }
 
-   ((font_uniforms_t*)atlas_ubo.mem.ptr)->viewport_width = video.screen.width;
-   ((font_uniforms_t*)atlas_ubo.mem.ptr)->viewport_height = video.screen.height;
-   ((font_uniforms_t*)atlas_ubo.mem.ptr)->texture_width = atlas.width;
-   ((font_uniforms_t*)atlas_ubo.mem.ptr)->texture_height = atlas.height;
+   ((font_uniforms_t *)atlas_ubo.mem.ptr)->viewport_width = video.screen.width;
+   ((font_uniforms_t *)atlas_ubo.mem.ptr)->viewport_height = video.screen.height;
+   ((font_uniforms_t *)atlas_ubo.mem.ptr)->texture_width = atlas.width;
+   ((font_uniforms_t *)atlas_ubo.mem.ptr)->texture_height = atlas.height;
    atlas_ubo.dirty = true;
 
 //   device_memory_flush(device, &atlas_ubo.mem);
@@ -282,7 +336,7 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
          .req_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
          .size = 4096 * sizeof(font_vertex_t)
       };
-      buffer_init(device, memory_types, &info, &atlas_vbo);      
+      buffer_init(device, memory_types, &info, &atlas_vbo);
       atlas_vbo.size = 0;
    }
 
@@ -429,7 +483,7 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
                .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
                .colorBlendOp = VK_BLEND_OP_ADD,
                .srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
-               .dstAlphaBlendFactor =VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+               .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
                .alphaBlendOp = VK_BLEND_OP_ADD,
                .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
                VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
@@ -469,8 +523,10 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
 
 }
 
-void vulkan_font_destroy(VkDevice device, VkDescriptorPool pool)
+void vulkan_font_destroy(VkDevice device)
 {
+   FT_Done_Face(ftface);
+   FT_Done_FreeType(ftlib);
    buffer_free(device, &atlas_vbo);
    texture_free(device, &atlas);
    vkDestroyPipelineLayout(device, pipe_layout, NULL);
@@ -483,11 +539,11 @@ void vulkan_font_destroy(VkDevice device, VkDescriptorPool pool)
 
 }
 
-void vulkan_font_draw_text(const char* text, int x, int y)
+void vulkan_font_draw_text(const char *text, int x, int y)
 {
-   const char* in = text;
+   const unsigned char *in = (const unsigned char*)text;
 
-   font_vertex_t* out = (font_vertex_t*)(atlas_vbo.mem.u8 + atlas_vbo.size);
+   font_vertex_t *out = (font_vertex_t *)(atlas_vbo.mem.u8 + atlas_vbo.size);
    font_vertex_t vertex;
    vertex.color.r = 255;
    vertex.color.g = 255;
@@ -495,26 +551,44 @@ void vulkan_font_draw_text(const char* text, int x, int y)
    vertex.position.x = x;
    vertex.position.y = y + ascender;
    vertex.id = 'p';
-   while(*in)
+
+   while (*in)
    {
-      if(*in == '\n')
+      uint32_t charcode = *(in++);
+
+      if (charcode == '\n')
       {
          vertex.position.x = 0;
          vertex.position.y += line_height;
-         in++;
          continue;
       }
+
+      if((charcode & 0xC0) == 0xC0)
+      {
+         int marker = charcode & 0xE0;
+         charcode = ((charcode & ~0xE0) << 6) | (*(in++) & ~0xC0);
+         if(marker == 0xE0)
+         {
+            charcode = (charcode << 6) | (*(in++) & ~0xC0);
+            if(charcode & 1 << (4 + 6 + 6))
+               charcode = (charcode & ~(1 << (4 + 6 + 6)) << 6) | (*(in++) & ~0xC0);
+         }
+      }
+
       *out = vertex;
-      vertex.position.x += ((font_uniforms_t*)atlas_ubo.mem.ptr)->advance[(int)*in];
-      if((vertex.position.x + max_advance) > video.screen.width)
+      int id = vulkan_font_get_glyph_id(charcode);
+      vertex.position.x += ((font_uniforms_t *)atlas_ubo.mem.ptr)->advance[id];
+
+      if ((vertex.position.x + max_advance) > video.screen.width)
       {
          vertex.position.x = 0;
          vertex.position.y += line_height;
       }
-      (out++)->id = *(in++);
+
+      (out++)->id = id;
    }
 
-   atlas_vbo.size = (uint8_t*)out - atlas_vbo.mem.u8;
+   atlas_vbo.size = (uint8_t *)out - atlas_vbo.mem.u8;
 
 
 }
@@ -523,20 +597,27 @@ void vulkan_font_update_assets(VkCommandBuffer cmd)
 {
    atlas_vbo.size = 0;
 
-   vulkan_font_draw_text("1111test\n 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test"
-                         "1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test"
-                         "1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test "
-                         "1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test "
-                         "1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test "
-                         "1test\n 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test "
-                         "1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test "
-                         "1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1", 0, 0);
-//   vulkan_font_draw_text("test 2", 0, 32);
+//   vulkan_font_draw_text("1111test\n 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test"
+//      "1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test"
+//      "1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test "
+//      "1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test "
+//      "1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test "
+//      "1test\n 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test "
+//      "1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test "
+//      "1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1", 0, 0);
+
+   vulkan_font_draw_text("北海道の有名なかん光地、知床半島で、黒いキツネがさつえいされました。"
+      "地元斜里町の町立知床博物館が、タヌキをかんさつするためにおいていた自動さつえいカメラがき重なすがたをとらえました＝"
+      "写真・同館ていきょう。同館の学芸員も「はじめて見た」とおどろいています。 "
+      "黒い毛皮のために昔、ゆ入したキツネの子そんとも言われてますが、はっきりしません。"
+      "北海道の先住みん族、アイヌのみん話にも黒いキツネが登場し、神せいな生き物とされているそうです。", 0, 0);
+//   vulkan_font_draw_text("gl_Position.xy = pos + 2.0 * vec2(0.0, glyph_metrics[c].w) / vp_size;", 0, 32);
+
 //   vulkan_font_draw_text("test 3", 40, 220);
    if (atlas.dirty)
       texture_update(cmd, &atlas);
 
-   if(atlas_vbo.dirty)
+   if (atlas_vbo.dirty)
    {
       VkMappedMemoryRange range =
       {
@@ -549,7 +630,8 @@ void vulkan_font_update_assets(VkCommandBuffer cmd)
       vkFlushMappedMemoryRanges(vk.device, 1, &range);
       atlas_vbo.dirty = false;
    }
-   if(atlas_ubo.dirty)
+
+   if (atlas_ubo.dirty)
    {
       VkMappedMemoryRange range =
       {
