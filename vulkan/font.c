@@ -299,13 +299,14 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
 
    {
 //      const char *font_path = "/usr/share/fonts/TTF/DejaVuSansMono.ttf";
+//      const char *font_path = "/usr/share/fonts/TTF/NotoSerif-Regular.ttf";
       const char *font_path = "/usr/share/fonts/TTF/HanaMinA.ttf";
 //      const char* font_path = "/usr/share/fonts/TTF/LiberationMono-Regular.ttf";
 //      const char* font_path = "/usr/share/fonts/75dpi/charR12.pcf.gz";
 //      const char* font_path = "/usr/share/fonts/WindowsFonts/cour.ttf";
 
 
-      FT_UInt font_size = 30;
+      FT_UInt font_size = 26;
 
       FT_Init_FreeType(&ftlib);
       FT_New_Face(ftlib, font_path, 0, &ftface);
@@ -545,9 +546,9 @@ void vulkan_font_draw_text(const char *text, int x, int y)
 
    font_vertex_t *out = (font_vertex_t *)(atlas_vbo.mem.u8 + atlas_vbo.size);
    font_vertex_t vertex;
-   vertex.color.r = 255;
-   vertex.color.g = 255;
-   vertex.color.b = 255;
+   vertex.color.r = 0;
+   vertex.color.g = 0;
+   vertex.color.b = 0;
    vertex.position.x = x;
    vertex.position.y = y + ascender;
    vertex.id = 'p';
@@ -597,14 +598,24 @@ void vulkan_font_update_assets(VkCommandBuffer cmd)
 {
    atlas_vbo.size = 0;
 
-//   vulkan_font_draw_text("1111test\n 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test"
-//      "1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test"
-//      "1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test "
-//      "1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test "
-//      "1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test "
-//      "1test\n 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test "
-//      "1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test "
-//      "1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1test 1", 0, 0);
+   vulkan_font_draw_text("Backward compatibility: Backwards compatibility with ASCII and the enormous "
+                         "amount of software designed to process ASCII-encoded text was the main driving "
+                         "force behind the design of UTF-8. In UTF-8, single bytes with values in the range "
+                         "of 0 to 127 map directly to Unicode code points in the ASCII range. Single bytes "
+                         "in this range represent characters, as they do in ASCII.\n\nMoreover, 7-bit bytes "
+                         "(bytes where the most significant bit is 0) never appear in a multi-byte sequence, "
+                         "and no valid multi-byte sequence decodes to an ASCII code-point. A sequence of 7-bit "
+                         "bytes is both valid ASCII and valid UTF-8, and under either interpretation represents "
+                         "the same sequence of characters.\n\nTherefore, the 7-bit bytes in a UTF-8 stream represent "
+                         "all and only the ASCII characters in the stream. Thus, many text processors, parsers, "
+                         "protocols, file formats, text display programs etc., which use ASCII characters for "
+                         "formatting and control purposes will continue to work as intended by treating the UTF-8 "
+                         "byte stream as a sequence of single-byte characters, without decoding the multi-byte sequences. "
+                         "ASCII characters on which the processing turns, such as punctuation, whitespace, and control "
+                         "characters will never be encoded as multi-byte sequences. It is therefore safe for such "
+                         "processors to simply ignore or pass-through the multi-byte sequences, without decoding them. "
+                         "For example, ASCII whitespace may be used to tokenize a UTF-8 stream into words; "
+                         "ASCII line-feeds may be used to split a UTF-8 stream into lines; and ASCII NUL ", 0, 0);
 
    vulkan_font_draw_text("北海道の有名なかん光地、知床半島で、黒いキツネがさつえいされました。"
       "地元斜里町の町立知床博物館が、タヌキをかんさつするためにおいていた自動さつえいカメラがき重なすがたをとらえました＝"

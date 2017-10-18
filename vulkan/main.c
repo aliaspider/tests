@@ -535,7 +535,7 @@ void video_frame_update()
          vkCmdBeginRenderPass(vk_render.cmd, &info, VK_SUBPASS_CONTENTS_INLINE);
       }
 
-//      vulkan_frame_render(vk_render.cmd);
+      vulkan_frame_render(vk_render.cmd);
       vulkan_font_render(vk_render.cmd);
 
       vkCmdEndRenderPass(vk_render.cmd);
