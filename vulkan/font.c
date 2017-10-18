@@ -116,31 +116,30 @@ static int vulkan_font_get_new_slot(void)
 
 static int vulkan_font_get_glyph_id(uint32_t charcode)
 {
-   unsigned map_id;
-   atlas_slot_t *atlas_slot;
+   unsigned map_id = charcode & 0xFF;
 
-   map_id     = charcode & 0xFF;
-   atlas_slot = uc_map[map_id];
-
-   while (atlas_slot)
    {
-      if (atlas_slot->charcode == charcode)
-      {
-         atlas_slot->last_used = usage_counter++;
-         return atlas_slot - atlas_slots;
-      }
+      atlas_slot_t *atlas_slot = uc_map[map_id];
 
-      atlas_slot = atlas_slot->next;
+      while (atlas_slot)
+      {
+         if (atlas_slot->charcode == charcode)
+         {
+            atlas_slot->last_used = usage_counter++;
+            return atlas_slot - atlas_slots;
+         }
+
+         atlas_slot = atlas_slot->next;
+      }
    }
 
-   int slot_id = vulkan_font_get_new_slot();
-   atlas_slot             = &atlas_slots[slot_id];
-   atlas_slot->charcode   = charcode;
-   atlas_slot->next       = uc_map[map_id];
-   uc_map[map_id] = atlas_slot;
+   int id = vulkan_font_get_new_slot();
+   atlas_slots[id].charcode   = charcode;
+   atlas_slots[id].next       = uc_map[map_id];
+   uc_map[map_id] = &atlas_slots[id];
 
    uint8_t *dst = atlas.staging.mem.u8 + atlas.staging.mem_layout.offset +
-      (slot_id & 0xF) * (VK_ATLAS_WIDTH / 16) + (((slot_id >> 4) * (VK_ATLAS_HEIGHT / 16))) * VK_ATLAS_WIDTH;
+      (id & 0xF) * (VK_ATLAS_WIDTH / 16) + (((id >> 4) * (VK_ATLAS_HEIGHT / 16))) * VK_ATLAS_WIDTH;
    int row;
 #if 1
    FT_Load_Char(ftface, charcode, FT_LOAD_RENDER);
@@ -179,15 +178,15 @@ static int vulkan_font_get_glyph_id(uint32_t charcode)
 
    atlas.dirty = true;
 
-   ((font_uniforms_t *)atlas_ubo.mem.ptr)->glyph_metrics[slot_id].x = ftface->glyph->metrics.horiBearingX >> 6;
-   ((font_uniforms_t *)atlas_ubo.mem.ptr)->glyph_metrics[slot_id].y = -ftface->glyph->metrics.horiBearingY >> 6;
-   ((font_uniforms_t *)atlas_ubo.mem.ptr)->glyph_metrics[slot_id].w = ftface->glyph->metrics.width >> 6;
-   ((font_uniforms_t *)atlas_ubo.mem.ptr)->glyph_metrics[slot_id].h = ftface->glyph->metrics.height >> 6;
-   ((font_uniforms_t *)atlas_ubo.mem.ptr)->advance[slot_id] = ftface->glyph->metrics.horiAdvance >> 6;
+   ((font_uniforms_t *)atlas_ubo.mem.ptr)->glyph_metrics[id].x = ftface->glyph->metrics.horiBearingX >> 6;
+   ((font_uniforms_t *)atlas_ubo.mem.ptr)->glyph_metrics[id].y = -ftface->glyph->metrics.horiBearingY >> 6;
+   ((font_uniforms_t *)atlas_ubo.mem.ptr)->glyph_metrics[id].w = ftface->glyph->metrics.width >> 6;
+   ((font_uniforms_t *)atlas_ubo.mem.ptr)->glyph_metrics[id].h = ftface->glyph->metrics.height >> 6;
+   ((font_uniforms_t *)atlas_ubo.mem.ptr)->advance[id] = ftface->glyph->metrics.horiAdvance >> 6;
 
    atlas_ubo.dirty = true;
-   atlas_slot->last_used = usage_counter++;
-   return slot_id;
+   atlas_slots[id].last_used = usage_counter++;
+   return id;
 }
 
 
@@ -598,24 +597,24 @@ void vulkan_font_update_assets(VkCommandBuffer cmd)
 {
    atlas_vbo.size = 0;
 
-   vulkan_font_draw_text("Backward compatibility: Backwards compatibility with ASCII and the enormous "
-                         "amount of software designed to process ASCII-encoded text was the main driving "
-                         "force behind the design of UTF-8. In UTF-8, single bytes with values in the range "
-                         "of 0 to 127 map directly to Unicode code points in the ASCII range. Single bytes "
-                         "in this range represent characters, as they do in ASCII.\n\nMoreover, 7-bit bytes "
-                         "(bytes where the most significant bit is 0) never appear in a multi-byte sequence, "
-                         "and no valid multi-byte sequence decodes to an ASCII code-point. A sequence of 7-bit "
-                         "bytes is both valid ASCII and valid UTF-8, and under either interpretation represents "
-                         "the same sequence of characters.\n\nTherefore, the 7-bit bytes in a UTF-8 stream represent "
-                         "all and only the ASCII characters in the stream. Thus, many text processors, parsers, "
-                         "protocols, file formats, text display programs etc., which use ASCII characters for "
-                         "formatting and control purposes will continue to work as intended by treating the UTF-8 "
-                         "byte stream as a sequence of single-byte characters, without decoding the multi-byte sequences. "
-                         "ASCII characters on which the processing turns, such as punctuation, whitespace, and control "
-                         "characters will never be encoded as multi-byte sequences. It is therefore safe for such "
-                         "processors to simply ignore or pass-through the multi-byte sequences, without decoding them. "
-                         "For example, ASCII whitespace may be used to tokenize a UTF-8 stream into words; "
-                         "ASCII line-feeds may be used to split a UTF-8 stream into lines; and ASCII NUL ", 0, 0);
+//   vulkan_font_draw_text("Backward compatibility: Backwards compatibility with ASCII and the enormous "
+//                         "amount of software designed to process ASCII-encoded text was the main driving "
+//                         "force behind the design of UTF-8. In UTF-8, single bytes with values in the range "
+//                         "of 0 to 127 map directly to Unicode code points in the ASCII range. Single bytes "
+//                         "in this range represent characters, as they do in ASCII.\n\nMoreover, 7-bit bytes "
+//                         "(bytes where the most significant bit is 0) never appear in a multi-byte sequence, "
+//                         "and no valid multi-byte sequence decodes to an ASCII code-point. A sequence of 7-bit "
+//                         "bytes is both valid ASCII and valid UTF-8, and under either interpretation represents "
+//                         "the same sequence of characters.\n\nTherefore, the 7-bit bytes in a UTF-8 stream represent "
+//                         "all and only the ASCII characters in the stream. Thus, many text processors, parsers, "
+//                         "protocols, file formats, text display programs etc., which use ASCII characters for "
+//                         "formatting and control purposes will continue to work as intended by treating the UTF-8 "
+//                         "byte stream as a sequence of single-byte characters, without decoding the multi-byte sequences. "
+//                         "ASCII characters on which the processing turns, such as punctuation, whitespace, and control "
+//                         "characters will never be encoded as multi-byte sequences. It is therefore safe for such "
+//                         "processors to simply ignore or pass-through the multi-byte sequences, without decoding them. "
+//                         "For example, ASCII whitespace may be used to tokenize a UTF-8 stream into words; "
+//                         "ASCII line-feeds may be used to split a UTF-8 stream into lines; and ASCII NUL ", 0, 0);
 
    vulkan_font_draw_text("北海道の有名なかん光地、知床半島で、黒いキツネがさつえいされました。"
       "地元斜里町の町立知床博物館が、タヌキをかんさつするためにおいていた自動さつえいカメラがき重なすがたをとらえました＝"
