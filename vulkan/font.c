@@ -264,7 +264,6 @@ void vulkan_font_init(vk_context_t *vk, vk_render_context_t *vk_render)
    memset(font.render.texture.staging.mem.u8 + font.render.texture.staging.mem_layout.offset, 0x0,
       font.render.texture.staging.mem_layout.size - font.render.texture.staging.mem_layout.offset);
 
-   device_memory_flush(vk->device, &font.render.texture.staging.mem);
    font.render.texture.dirty = true;
 
    font_uniforms_t *uniforms = (font_uniforms_t *)font.render.ubo.mem.ptr;
@@ -402,7 +401,7 @@ void vulkan_font_update_assets(VkDevice device, VkCommandBuffer cmd)
 
 //   vulkan_font_draw_text("test 3", 40, 220);
    if (font.render.texture.dirty)
-      texture_update(cmd, &font.render.texture);
+      texture_update(device, cmd, &font.render.texture);
 
    if (font.render.vbo.dirty)
       buffer_flush(device, &font.render.vbo);

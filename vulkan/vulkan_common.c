@@ -94,8 +94,10 @@ void texture_free(VkDevice device, vk_texture_t *texture)
    texture->image = VK_NULL_HANDLE;
 }
 
-void texture_update(VkCommandBuffer cmd, vk_texture_t *texture)
+void texture_update(VkDevice device, VkCommandBuffer cmd, vk_texture_t *texture)
 {
+   device_memory_flush(device, &texture->staging.mem);
+
    VkImageMemoryBarrier barrier =
    {
       VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -439,13 +441,19 @@ void vk_render_init(vk_context_t *vk, vk_render_context_t *vk_render, const vk_p
 {
    texture_init(vk->device, vk->memoryTypes, vk->queue_family_index, &dst->texture);
 
-   dst->ssbo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-   dst->ssbo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-   buffer_init(vk->device, vk->memoryTypes, NULL, &dst->ssbo);
+   if(dst->ssbo.info.range)
+   {
+      dst->ssbo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+      dst->ssbo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+      buffer_init(vk->device, vk->memoryTypes, NULL, &dst->ssbo);
+   }
 
-   dst->ubo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-   dst->ubo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-   buffer_init(vk->device, vk->memoryTypes, NULL, &dst->ubo);
+   if(dst->ubo.info.range)
+   {
+      dst->ubo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+      dst->ubo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+      buffer_init(vk->device, vk->memoryTypes, NULL, &dst->ubo);
+   }
 
    dst->vbo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
    dst->vbo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
@@ -547,7 +555,7 @@ void vk_render_init(vk_context_t *vk, vk_render_context_t *vk_render, const vk_p
       {
          VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
          .flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
-         .stageCount = countof(shaders_info), shaders_info,
+         .stageCount = shaders_info[2].module? 3 : 2, shaders_info,
          .pVertexInputState = &vertex_input_state,
          .pInputAssemblyState = &input_assembly_state,
          .pViewportState = &viewport_state,

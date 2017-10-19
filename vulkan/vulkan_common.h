@@ -53,7 +53,7 @@ typedef struct
 
 void texture_init(VkDevice device, const VkMemoryType *memory_types, uint32_t queue_family_index, vk_texture_t *dst);
 void texture_free(VkDevice device, vk_texture_t *texture);
-void texture_update(VkCommandBuffer cmd, vk_texture_t *texture);
+void texture_update(VkDevice device, VkCommandBuffer cmd, vk_texture_t *texture);
 
 typedef struct
 {
