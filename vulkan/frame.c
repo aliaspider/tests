@@ -5,22 +5,14 @@
 #include "video.h"
 #include "font.h"
 
-static struct
-{
-   vk_texture_t tex;
-   vk_buffer_t vbo;
-   vk_buffer_t ubo;
-   VkDescriptorSet desc;
-   VkPipeline pipe;
-   VkPipelineLayout pipe_layout;
-   VkCommandBuffer cmd;
-} frame;
 
 typedef struct
 {
    float val0;
    float val1;
 } frame_uniforms_t;
+
+static vk_render_t frame;
 
 void vulkan_frame_init(vk_context_t *vk, vk_render_context_t *vk_render, int width, int height, VkFormat format)
 {
@@ -112,7 +104,7 @@ void vulkan_frame_init(vk_context_t *vk, vk_render_context_t *vk_render, int wid
 #endif
             };
 
-            vkCreatePipelineLayout(vk->device, &info, NULL, &frame.pipe_layout);
+            vkCreatePipelineLayout(vk->device, &info, NULL, &frame.pipeline_layout);
          }
 
          {
@@ -194,7 +186,7 @@ void vulkan_frame_init(vk_context_t *vk, vk_render_context_t *vk_render, int wid
                .pRasterizationState = &rasterization_info,
                .pMultisampleState = &multisample_state,
                .pColorBlendState = &colorblend_state,
-               .layout = frame.pipe_layout,
+               .layout = frame.pipeline_layout,
                .renderPass = vk_render->renderpass,
                .subpass = 0
             };
@@ -208,41 +200,41 @@ void vulkan_frame_init(vk_context_t *vk, vk_render_context_t *vk_render, int wid
    }
 
    {
-      frame.tex.width = width;
-      frame.tex.height = height;
-      frame.tex.format = format;
-      texture_init(vk->device, vk->memoryTypes, vk->queue_family_index, &frame.tex);
+      frame.texture.width = width;
+      frame.texture.height = height;
+      frame.texture.format = format;
+      texture_init(vk->device, vk->memoryTypes, vk->queue_family_index, &frame.texture);
 
       /* texture updates are written to the stating texture then uploaded later */
-      memset(frame.tex.staging.mem.u8 + frame.tex.staging.mem_layout.offset, 0xFF,
-         frame.tex.staging.mem_layout.size - frame.tex.staging.mem_layout.offset);
+      memset(frame.texture.staging.mem.u8 + frame.texture.staging.mem_layout.offset, 0xFF,
+         frame.texture.staging.mem_layout.size - frame.texture.staging.mem_layout.offset);
 
-      device_memory_flush(vk->device, &frame.tex.staging.mem);
-      frame.tex.dirty = true;
+      device_memory_flush(vk->device, &frame.texture.staging.mem);
+      frame.texture.dirty = true;
 
-      vk_update_descriptor_set(vk->device, &frame.tex, NULL, NULL, frame.desc);
+      vk_update_descriptor_set(vk->device, &frame.texture, NULL, NULL, frame.desc);
    }
 
    video.frame.width = width;
    video.frame.height = height;
-   video.frame.pitch = frame.tex.staging.mem_layout.rowPitch / 4;
-   video.frame.data = frame.tex.staging.mem.u8 + frame.tex.staging.mem_layout.offset;
+   video.frame.pitch = frame.texture.staging.mem_layout.rowPitch / 4;
+   video.frame.data = frame.texture.staging.mem.u8 + frame.texture.staging.mem_layout.offset;
 
 }
 
 void vulkan_frame_update(VkDevice device, VkCommandBuffer cmd)
 {
-   device_memory_flush(device, &frame.tex.staging.mem);
-   frame.tex.dirty = true;
+   device_memory_flush(device, &frame.texture.staging.mem);
+   frame.texture.dirty = true;
 
-   if (frame.tex.dirty)
-      texture_update(cmd, &frame.tex);
+   if (frame.texture.dirty)
+      texture_update(cmd, &frame.texture);
 }
 void vulkan_frame_render(VkCommandBuffer cmd)
 {
    VkDeviceSize offset = 0;
    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, frame.pipe);
-   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, frame.pipe_layout, 0, 1, &frame.desc, 0, NULL);
+   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, frame.pipeline_layout, 0, 1, &frame.desc, 0, NULL);
 // vkCmdPushConstants(device.cmd, device.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(uniforms_t), mapped_uniforms);
 
    vkCmdBindVertexBuffers(cmd, 0, 1, &frame.vbo.info.buffer, &offset);
@@ -251,12 +243,12 @@ void vulkan_frame_render(VkCommandBuffer cmd)
 }
 void vulkan_frame_destroy(VkDevice device)
 {
-   vkDestroyPipelineLayout(device, frame.pipe_layout, NULL);
+   vkDestroyPipelineLayout(device, frame.pipeline_layout, NULL);
    vkDestroyPipeline(device, frame.pipe, NULL);
-   frame.pipe_layout = VK_NULL_HANDLE;
+   frame.pipeline_layout = VK_NULL_HANDLE;
    frame.pipe = VK_NULL_HANDLE;
 
    buffer_free(device, &frame.vbo);
    buffer_free(device, &frame.ubo);
-   texture_free(device, &frame.tex);
+   texture_free(device, &frame.texture);
 }

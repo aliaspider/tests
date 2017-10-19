@@ -190,7 +190,7 @@ typedef struct
    vk_buffer_t ssbo;
    VkDescriptorSet desc;
    VkPipeline pipe;
-   VkPipelineLayout layout;
+   VkPipelineLayout pipeline_layout;
 }vk_render_t;
 
 typedef struct

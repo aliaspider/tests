@@ -474,7 +474,7 @@ void vk_render_init(vk_context_t *vk, vk_render_context_t *vk_render, const vk_p
 #endif
       };
 
-      vkCreatePipelineLayout(vk->device, &info, NULL, &dst->layout);
+      vkCreatePipelineLayout(vk->device, &info, NULL, &dst->pipeline_layout);
    }
 
    {
@@ -554,7 +554,7 @@ void vk_render_init(vk_context_t *vk, vk_render_context_t *vk_render, const vk_p
          .pRasterizationState = &rasterization_info,
          .pMultisampleState = &multisample_state,
          .pColorBlendState = &colorblend_state,
-         .layout = dst->layout,
+         .layout = dst->pipeline_layout,
          .renderPass = vk_render->renderpass,
          .subpass = 0
       };

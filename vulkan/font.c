@@ -286,7 +286,7 @@ void vulkan_font_destroy(VkDevice device)
    buffer_free(device, &font.render.ubo);
    buffer_free(device, &font.render.vbo);
    texture_free(device, &font.render.texture);
-   vkDestroyPipelineLayout(device, font.render.layout, NULL);
+   vkDestroyPipelineLayout(device, font.render.pipeline_layout, NULL);
    vkDestroyPipeline(device, font.render.pipe, NULL);
    memset(&font, 0, sizeof(font));
 }
@@ -420,7 +420,7 @@ void vulkan_font_render(VkCommandBuffer cmd)
 
    VkDeviceSize offset = 0;
    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, font.render.pipe);
-   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, font.render.layout, 0, 1, &font.render.desc, 0, NULL);
+   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, font.render.pipeline_layout, 0, 1, &font.render.desc, 0, NULL);
    vkCmdBindVertexBuffers(cmd, 0, 1, &font.render.vbo.info.buffer, &offset);
    vkCmdDraw(cmd, font.render.vbo.info.range / sizeof(font_vertex_t), 1, 0, 0);
 //   {
