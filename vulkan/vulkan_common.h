@@ -193,7 +193,7 @@ typedef struct
    VkPipelineLayout layout;
 }vk_render_t;
 
-void vk_render_init(vk_context_t *vk, vk_render_context_t *vk_render, vk_render_t* dst);
+void vk_render_init(vk_context_t *vk, vk_render_context_t *vk_render, vk_render_t *dst);
 
 static inline VkResult vk_allocate_descriptor_set(VkDevice device, VkDescriptorPool pool,
    const VkDescriptorSetLayout layout, VkDescriptorSet *dst)
@@ -272,4 +272,144 @@ static inline void vk_update_descriptor_set(VkDevice device, vk_texture_t* textu
    }
 
    vkUpdateDescriptorSets(device, write_set_count, write_set, 0, NULL);
+}
+
+
+typedef struct
+{
+   const uint32_t* code;
+   size_t code_size;
+}vk_shader_code_t;
+typedef struct
+{
+   struct
+   {
+      vk_shader_code_t vs;
+      vk_shader_code_t ps;
+      vk_shader_code_t gs;
+   }shaders;
+
+   uint32_t vertex_stride;
+   uint32_t attrib_count;
+   const VkVertexInputAttributeDescription* attrib_desc;
+   VkPipelineLayout pipeline_layout;
+}vk_pipeline_init_info_t;
+
+
+static inline VkShaderModule vk_shader_code_init(VkDevice device, const vk_shader_code_t* shader_code)
+{
+   VkShaderModule shader;
+
+   const VkShaderModuleCreateInfo info =
+   {
+      VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+      .codeSize = shader_code->code_size,
+      .pCode = shader_code->code
+   };
+   vkCreateShaderModule(device, &info, NULL, &shader);
+
+   return shader;
+}
+
+static inline void vk_pipeline_init(const vk_context_t* vk, const vk_render_context_t* vk_render, const vk_pipeline_init_info_t* init_info, VkPipeline* dst)
+{
+   const VkPipelineShaderStageCreateInfo shaders_info[] =
+   {
+      {
+         VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+         .stage = VK_SHADER_STAGE_VERTEX_BIT,
+         .pName = "main",
+         .module = vk_shader_code_init(vk->device, &init_info->shaders.vs)
+      },
+      {
+         VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+         .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+         .pName = "main",
+         .module = vk_shader_code_init(vk->device, &init_info->shaders.ps)
+      },
+      {
+         VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+         .stage = VK_SHADER_STAGE_GEOMETRY_BIT,
+         .pName = "main",
+         .module = init_info->shaders.gs.code ? vk_shader_code_init(vk->device, &init_info->shaders.gs) : VK_NULL_HANDLE
+      }
+   };
+
+   const VkVertexInputBindingDescription vertex_description =
+   {
+      0, init_info->vertex_stride, VK_VERTEX_INPUT_RATE_VERTEX
+   };
+
+   const VkPipelineVertexInputStateCreateInfo vertex_input_state =
+   {
+      VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+      .vertexBindingDescriptionCount = 1, &vertex_description,
+      .vertexAttributeDescriptionCount = init_info->attrib_count, init_info->attrib_desc
+   };
+
+   const VkPipelineInputAssemblyStateCreateInfo input_assembly_state =
+   {
+      VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+      .topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
+      .primitiveRestartEnable = VK_FALSE
+   };
+
+   const VkPipelineViewportStateCreateInfo viewport_state =
+   {
+      VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+      .viewportCount = 1, &vk_render->viewport, .scissorCount = 1, &vk_render->scissor
+   };
+
+   const VkPipelineRasterizationStateCreateInfo rasterization_info =
+   {
+      VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+      .lineWidth = 1.0f
+   };
+
+   const VkPipelineMultisampleStateCreateInfo multisample_state =
+   {
+      VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+      .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+   };
+
+   const VkPipelineColorBlendAttachmentState attachement_state =
+   {
+      .blendEnable = VK_TRUE,
+      .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+      .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+      .colorBlendOp = VK_BLEND_OP_ADD,
+      .srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+      .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+      .alphaBlendOp = VK_BLEND_OP_ADD,
+      .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+      VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
+   };
+
+   const VkPipelineColorBlendStateCreateInfo colorblend_state =
+   {
+      VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+      .attachmentCount = 1, &attachement_state
+   };
+
+   const VkGraphicsPipelineCreateInfo info =
+   {
+      VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+      .flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
+      .stageCount = countof(shaders_info), shaders_info,
+      .pVertexInputState = &vertex_input_state,
+      .pInputAssemblyState = &input_assembly_state,
+      .pViewportState = &viewport_state,
+      .pRasterizationState = &rasterization_info,
+      .pMultisampleState = &multisample_state,
+      .pColorBlendState = &colorblend_state,
+      .layout = init_info->pipeline_layout,
+      .renderPass = vk_render->renderpass,
+      .subpass = 0
+   };
+   vkCreateGraphicsPipelines(vk->device, VK_NULL_HANDLE, 1, &info, NULL, dst);
+
+   vkDestroyShaderModule(vk->device, shaders_info[0].module, NULL);
+   vkDestroyShaderModule(vk->device, shaders_info[1].module, NULL);
+   if(shaders_info[2].module)
+      vkDestroyShaderModule(vk->device, shaders_info[2].module, NULL);
 }

@@ -8,8 +8,9 @@ layout(location = 2) in vec2 position;
 layout(location = 0) out uint id_out;
 layout(location = 1) out vec3 color_out;
 layout(location = 2) out vec2 position_out;
+#endif
 
-#elif defined(GEOMETRY_SHADER)
+#if defined(GEOMETRY_SHADER)
 #extension GL_EXT_geometry_shader : require
 layout(points) in;
 layout(location = 0) in uint id[1];
@@ -31,8 +32,9 @@ layout(set = 0, binding = 2, std140) buffer g_buffer
    coherent int posy;
    coherent int lastid;
 };
+#endif
 
-#elif defined(FRAGMENT_SHADER)
+#if defined(FRAGMENT_SHADER)
 layout(location = 0) in vec2 vTexCoord;
 layout(location = 1) in vec4 vColor;
 layout(location = 0) out vec4 FragColor;
@@ -46,8 +48,9 @@ void main()
    color_out = color;
    position_out = position;
 }
+#endif
 
-#elif defined(GEOMETRY_SHADER)
+#if defined(GEOMETRY_SHADER)
 void main()
 {
    uint c = id[0] & 0xFFu;
@@ -93,8 +96,9 @@ void main()
 #endif
    EndPrimitive();
 }
+#endif
 
-#elif defined(FRAGMENT_SHADER)
+#if defined(FRAGMENT_SHADER)
 void main()
 {
    FragColor = texture(uTex, vTexCoord).r * vColor;

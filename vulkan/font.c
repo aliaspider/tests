@@ -252,15 +252,22 @@ void vulkan_font_init(vk_context_t *vk, vk_render_context_t *vk_render)
    font.atlas.slot_width = font.max_advance;
    font.atlas.slot_height = font.line_height;
 
+
    font.atlas.render.texture.width = font.atlas.slot_width << 4;
    font.atlas.render.texture.height = font.atlas.slot_height << 4;
    font.atlas.render.texture.format = VK_FORMAT_R8_UNORM;
+
    font.atlas.render.ssbo.info.range = sizeof(font_shader_storage_t);
    font.atlas.render.ssbo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
    font.atlas.render.ssbo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+
    font.atlas.render.ubo.info.range = sizeof(font_uniforms_t);
    font.atlas.render.ubo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
    font.atlas.render.ubo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+
+   font.atlas.render.vbo.info.range = 4096 * sizeof(font_vertex_t);
+   font.atlas.render.vbo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+   font.atlas.render.vbo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 
    vk_render_init(vk, vk_render, &font.atlas.render);
 
@@ -278,90 +285,18 @@ void vulkan_font_init(vk_context_t *vk, vk_render_context_t *vk_render)
    uniforms->tex_size.height = font.atlas.render.texture.height;
    font.atlas.render.ubo.dirty = true;
 
-   font.atlas.render.vbo.info.range = 4096 * sizeof(font_vertex_t);
-   font.atlas.render.vbo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-   font.atlas.render.vbo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-   buffer_init(vk->device, vk->memoryTypes, NULL, &font.atlas.render.vbo);
    font.atlas.render.vbo.info.range = 0;
 
-
    {
-#if 0
-      VkPushConstantRange ranges[] =
-      {
-         {
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-            .offset = 0,
-            .size = sizeof(uniforms_t)
-         }
-      };
-#endif
-      const VkPipelineLayoutCreateInfo info =
-      {
-         VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-         .setLayoutCount = 1, &vk_render->descriptor_set_layout,
-#if 0
-         .pushConstantRangeCount = countof(ranges), ranges
-#endif
-      };
-
-      vkCreatePipelineLayout(vk->device, &info, NULL, &font.atlas.render.layout);
-   }
-
-   {
-      VkShaderModule vertex_shader;
-      {
-         const uint32_t code [] =
+      const uint32_t vs_code [] =
 #include "font.vert.inc"
-            ;
-         const VkShaderModuleCreateInfo info = {VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, .codeSize = sizeof(code), .pCode = code};
-         vkCreateShaderModule(vk->device, &info, NULL, &vertex_shader);
-      }
-
-      VkShaderModule fragment_shader;
-      {
-         const uint32_t code [] =
+         ;
+      const uint32_t ps_code [] =
 #include "font.frag.inc"
-            ;
-         const VkShaderModuleCreateInfo info = {VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, .codeSize = sizeof(code), .pCode = code};
-         vkCreateShaderModule(vk->device, &info, NULL, &fragment_shader);
-      }
-
-      VkShaderModule geometry_shader;
-      {
-         const uint32_t code [] =
+         ;
+      const uint32_t gs_code [] =
 #include "font.geom.inc"
-            ;
-         const VkShaderModuleCreateInfo info = {VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, .codeSize = sizeof(code), .pCode = code};
-         vkCreateShaderModule(vk->device, &info, NULL, &geometry_shader);
-      }
-
-      const VkPipelineShaderStageCreateInfo shaders_info[] =
-      {
-         {
-            VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-            .stage = VK_SHADER_STAGE_VERTEX_BIT,
-            .pName = "main",
-            .module = vertex_shader
-         },
-         {
-            VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-            .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-            .pName = "main",
-            .module = fragment_shader
-         },
-         {
-            VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-            .stage = VK_SHADER_STAGE_GEOMETRY_BIT,
-            .pName = "main",
-            .module = geometry_shader
-         }
-      };
-
-      const VkVertexInputBindingDescription vertex_description =
-      {
-         0, sizeof(font_vertex_t), VK_VERTEX_INPUT_RATE_VERTEX
-      };
+         ;
 
       const VkVertexInputAttributeDescription attrib_desc[] =
       {
@@ -370,76 +305,20 @@ void vulkan_font_init(vk_context_t *vk, vk_render_context_t *vk_render)
          {2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(font_vertex_t, position)}
       };
 
-      const VkPipelineVertexInputStateCreateInfo vertex_input_state =
+      const vk_pipeline_init_info_t info =
       {
-         VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-         .vertexBindingDescriptionCount = 1, &vertex_description,
-         .vertexAttributeDescriptionCount = countof(attrib_desc), attrib_desc
+         .shaders.vs.code = vs_code,
+         .shaders.vs.code_size = sizeof(vs_code),
+         .shaders.ps.code = ps_code,
+         .shaders.ps.code_size = sizeof(ps_code),
+         .shaders.gs.code = gs_code,
+         .shaders.gs.code_size = sizeof(gs_code),
+         .vertex_stride = sizeof(font_vertex_t),
+         .attrib_count = countof(attrib_desc),
+         .attrib_desc = attrib_desc,
+         .pipeline_layout = font.atlas.render.layout,
       };
-
-      const VkPipelineInputAssemblyStateCreateInfo input_assembly_state =
-      {
-         VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-         .topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
-         .primitiveRestartEnable = VK_FALSE
-      };
-
-      const VkPipelineViewportStateCreateInfo viewport_state =
-      {
-         VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-         .viewportCount = 1, &vk_render->viewport, .scissorCount = 1, &vk_render->scissor
-      };
-
-      const VkPipelineRasterizationStateCreateInfo rasterization_info =
-      {
-         VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-         .lineWidth = 1.0f
-      };
-
-      const VkPipelineMultisampleStateCreateInfo multisample_state =
-      {
-         VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-         .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
-      };
-
-      const VkPipelineColorBlendAttachmentState attachement_state =
-      {
-         .blendEnable = VK_TRUE,
-         .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
-         .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-         .colorBlendOp = VK_BLEND_OP_ADD,
-         .srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
-         .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-         .alphaBlendOp = VK_BLEND_OP_ADD,
-         .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-         VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
-      };
-
-      const VkPipelineColorBlendStateCreateInfo colorblend_state =
-      {
-         VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-         .attachmentCount = 1, &attachement_state
-      };
-
-      const VkGraphicsPipelineCreateInfo info =
-      {
-         VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-         .flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
-         .stageCount = countof(shaders_info), shaders_info,
-         .pVertexInputState = &vertex_input_state,
-         .pInputAssemblyState = &input_assembly_state,
-         .pViewportState = &viewport_state,
-         .pRasterizationState = &rasterization_info,
-         .pMultisampleState = &multisample_state,
-         .pColorBlendState = &colorblend_state,
-         .layout = font.atlas.render.layout,
-         .renderPass = vk_render->renderpass,
-         .subpass = 0
-      };
-      vkCreateGraphicsPipelines(vk->device, VK_NULL_HANDLE, 1, &info, NULL, &font.atlas.render.pipe);
-      vkDestroyShaderModule(vk->device, vertex_shader, NULL);
-      vkDestroyShaderModule(vk->device, fragment_shader, NULL);
-      vkDestroyShaderModule(vk->device, geometry_shader, NULL);
+      vk_pipeline_init(vk, vk_render, &info, &font.atlas.render.pipe);
    }
 }
 

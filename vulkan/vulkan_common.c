@@ -424,7 +424,30 @@ void vk_render_init(vk_context_t *vk, vk_render_context_t *vk_render, vk_render_
    texture_init(vk->device, vk->memoryTypes, vk->queue_family_index, &dst->texture);
    buffer_init(vk->device, vk->memoryTypes, NULL, &dst->ssbo);
    buffer_init(vk->device, vk->memoryTypes, NULL, &dst->ubo);
+   buffer_init(vk->device, vk->memoryTypes, NULL, &dst->vbo);
    vk_allocate_descriptor_set(vk->device, vk->pools.desc, vk_render->descriptor_set_layout, &dst->desc);
    vk_update_descriptor_set(vk->device, &dst->texture, &dst->ubo, &dst->ssbo, dst->desc);
 
+   {
+#if 0
+      VkPushConstantRange ranges[] =
+      {
+         {
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+            .offset = 0,
+            .size = sizeof(uniforms_t)
+         }
+      };
+#endif
+      const VkPipelineLayoutCreateInfo info =
+      {
+         VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+         .setLayoutCount = 1, &vk_render->descriptor_set_layout,
+#if 0
+         .pushConstantRangeCount = countof(ranges), ranges
+#endif
+      };
+
+      vkCreatePipelineLayout(vk->device, &info, NULL, &dst->layout);
+   }
 }
