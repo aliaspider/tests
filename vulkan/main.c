@@ -442,8 +442,7 @@ void video_init()
 //      VK_CHECK(vkRegisterDisplayEventEXT(vk.device, surface.display, &displayEventInfo, NULL, &display_fence));
 //   }
 
-   vulkan_font_init(vk.device, vk.queue_family_index, vk.memoryTypes, vk.pools.desc,
-      vk_render.descriptor_set_layout, &vk_render.scissor, &vk_render.viewport, vk_render.renderpass);
+   vulkan_font_init(&vk, &vk_render);
 
 }
 

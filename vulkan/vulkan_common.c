@@ -3,11 +3,8 @@
 
 #include "vulkan_common.h"
 
-void texture_init(VkDevice device, const VkMemoryType *memory_types, const texture_init_info_t *init_info,
-   vk_texture_t *dst)
+void texture_init(VkDevice device, const VkMemoryType *memory_types, uint32_t queue_family_index, vk_texture_t *dst)
 {
-   dst->width = init_info->width;
-   dst->height = init_info->height;
    dst->dirty = true;
    dst->info.sampler = VK_NULL_HANDLE;
 
@@ -17,7 +14,7 @@ void texture_init(VkDevice device, const VkMemoryType *memory_types, const textu
          VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
          .flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
          .imageType = VK_IMAGE_TYPE_2D,
-         .format = init_info->format,
+         .format = dst->format,
          .extent.width = dst->width,
          .extent.height = dst->height,
          .extent.depth = 1,
@@ -28,19 +25,13 @@ void texture_init(VkDevice device, const VkMemoryType *memory_types, const textu
          .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
          .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
          .queueFamilyIndexCount = 1,
-         .pQueueFamilyIndices = &init_info->queue_family_index,
+         .pQueueFamilyIndices = &queue_family_index,
          .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
       };
 
-//      if((info.format == VK_FORMAT_R5G6B5_UNORM_PACK16)
-//         ||(info.format == VK_FORMAT_R5G5B5A1_UNORM_PACK16))
-//         info.format = VK_FORMAT_A8B8G8R8_UNORM_PACK32;
-
-      dst->format = info.format;
       dst->info.imageLayout = info.initialLayout;
       vkCreateImage(device, &info, NULL, &dst->image);
 
-      info.format = init_info->format;
       info.tiling = VK_IMAGE_TILING_LINEAR;
       info.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
       info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;      
@@ -423,4 +414,10 @@ uint32_t vk_get_queue_family_index(VkPhysicalDevice gpu, VkQueueFlags required_f
          return i;
 
    return 0;
+}
+
+void vk_render_init(vk_context_t vk, vk_render_context_t vk_render, vk_render_t* dst)
+{
+
+
 }

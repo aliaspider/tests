@@ -51,15 +51,7 @@ typedef struct
    bool dirty;
 } vk_texture_t;
 
-typedef struct
-{
-   uint32_t queue_family_index;
-   int width;
-   int height;
-   VkFormat format;
-} texture_init_info_t;
-void texture_init(VkDevice device, const VkMemoryType *memory_types, const texture_init_info_t *init_info,
-   vk_texture_t *dst);
+void texture_init(VkDevice device, const VkMemoryType *memory_types, uint32_t queue_family_index, vk_texture_t *dst);
 void texture_free(VkDevice device, vk_texture_t *texture);
 void texture_update(VkCommandBuffer cmd, vk_texture_t *texture);
 
@@ -197,6 +189,18 @@ typedef struct
    } samplers;
 } vk_render_context_t;
 
+typedef struct
+{
+   vk_texture_t texture;
+   vk_buffer_t vbo;
+   vk_buffer_t ubo;
+   vk_buffer_t ssbo;
+   VkDescriptorSet desc;
+   VkPipeline pipe;
+   VkPipelineLayout layout;
+}vk_render_t;
+
+void vk_render_init(vk_context_t vk, vk_render_context_t vk_render, vk_render_t* dst);
 
 static inline VkResult vk_allocate_descriptor_set(VkDevice device, VkDescriptorPool pool,
    const VkDescriptorSetLayout layout, VkDescriptorSet *dst)

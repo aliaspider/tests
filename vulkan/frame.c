@@ -22,7 +22,7 @@ typedef struct
    float val1;
 } frame_uniforms_t;
 
-void vulkan_frame_init(vk_context_t* vk, vk_render_context_t* vk_render, int width, int height, VkFormat format)
+void vulkan_frame_init(vk_context_t *vk, vk_render_context_t *vk_render, int width, int height, VkFormat format)
 {
    {
       const vertex_t vertices[] =
@@ -217,20 +217,14 @@ void vulkan_frame_init(vk_context_t* vk, vk_render_context_t* vk_render, int wid
    }
 
    {
-      {
-         texture_init_info_t info =
-         {
-            .queue_family_index = vk->queue_family_index,
-            .width = width,
-            .height = height,
-            .format = format,
-         };
-         texture_init(vk->device, vk->memoryTypes, &info, &frame.tex);
-      }
+      frame.tex.width = width;
+      frame.tex.height = height;
+      frame.tex.format = format;
+      texture_init(vk->device, vk->memoryTypes, vk->queue_family_index, &frame.tex);
 
       /* texture updates are written to the stating texture then uploaded later */
       memset(frame.tex.staging.mem.u8 + frame.tex.staging.mem_layout.offset, 0xFF,
-             frame.tex.staging.mem_layout.size - frame.tex.staging.mem_layout.offset);
+         frame.tex.staging.mem_layout.size - frame.tex.staging.mem_layout.offset);
 
       device_memory_flush(vk->device, &frame.tex.staging.mem);
       frame.tex.dirty = true;
