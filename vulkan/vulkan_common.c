@@ -3,7 +3,7 @@
 
 #include "vulkan_common.h"
 
-void texture_init(VkDevice device, const VkMemoryType *memory_types, uint32_t queue_family_index, vk_texture_t *dst)
+void vk_texture_init(VkDevice device, const VkMemoryType *memory_types, uint32_t queue_family_index, vk_texture_t *dst)
 {
    dst->dirty = true;
    dst->info.sampler = VK_NULL_HANDLE;
@@ -246,7 +246,7 @@ void device_memory_flush(VkDevice device, const device_memory_t *memory)
    }
 }
 
-void buffer_init(VkDevice device, const VkMemoryType *memory_types, const void *data, vk_buffer_t *dst)
+void vk_buffer_init(VkDevice device, const VkMemoryType *memory_types, const void *data, vk_buffer_t *dst)
 {
    {
       const VkBufferCreateInfo info =
@@ -439,25 +439,25 @@ static inline VkShaderModule vk_shader_code_init(VkDevice device, const vk_shade
 
 void vk_render_init(vk_context_t *vk, vk_render_context_t *vk_render, const vk_pipeline_init_info_t* init_info, vk_render_t *dst)
 {
-   texture_init(vk->device, vk->memoryTypes, vk->queue_family_index, &dst->texture);
+   vk_texture_init(vk->device, vk->memoryTypes, vk->queue_family_index, &dst->texture);
 
    if(dst->ssbo.info.range)
    {
       dst->ssbo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
       dst->ssbo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-      buffer_init(vk->device, vk->memoryTypes, NULL, &dst->ssbo);
+      vk_buffer_init(vk->device, vk->memoryTypes, NULL, &dst->ssbo);
    }
 
    if(dst->ubo.info.range)
    {
       dst->ubo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
       dst->ubo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-      buffer_init(vk->device, vk->memoryTypes, NULL, &dst->ubo);
+      vk_buffer_init(vk->device, vk->memoryTypes, NULL, &dst->ubo);
    }
 
    dst->vbo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
    dst->vbo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-   buffer_init(vk->device, vk->memoryTypes, NULL, &dst->vbo);
+   vk_buffer_init(vk->device, vk->memoryTypes, NULL, &dst->vbo);
 
    vk_allocate_descriptor_set(vk->device, vk->pools.desc, vk_render->descriptor_set_layout, &dst->desc);
    vk_update_descriptor_set(vk->device, &dst->texture, &dst->ubo, &dst->ssbo, dst->desc);

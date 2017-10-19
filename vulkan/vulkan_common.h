@@ -51,7 +51,7 @@ typedef struct
    bool dirty;
 } vk_texture_t;
 
-void texture_init(VkDevice device, const VkMemoryType *memory_types, uint32_t queue_family_index, vk_texture_t *dst);
+void vk_texture_init(VkDevice device, const VkMemoryType *memory_types, uint32_t queue_family_index, vk_texture_t *dst);
 void texture_free(VkDevice device, vk_texture_t *texture);
 void texture_update(VkDevice device, VkCommandBuffer cmd, vk_texture_t *texture);
 
@@ -63,7 +63,7 @@ typedef struct
    bool dirty;
 } vk_buffer_t;
 
-void buffer_init(VkDevice device, const VkMemoryType *memory_types, const void *data, vk_buffer_t *dst);
+void vk_buffer_init(VkDevice device, const VkMemoryType *memory_types, const void *data, vk_buffer_t *dst);
 void buffer_flush(VkDevice device, vk_buffer_t *buffer);
 void buffer_free(VkDevice device, vk_buffer_t *buffer);
 

@@ -5,7 +5,6 @@
 #include "video.h"
 #include "font.h"
 
-
 typedef struct
 {
    float val0;
@@ -83,6 +82,7 @@ void vulkan_frame_update(VkDevice device, VkCommandBuffer cmd)
 {
    texture_update(device, cmd, &frame.texture);
 }
+
 void vulkan_frame_render(VkCommandBuffer cmd)
 {
    VkDeviceSize offset = 0;
@@ -94,14 +94,15 @@ void vulkan_frame_render(VkCommandBuffer cmd)
 
    vkCmdDraw(cmd, frame.vbo.info.range / sizeof(vertex_t), 1, 0, 0);
 }
+
 void vulkan_frame_destroy(VkDevice device)
 {
    vkDestroyPipelineLayout(device, frame.pipeline_layout, NULL);
    vkDestroyPipeline(device, frame.pipe, NULL);
-   frame.pipeline_layout = VK_NULL_HANDLE;
-   frame.pipe = VK_NULL_HANDLE;
 
    buffer_free(device, &frame.vbo);
    buffer_free(device, &frame.ubo);
    texture_free(device, &frame.texture);
+
+   memset(&frame, 0, sizeof(frame));
 }
