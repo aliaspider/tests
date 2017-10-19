@@ -17,76 +17,24 @@ typedef struct
    int dummy;
 } font_shader_storage_t;
 
-typedef union
-{
-   struct
-   {
-      float r;
-      float g;
-   };
-   struct
-   {
-      float x;
-      float y;
-   };
-   struct
-   {
-      float width;
-      float height;
-   };
-} vec2;
-
-typedef union
-{
-   struct
-   {
-      float r;
-      float g;
-      float b;
-      float a;
-   };
-   struct
-   {
-      float x;
-      float y;
-      union
-      {
-         struct
-         {
-            float z;
-            float w;
-         };
-         struct
-         {
-            float width;
-            float height;
-         };
-      };
-   };
-} vec4;
-
 typedef struct
 {
    vec2 vp_size;
    vec2 tex_size;
    vec4 glyph_metrics[256];
-
    float advance[256];
 } font_uniforms_t;
 
 typedef struct
 {
-   uint8_t id;
+   uint8_t slot_id;
    struct
    {
-      uint8_t r;
-      uint8_t g;
-      uint8_t b;
+      uint8_t r, g, b;
    } color;
    struct
    {
-      float x;
-      float y;
+      float x, y;
    } position;
 } font_vertex_t;
 
@@ -97,7 +45,6 @@ typedef struct atlas_slot
    struct atlas_slot *next;
 } atlas_slot_t;
 
-
 static struct
 {
    FT_Library ftlib;
@@ -105,9 +52,9 @@ static struct
    int line_height;
    int ascender;
    int max_advance;
+   vk_render_t render;
    struct
    {
-      vk_render_t render;
       int slot_width;
       int slot_height;
       atlas_slot_t slots[256];
@@ -144,7 +91,64 @@ static int vulkan_font_get_new_slot(void)
    return oldest;
 }
 
-static int vulkan_font_get_glyph_id(uint32_t charcode)
+static void ft_font_render_glyph(unsigned charcode, int slot_id)
+{
+   uint8_t *dst = font.render.texture.staging.mem.u8 + font.render.texture.staging.mem_layout.offset +
+      (slot_id & 0xF) * font.atlas.slot_width + (((slot_id >> 4) * font.atlas.slot_height)) *
+      font.render.texture.staging.mem_layout.rowPitch;
+
+   int row;
+#if 1
+   FT_Load_Char(font.ftface, charcode, FT_LOAD_RENDER);
+//   FT_Render_Glyph(ftface->glyph, FT_RENDER_MODE_NORMAL);
+
+   uint8_t *src = font.ftface->glyph->bitmap.buffer;
+
+   assert((dst - font.render.texture.staging.mem.u8 + font.render.texture.staging.mem_layout.rowPitch *
+         (font.ftface->glyph->bitmap.rows + 1) < font.render.texture.staging.mem_layout.size));
+
+   for (row = 0; row < font.ftface->glyph->bitmap.rows; row++)
+   {
+      memcpy(dst, src, font.ftface->glyph->bitmap.width);
+      src += font.ftface->glyph->bitmap.pitch;
+      dst += font.render.texture.staging.mem_layout.rowPitch;
+   }
+
+#else
+   FT_Load_Char(ftface, charcode, FT_LOAD_RENDER | FT_LOAD_MONOCHROME);
+//      FT_Render_Glyph(ftface->glyph, FT_RENDER_MODE_MONO);
+
+   uint8_t *src = ftface->glyph->bitmap.buffer;
+
+   for (row = 0; row < ftface->glyph->bitmap.rows; row++)
+   {
+      int col;
+
+      for (col = 0; col < ftface->glyph->bitmap.width; col++)
+      {
+         if (src[col >> 3] & (0x80 >> (col & 0x7)))
+            dst[col] = 255;
+      }
+
+      src += ftface->glyph->bitmap.pitch;
+      dst += atlas.staging.mem_layout.rowPitch;
+   }
+
+#endif
+   font.render.texture.dirty = true;
+
+   {
+      font_uniforms_t *uniforms = (font_uniforms_t *)font.render.ubo.mem.ptr;
+      uniforms->glyph_metrics[slot_id].x = font.ftface->glyph->metrics.horiBearingX >> 6;
+      uniforms->glyph_metrics[slot_id].y = -font.ftface->glyph->metrics.horiBearingY >> 6;
+      uniforms->glyph_metrics[slot_id].width = font.ftface->glyph->metrics.width >> 6;
+      uniforms->glyph_metrics[slot_id].height = font.ftface->glyph->metrics.height >> 6;
+      uniforms->advance[slot_id] = font.ftface->glyph->metrics.horiAdvance >> 6;
+      font.render.ubo.dirty = true;
+   }
+}
+
+static int vulkan_font_get_slot_id(uint32_t charcode)
 {
    unsigned map_id = charcode & 0xFF;
 
@@ -163,68 +167,15 @@ static int vulkan_font_get_glyph_id(uint32_t charcode)
       }
    }
 
-   int id = vulkan_font_get_new_slot();
-   font.atlas.slots[id].charcode   = charcode;
-   font.atlas.slots[id].next       = font.atlas.uc_map[map_id];
-   font.atlas.uc_map[map_id] = &font.atlas.slots[id];
+   int slot_id = vulkan_font_get_new_slot();
+   font.atlas.slots[slot_id].charcode   = charcode;
+   font.atlas.slots[slot_id].next       = font.atlas.uc_map[map_id];
+   font.atlas.uc_map[map_id] = &font.atlas.slots[slot_id];
 
-   {
-      uint8_t *dst = font.atlas.render.texture.staging.mem.u8 + font.atlas.render.texture.staging.mem_layout.offset +
-         (id & 0xF) * font.atlas.slot_width + (((id >> 4) * font.atlas.slot_height)) *
-         font.atlas.render.texture.staging.mem_layout.rowPitch;
-      int row;
-#if 1
-      FT_Load_Char(font.ftface, charcode, FT_LOAD_RENDER);
-//   FT_Render_Glyph(ftface->glyph, FT_RENDER_MODE_NORMAL);
+   ft_font_render_glyph(charcode, slot_id);
 
-      uint8_t *src = font.ftface->glyph->bitmap.buffer;
-
-      assert((dst - font.atlas.render.texture.staging.mem.u8 + font.atlas.render.texture.staging.mem_layout.rowPitch *
-            (font.ftface->glyph->bitmap.rows + 1) < font.atlas.render.texture.staging.mem_layout.size));
-
-      for (row = 0; row < font.ftface->glyph->bitmap.rows; row++)
-      {
-         memcpy(dst, src, font.ftface->glyph->bitmap.width);
-         src += font.ftface->glyph->bitmap.pitch;
-         dst += font.atlas.render.texture.staging.mem_layout.rowPitch;
-      }
-
-#else
-      FT_Load_Char(ftface, charcode, FT_LOAD_RENDER | FT_LOAD_MONOCHROME);
-//      FT_Render_Glyph(ftface->glyph, FT_RENDER_MODE_MONO);
-
-      uint8_t *src = ftface->glyph->bitmap.buffer;
-
-      for (row = 0; row < ftface->glyph->bitmap.rows; row++)
-      {
-         int col;
-
-         for (col = 0; col < ftface->glyph->bitmap.width; col++)
-         {
-            if (src[col >> 3] & (0x80 >> (col & 0x7)))
-               dst[col] = 255;
-         }
-
-         src += ftface->glyph->bitmap.pitch;
-         dst += atlas.staging.mem_layout.rowPitch;
-      }
-
-#endif
-      font.atlas.render.texture.dirty = true;
-   }
-
-   {
-      font_uniforms_t *uniforms = (font_uniforms_t *)font.atlas.render.ubo.mem.ptr;
-      uniforms->glyph_metrics[id].x = font.ftface->glyph->metrics.horiBearingX >> 6;
-      uniforms->glyph_metrics[id].y = -font.ftface->glyph->metrics.horiBearingY >> 6;
-      uniforms->glyph_metrics[id].width = font.ftface->glyph->metrics.width >> 6;
-      uniforms->glyph_metrics[id].height = font.ftface->glyph->metrics.height >> 6;
-      uniforms->advance[id] = font.ftface->glyph->metrics.horiAdvance >> 6;
-      font.atlas.render.ubo.dirty = true;
-   }
-
-   font.atlas.slots[id].last_used = font.atlas.usage_counter++;
-   return id;
+   font.atlas.slots[slot_id].last_used = font.atlas.usage_counter++;
+   return slot_id;
 }
 
 
@@ -239,7 +190,7 @@ void vulkan_font_init(vk_context_t *vk, vk_render_context_t *vk_render)
 //      const char* font_path = "/usr/share/fonts/75dpi/charR12.pcf.gz";
 //      const char* font_path = "/usr/share/fonts/WindowsFonts/cour.ttf";
 
-      FT_UInt font_size = 26;      
+      FT_UInt font_size = 26;
       FT_Init_FreeType(&font.ftlib);
       FT_New_Face(font.ftlib, font_path, 0, &font.ftface);
       FT_Select_Charmap(font.ftface, FT_ENCODING_UNICODE);
@@ -265,7 +216,7 @@ void vulkan_font_init(vk_context_t *vk, vk_render_context_t *vk_render)
 
       const VkVertexInputAttributeDescription attrib_desc[] =
       {
-         {0, 0, VK_FORMAT_R8_UINT, offsetof(font_vertex_t, id)},
+         {0, 0, VK_FORMAT_R8_UINT, offsetof(font_vertex_t, slot_id)},
          {1, 0, VK_FORMAT_R8G8B8_UNORM, offsetof(font_vertex_t, color)},
          {2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(font_vertex_t, position)}
       };
@@ -298,40 +249,32 @@ void vulkan_font_init(vk_context_t *vk, vk_render_context_t *vk_render)
          .color_blend_attachement_state = &color_blend_attachement_state,
       };
 
-      font.atlas.render.texture.width = font.atlas.slot_width << 4;
-      font.atlas.render.texture.height = font.atlas.slot_height << 4;
-      font.atlas.render.texture.format = VK_FORMAT_R8_UNORM;
+      font.render.texture.width = font.atlas.slot_width << 4;
+      font.render.texture.height = font.atlas.slot_height << 4;
+      font.render.texture.format = VK_FORMAT_R8_UNORM;
 
-      font.atlas.render.ssbo.info.range = sizeof(font_shader_storage_t);
-      font.atlas.render.ssbo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-      font.atlas.render.ssbo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+      font.render.ssbo.info.range = sizeof(font_shader_storage_t);
+      font.render.ubo.info.range = sizeof(font_uniforms_t);
+      font.render.vbo.info.range = 4096 * sizeof(font_vertex_t);
 
-      font.atlas.render.ubo.info.range = sizeof(font_uniforms_t);
-      font.atlas.render.ubo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-      font.atlas.render.ubo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-
-      font.atlas.render.vbo.info.range = 4096 * sizeof(font_vertex_t);
-      font.atlas.render.vbo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-      font.atlas.render.vbo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-
-      vk_render_init(vk, vk_render, &info, &font.atlas.render);
+      vk_render_init(vk, vk_render, &info, &font.render);
    }
 
 
-   memset(font.atlas.render.texture.staging.mem.u8 + font.atlas.render.texture.staging.mem_layout.offset, 0x0,
-      font.atlas.render.texture.staging.mem_layout.size - font.atlas.render.texture.staging.mem_layout.offset);
+   memset(font.render.texture.staging.mem.u8 + font.render.texture.staging.mem_layout.offset, 0x0,
+      font.render.texture.staging.mem_layout.size - font.render.texture.staging.mem_layout.offset);
 
-   device_memory_flush(vk->device, &font.atlas.render.texture.staging.mem);
-   font.atlas.render.texture.dirty = true;
+   device_memory_flush(vk->device, &font.render.texture.staging.mem);
+   font.render.texture.dirty = true;
 
-   font_uniforms_t *uniforms = (font_uniforms_t *)font.atlas.render.ubo.mem.ptr;
+   font_uniforms_t *uniforms = (font_uniforms_t *)font.render.ubo.mem.ptr;
    uniforms->vp_size.width = video.screen.width;
    uniforms->vp_size.height = video.screen.height;
-   uniforms->tex_size.width = font.atlas.render.texture.width;
-   uniforms->tex_size.height = font.atlas.render.texture.height;
-   font.atlas.render.ubo.dirty = true;
+   uniforms->tex_size.width = font.render.texture.width;
+   uniforms->tex_size.height = font.render.texture.height;
+   font.render.ubo.dirty = true;
 
-   font.atlas.render.vbo.info.range = 0;
+   font.render.vbo.info.range = 0;
 
 }
 
@@ -339,10 +282,12 @@ void vulkan_font_destroy(VkDevice device)
 {
    FT_Done_Face(font.ftface);
    FT_Done_FreeType(font.ftlib);
-   buffer_free(device, &font.atlas.render.vbo);
-   texture_free(device, &font.atlas.render.texture);
-   vkDestroyPipelineLayout(device, font.atlas.render.layout, NULL);
-   vkDestroyPipeline(device, font.atlas.render.pipe, NULL);
+   buffer_free(device, &font.render.ssbo);
+   buffer_free(device, &font.render.ubo);
+   buffer_free(device, &font.render.vbo);
+   texture_free(device, &font.render.texture);
+   vkDestroyPipelineLayout(device, font.render.layout, NULL);
+   vkDestroyPipeline(device, font.render.pipe, NULL);
    memset(&font, 0, sizeof(font));
 }
 
@@ -351,14 +296,14 @@ void vulkan_font_draw_text(const char *text, int x, int y)
    const unsigned char *in = (const unsigned char *)text;
    font_vertex_t *last_space = NULL;
 
-   font_vertex_t *out = (font_vertex_t *)(font.atlas.render.vbo.mem.u8 + font.atlas.render.vbo.info.range);
+   font_vertex_t *out = (font_vertex_t *)(font.render.vbo.mem.u8 + font.render.vbo.info.range);
    font_vertex_t vertex;
    vertex.color.r = 0;
    vertex.color.g = 0;
    vertex.color.b = 0;
    vertex.position.x = x;
    vertex.position.y = y + font.ascender;
-   vertex.id = 'p';
+   vertex.slot_id = 'p';
 
    while (*in)
    {
@@ -388,9 +333,9 @@ void vulkan_font_draw_text(const char *text, int x, int y)
          }
       }
 
-      int id = vulkan_font_get_glyph_id(charcode);
+      int slot_id = vulkan_font_get_slot_id(charcode);
 
-      if ((vertex.position.x + ((font_uniforms_t *)font.atlas.render.ubo.mem.ptr)->advance[id]) > video.screen.width)
+      if ((vertex.position.x + ((font_uniforms_t *)font.render.ubo.mem.ptr)->advance[slot_id]) > video.screen.width)
 //      if ((vertex.position.x + font.max_advance) > video.screen.width)
       {
          vertex.position.x = 0;
@@ -404,7 +349,7 @@ void vulkan_font_draw_text(const char *text, int x, int y)
             {
                ptr->position.x = vertex.position.x;
                ptr->position.y = vertex.position.y;
-               vertex.position.x += ((font_uniforms_t *)font.atlas.render.ubo.mem.ptr)->advance[ptr->id];
+               vertex.position.x += ((font_uniforms_t *)font.render.ubo.mem.ptr)->advance[ptr->slot_id];
                ptr++;
             }
 
@@ -413,19 +358,19 @@ void vulkan_font_draw_text(const char *text, int x, int y)
       }
 
       *out = vertex;
-      vertex.position.x += ((font_uniforms_t *)font.atlas.render.ubo.mem.ptr)->advance[id];
+      vertex.position.x += ((font_uniforms_t *)font.render.ubo.mem.ptr)->advance[slot_id];
 
-      (out++)->id = id;
+      (out++)->slot_id = slot_id;
    }
 
-   font.atlas.render.vbo.info.range = (uint8_t *)out - font.atlas.render.vbo.mem.u8;
+   font.render.vbo.info.range = (uint8_t *)out - font.render.vbo.mem.u8;
 
 
 }
 
 void vulkan_font_update_assets(VkDevice device, VkCommandBuffer cmd)
 {
-   font.atlas.render.vbo.info.range = 0;
+   font.render.vbo.info.range = 0;
 
 //   vulkan_font_draw_text("Backward compatibility: Backwards compatibility with ASCII and the enormous "
 //      "amount of software designed to process ASCII-encoded text was the main driving "
@@ -456,28 +401,28 @@ void vulkan_font_update_assets(VkDevice device, VkCommandBuffer cmd)
 //   vulkan_font_draw_text("gl_Position.xy = pos + 2.0 * vec2(0.0, glyph_metrics[c].w) / vp_size;", 0, 32);
 
 //   vulkan_font_draw_text("test 3", 40, 220);
-   if (font.atlas.render.texture.dirty)
-      texture_update(cmd, &font.atlas.render.texture);
+   if (font.render.texture.dirty)
+      texture_update(cmd, &font.render.texture);
 
-   if (font.atlas.render.vbo.dirty)
-      buffer_flush(device, &font.atlas.render.vbo);
+   if (font.render.vbo.dirty)
+      buffer_flush(device, &font.render.vbo);
 
-   if (font.atlas.render.ubo.dirty)
-      buffer_flush(device, &font.atlas.render.ubo);
+   if (font.render.ubo.dirty)
+      buffer_flush(device, &font.render.ubo);
 
-   if (font.atlas.render.ssbo.dirty)
-      buffer_flush(device, &font.atlas.render.ssbo);
+   if (font.render.ssbo.dirty)
+      buffer_flush(device, &font.render.ssbo);
 }
 void vulkan_font_render(VkCommandBuffer cmd)
 {
-   if (!font.atlas.render.vbo.info.range)
+   if (!font.render.vbo.info.range)
       return;
 
    VkDeviceSize offset = 0;
-   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, font.atlas.render.pipe);
-   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, font.atlas.render.layout, 0, 1, &font.atlas.render.desc, 0, NULL);
-   vkCmdBindVertexBuffers(cmd, 0, 1, &font.atlas.render.vbo.info.buffer, &offset);
-   vkCmdDraw(cmd, font.atlas.render.vbo.info.range / sizeof(font_vertex_t), 1, 0, 0);
+   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, font.render.pipe);
+   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, font.render.layout, 0, 1, &font.render.desc, 0, NULL);
+   vkCmdBindVertexBuffers(cmd, 0, 1, &font.render.vbo.info.buffer, &offset);
+   vkCmdDraw(cmd, font.render.vbo.info.range / sizeof(font_vertex_t), 1, 0, 0);
 //   {
 //      VkMappedMemoryRange range =
 //      {

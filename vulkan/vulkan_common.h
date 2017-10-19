@@ -295,3 +295,52 @@ static inline void vk_update_descriptor_set(VkDevice device, vk_texture_t* textu
 
    vkUpdateDescriptorSets(device, write_set_count, write_set, 0, NULL);
 }
+
+
+typedef union
+{
+   struct
+   {
+      float r;
+      float g;
+   };
+   struct
+   {
+      float x;
+      float y;
+   };
+   struct
+   {
+      float width;
+      float height;
+   };
+} vec2;
+
+typedef union
+{
+   struct
+   {
+      float r;
+      float g;
+      float b;
+      float a;
+   };
+   struct
+   {
+      float x;
+      float y;
+      union
+      {
+         struct
+         {
+            float z;
+            float w;
+         };
+         struct
+         {
+            float width;
+            float height;
+         };
+      };
+   };
+} vec4;

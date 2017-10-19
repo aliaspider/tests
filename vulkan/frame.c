@@ -257,5 +257,6 @@ void vulkan_frame_destroy(VkDevice device)
    frame.pipe = VK_NULL_HANDLE;
 
    buffer_free(device, &frame.vbo);
+   buffer_free(device, &frame.ubo);
    texture_free(device, &frame.tex);
 }
