@@ -71,8 +71,6 @@ void vulkan_frame_init(vk_context_t *vk, vk_render_context_t *vk_render, int wid
 
    memset(frame.texture.staging.mem.u8 + frame.texture.staging.mem_layout.offset, 0xFF,
       frame.texture.staging.mem_layout.size - frame.texture.staging.mem_layout.offset);
-
-   device_memory_flush(vk->device, &frame.texture.staging.mem);
    frame.texture.dirty = true;
 
    video.frame.width = width;
