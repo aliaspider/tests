@@ -192,7 +192,7 @@ void video_init()
       const VkDescriptorPoolSize sizes[] =
       {
          {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,2},
-         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,2},
+         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,4},
          {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,2}
       };
 
@@ -357,6 +357,26 @@ void video_init()
    vk_render.scissor.extent.height = video.screen.height;
 
    {
+      const VkSamplerCreateInfo info =
+      {
+         VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+         .magFilter = VK_FILTER_NEAREST,
+         .minFilter = VK_FILTER_NEAREST,
+      };
+      vkCreateSampler(vk.device, &info, NULL, &vk_render.sampler_nearest);
+   }
+
+   {
+      const VkSamplerCreateInfo info =
+      {
+         VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+         .magFilter = VK_FILTER_LINEAR,
+         .minFilter = VK_FILTER_LINEAR,
+      };
+      vkCreateSampler(vk.device, &info, NULL, &vk_render.sampler_linear);
+   }
+
+   {
       const VkDescriptorSetLayoutBinding bindings[] =
       {
          {
@@ -368,16 +388,16 @@ void video_init()
          {
             .binding = 1,
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .descriptorCount = 1,
+            .descriptorCount = 2,
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-//            .pImmutableSamplers = &vk.texture_sampler
+            .pImmutableSamplers = vk_render.samplers
          },
          {
             .binding = 2,
             .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT,
-         },
+         }
       };
 
       const VkDescriptorSetLayoutCreateInfo info [] =
@@ -522,6 +542,9 @@ void video_destroy()
 
    vulkan_font_destroy(vk.device);
    vulkan_frame_destroy(vk.device);
+
+   vkDestroySampler(vk.device, vk_render.sampler_nearest, NULL);
+   vkDestroySampler(vk.device, vk_render.sampler_linear, NULL);
 
    vkDestroyDescriptorPool(vk.device, vk.pools.desc, NULL);
    vkDestroyDescriptorSetLayout(vk.device, vk_render.descriptor_set_layout, NULL);

@@ -269,7 +269,6 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
          .width = font.atlas.slot_width << 4,
          .height = font.atlas.slot_height << 4,
          .format = VK_FORMAT_R8_UNORM,
-         .filter = VK_FILTER_NEAREST
       };
       texture_init(device, memory_types, &info, &font.atlas.texture);
    }
@@ -317,12 +316,18 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
          .offset = 0,
          .range = sizeof(font_uniforms_t)
       };
-      const VkDescriptorImageInfo image_info =
+      const VkDescriptorImageInfo image_info[] =
       {
-         .sampler = font.atlas.texture.sampler,
-         .imageView = font.atlas.texture.view,
-         .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+         {
+            .imageView = font.atlas.texture.view,
+            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+         },
+         {
+            .imageView = font.atlas.texture.view,
+            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+         }
       };
+
 
       const VkWriteDescriptorSet write_set[] =
       {
@@ -340,9 +345,9 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
             .dstSet = font.atlas.desc,
             .dstBinding = 1,
             .dstArrayElement = 0,
-            .descriptorCount = 1,
+            .descriptorCount = countof(image_info),
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .pImageInfo = &image_info
+            .pImageInfo = image_info
          },
          {
             VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,

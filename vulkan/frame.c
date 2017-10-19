@@ -224,7 +224,6 @@ void vulkan_frame_init(vk_context_t* vk, vk_render_context_t* vk_render, int wid
             .width = width,
             .height = height,
             .format = format,
-            .filter = VK_FILTER_LINEAR
          };
          texture_init(vk->device, vk->memoryTypes, &info, &frame.tex);
       }
@@ -244,11 +243,16 @@ void vulkan_frame_init(vk_context_t* vk, vk_render_context_t* vk_render, int wid
 //         .offset = 0,
 //         .range = init_info->ubo_range
 //      };
-      const VkDescriptorImageInfo image_info =
+      const VkDescriptorImageInfo image_info[] =
       {
-         .sampler = frame.tex.sampler,
-         .imageView = frame.tex.view,
-         .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+         {
+            .imageView = frame.tex.view,
+            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+         },
+         {
+            .imageView = frame.tex.view,
+            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+         }
       };
 
       const VkWriteDescriptorSet write_set[] =
@@ -267,9 +271,9 @@ void vulkan_frame_init(vk_context_t* vk, vk_render_context_t* vk_render, int wid
             .dstSet = frame.desc,
             .dstBinding = 1,
             .dstArrayElement = 0,
-            .descriptorCount = 1,
+            .descriptorCount = countof(image_info),
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .pImageInfo = &image_info
+            .pImageInfo = image_info
          }
       };
       vkUpdateDescriptorSets(vk->device, countof(write_set), write_set, 0, NULL);

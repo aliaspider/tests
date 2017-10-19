@@ -81,27 +81,15 @@ void texture_init(VkDevice device, const VkMemoryType *memory_types, const textu
       };
       vkCreateImageView(device, &info, NULL, &dst->view);
    }
-
-   {
-      VkSamplerCreateInfo samplerCreateInfo =
-      {
-         VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-         .magFilter = init_info->filter,
-         .minFilter = init_info->filter,
-      };
-      vkCreateSampler(device, &samplerCreateInfo, NULL, &dst->sampler);
-   }
 }
 
 void texture_free(VkDevice device, vk_texture_t *texture)
 {
-   vkDestroySampler(device, texture->sampler, NULL);
    vkDestroyImageView(device, texture->view, NULL);
    vkDestroyImage(device, texture->image, NULL);
    vkDestroyImage(device, texture->staging.image, NULL);
    device_memory_free(device, &texture->mem);
    device_memory_free(device, &texture->staging.mem);
-   texture->sampler = VK_NULL_HANDLE;
    texture->view = VK_NULL_HANDLE;
    texture->image = VK_NULL_HANDLE;
 }

@@ -45,7 +45,6 @@ typedef struct
 //   VkSubresourceLayout mem_layout;
    VkImageLayout layout;
    VkImageView view;
-   VkSampler sampler;
    int width;
    int height;
    bool dirty;
@@ -57,7 +56,6 @@ typedef struct
    int width;
    int height;
    VkFormat format;
-   VkFilter filter;
 }texture_init_info_t;
 void texture_init(VkDevice device, const VkMemoryType* memory_types, const texture_init_info_t *init_info, vk_texture_t* dst);
 void texture_free(VkDevice device, vk_texture_t* texture);
@@ -188,4 +186,13 @@ typedef struct
    VkCommandBuffer cmd;
    VkFence queue_fence;
    VkFence chain_fence;
+   union
+   {
+      struct
+      {
+         VkSampler sampler_nearest;
+         VkSampler sampler_linear;
+      };
+      VkSampler samplers[2];
+   };
 } vk_render_context_t;
