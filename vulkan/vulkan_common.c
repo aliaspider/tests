@@ -419,7 +419,23 @@ uint32_t vk_get_queue_family_index(VkPhysicalDevice gpu, VkQueueFlags required_f
    return 0;
 }
 
-void vk_render_init(vk_context_t *vk, vk_render_context_t *vk_render, vk_render_t *dst)
+
+static inline VkShaderModule vk_shader_code_init(VkDevice device, const vk_shader_code_t* shader_code)
+{
+   VkShaderModule shader;
+
+   const VkShaderModuleCreateInfo info =
+   {
+      VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+      .codeSize = shader_code->code_size,
+      .pCode = shader_code->code
+   };
+   vkCreateShaderModule(device, &info, NULL, &shader);
+
+   return shader;
+}
+
+void vk_render_init(vk_context_t *vk, vk_render_context_t *vk_render, const vk_pipeline_init_info_t* init_info, vk_render_t *dst)
 {
    texture_init(vk->device, vk->memoryTypes, vk->queue_family_index, &dst->texture);
    buffer_init(vk->device, vk->memoryTypes, NULL, &dst->ssbo);
@@ -450,4 +466,93 @@ void vk_render_init(vk_context_t *vk, vk_render_context_t *vk_render, vk_render_
 
       vkCreatePipelineLayout(vk->device, &info, NULL, &dst->layout);
    }
+   {
+      const VkPipelineShaderStageCreateInfo shaders_info[] =
+      {
+         {
+            VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+            .stage = VK_SHADER_STAGE_VERTEX_BIT,
+            .pName = "main",
+            .module = vk_shader_code_init(vk->device, &init_info->shaders.vs)
+         },
+         {
+            VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+            .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+            .pName = "main",
+            .module = vk_shader_code_init(vk->device, &init_info->shaders.ps)
+         },
+         {
+            VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+            .stage = VK_SHADER_STAGE_GEOMETRY_BIT,
+            .pName = "main",
+            .module = init_info->shaders.gs.code ? vk_shader_code_init(vk->device, &init_info->shaders.gs) : VK_NULL_HANDLE
+         }
+      };
+
+      const VkVertexInputBindingDescription vertex_description =
+      {
+         0, init_info->vertex_stride, VK_VERTEX_INPUT_RATE_VERTEX
+      };
+
+      const VkPipelineVertexInputStateCreateInfo vertex_input_state =
+      {
+         VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+         .vertexBindingDescriptionCount = 1, &vertex_description,
+         .vertexAttributeDescriptionCount = init_info->attrib_count, init_info->attrib_desc
+      };
+
+      const VkPipelineInputAssemblyStateCreateInfo input_assembly_state =
+      {
+         VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+         .topology = init_info->topology,
+         .primitiveRestartEnable = VK_FALSE
+      };
+
+      const VkPipelineViewportStateCreateInfo viewport_state =
+      {
+         VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+         .viewportCount = 1, &vk_render->viewport, .scissorCount = 1, &vk_render->scissor
+      };
+
+      const VkPipelineRasterizationStateCreateInfo rasterization_info =
+      {
+         VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+         .lineWidth = 1.0f
+      };
+
+      const VkPipelineMultisampleStateCreateInfo multisample_state =
+      {
+         VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+         .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+      };
+
+      const VkPipelineColorBlendStateCreateInfo colorblend_state =
+      {
+         VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+         .attachmentCount = 1, init_info->color_blend_attachement_state
+      };
+
+      const VkGraphicsPipelineCreateInfo info =
+      {
+         VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+         .flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
+         .stageCount = countof(shaders_info), shaders_info,
+         .pVertexInputState = &vertex_input_state,
+         .pInputAssemblyState = &input_assembly_state,
+         .pViewportState = &viewport_state,
+         .pRasterizationState = &rasterization_info,
+         .pMultisampleState = &multisample_state,
+         .pColorBlendState = &colorblend_state,
+         .layout = dst->layout,
+         .renderPass = vk_render->renderpass,
+         .subpass = 0
+      };
+      vkCreateGraphicsPipelines(vk->device, VK_NULL_HANDLE, 1, &info, NULL, &dst->pipe);
+
+      vkDestroyShaderModule(vk->device, shaders_info[0].module, NULL);
+      vkDestroyShaderModule(vk->device, shaders_info[1].module, NULL);
+      if(shaders_info[2].module)
+         vkDestroyShaderModule(vk->device, shaders_info[2].module, NULL);
+   }
+
 }
