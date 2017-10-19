@@ -90,12 +90,5 @@ void vulkan_frame_render(VkCommandBuffer cmd)
 
 void vulkan_frame_destroy(VkDevice device)
 {
-   vkDestroyPipelineLayout(device, frame.pipeline_layout, NULL);
-   vkDestroyPipeline(device, frame.pipe, NULL);
-
-   buffer_free(device, &frame.vbo);
-   buffer_free(device, &frame.ubo);
-   texture_free(device, &frame.texture);
-
-   memset(&frame, 0, sizeof(frame));
+   vk_render_destroy(device, &frame);
 }

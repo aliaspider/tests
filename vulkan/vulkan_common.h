@@ -220,6 +220,7 @@ typedef struct
 }vk_pipeline_init_info_t;
 
 void vk_render_init(vk_context_t *vk, vk_render_context_t *vk_render, const vk_pipeline_init_info_t *init_info, vk_render_t *dst);
+void vk_render_destroy(VkDevice device, vk_render_t *render);
 
 typedef union
 {

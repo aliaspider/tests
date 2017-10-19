@@ -650,3 +650,15 @@ void vk_render_init(vk_context_t *vk, vk_render_context_t *vk_render, const vk_p
    }
 
 }
+
+void vk_render_destroy(VkDevice device, vk_render_t *render)
+{
+   vkDestroyPipelineLayout(device, render->pipeline_layout, NULL);
+   vkDestroyPipeline(device, render->pipe, NULL);
+   buffer_free(device, &render->vbo);
+   buffer_free(device, &render->ubo);
+   buffer_free(device, &render->ssbo);
+   texture_free(device, &render->texture);
+
+   memset(render, 0, sizeof(*render));
+}

@@ -273,13 +273,7 @@ void vulkan_font_destroy(VkDevice device)
 {
    FT_Done_Face(font.ftface);
    FT_Done_FreeType(font.ftlib);
-   buffer_free(device, &font.render.ssbo);
-   buffer_free(device, &font.render.ubo);
-   buffer_free(device, &font.render.vbo);
-   texture_free(device, &font.render.texture);
-   vkDestroyPipelineLayout(device, font.render.pipeline_layout, NULL);
-   vkDestroyPipeline(device, font.render.pipe, NULL);
-   memset(&font, 0, sizeof(font));
+   vk_render_destroy(device, &font.render);
 }
 
 void vulkan_font_draw_text(const char *text, int x, int y)
