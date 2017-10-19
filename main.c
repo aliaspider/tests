@@ -20,6 +20,20 @@ int main(int argc, char **argv)
 {
    debug_log("main\n");
 
+   video = video_vulkan;
+#ifdef __WIN32__
+   audio = audio_win;
+   input = input_dinput;
+#elif defined(__linux__)
+   audio = audio_alsa;
+#ifdef HAVE_X11
+   input = input_x11;
+#endif
+#endif
+
+   video.screen.width = 640;
+   video.screen.height = 480;
+
    platform_init();
 
    {
@@ -31,31 +45,15 @@ int main(int argc, char **argv)
       module_init(&info, &module);
    }
 
-   video = video_vulkan;
    video.init();
-
-#ifdef __WIN32__
-   audio = audio_win;
-#elif defined(__linux__)
-   audio = audio_alsa;
-#endif
    audio.init();
-
-#ifdef __WIN32__
-   input = input_dinput;
-#elif HAVE_X11
-   input = input_x11;
-#endif
    input.init();
 
    video.frame_init(module.output_width, module.output_height, module.screen_format);
 
-
    int frames = 0;
    struct timespec start_time;
    clock_gettime(CLOCK_MONOTONIC, &start_time);
-
-
 
    while (true)
    {

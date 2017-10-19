@@ -8,9 +8,7 @@
 #include "frame.h"
 #include "font.h"
 
-video_t video;
-
-vk_context_t        vk;
+static vk_context_t vk;
 static vk_render_context_t vk_render;
 
 static VkBool32 vulkan_debug_report_callback(VkDebugReportFlagsEXT flags,
@@ -22,14 +20,13 @@ static VkBool32 vulkan_debug_report_callback(VkDebugReportFlagsEXT flags,
 {
    static const char *debugFlags_str[] = {"INFORMATION", "WARNING", "PERFORMANCE", "ERROR", "DEBUG"};
 
-   int                i;
+   int i;
 
    for (i = 0; i < countof(debugFlags_str); i++)
       if (flags & (1 << i))
          break;
 
-   printf("[%-14s - %-11s] %s\n", pLayerPrefix, debugFlags_str[i],
-      pMessage);
+   printf("[%-14s - %-11s] %s\n", pLayerPrefix, debugFlags_str[i], pMessage);
 
 #ifdef HAVE_X11
    XAutoRepeatOn(video.screen.display);
@@ -90,7 +87,7 @@ void video_init()
          .pApplicationName = "Vulkan Test",
          .applicationVersion = VK_MAKE_VERSION(0, 1, 0),
          .pEngineName = "my engine",
-         .engineVersion = VK_MAKE_VERSION(0,      1, 0)
+         .engineVersion = VK_MAKE_VERSION(0, 1, 0)
       };
 
       VkInstanceCreateInfo info =
@@ -145,7 +142,6 @@ void video_init()
 //         VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME,
       };
 
-
       const VkDeviceQueueCreateInfo queue_info =
       {
          VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
@@ -191,9 +187,9 @@ void video_init()
    {
       const VkDescriptorPoolSize sizes[] =
       {
-         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,2},
-         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,4},
-         {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,2}
+         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2},
+         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4},
+         {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2}
       };
 
       const VkDescriptorPoolCreateInfo info =
@@ -204,18 +200,6 @@ void video_init()
       };
       vkCreateDescriptorPool(vk.device, &info, NULL, &vk.pools.desc);
    }
-
-   video.screen.width = 640;
-   video.screen.height = 480;
-#ifdef VK_USE_PLATFORM_XLIB_KHR
-   video.screen.display = XOpenDisplay(NULL);
-   video.screen.window  = XCreateSimpleWindow(video.screen.display,
-         DefaultRootWindow(video.screen.display), 0, 0, video.screen.width, video.screen.height, 0, 0, 0);
-   XStoreName(video.screen.display, video.screen.window, "Vulkan Test");
-   XSelectInput(video.screen.display, video.screen.window,
-      ExposureMask | FocusChangeMask | KeyPressMask | KeyReleaseMask);
-   XMapWindow(video.screen.display, video.screen.window);
-#endif
 
 #ifdef VK_USE_PLATFORM_XLIB_KHR
    {
@@ -260,7 +244,7 @@ void video_init()
 //         .presentMode = VK_PRESENT_MODE_FIFO_KHR,
 //         .presentMode = VK_PRESENT_MODE_FIFO_RELAXED_KHR,
 //         .presentMode = VK_PRESENT_MODE_MAILBOX_KHR,
-//      .present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR
+//         .presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR,
          .clipped = VK_TRUE
       };
       VK_CHECK(vkCreateSwapchainKHR(vk.device, &info, NULL, &vk_render.swapchain));
@@ -311,7 +295,7 @@ void video_init()
       vkGetSwapchainImagesKHR(vk.device, vk_render.swapchain, &vk_render.swapchain_count,
          swapchainImages);
 
-      int     i;
+      int i;
 
       for (i = 0; i < vk_render.swapchain_count; i++)
       {
@@ -383,14 +367,14 @@ void video_init()
             .binding = 0,
             .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             .descriptorCount = 1,
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT|VK_SHADER_STAGE_GEOMETRY_BIT,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT,
          },
          {
             .binding = 1,
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             .descriptorCount = 2,
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-            .pImmutableSamplers = (VkSampler*)&vk_render.samplers
+            .pImmutableSamplers = (VkSampler *) &vk_render.samplers
          },
          {
             .binding = 2,
@@ -490,7 +474,7 @@ void video_frame_update()
          vkCmdBeginRenderPass(vk_render.cmd, &info, VK_SUBPASS_CONTENTS_INLINE);
       }
 
-//      vulkan_frame_render(vk_render.cmd);
+      vulkan_frame_render(vk_render.cmd);
       vulkan_font_render(vk_render.cmd);
 
       vkCmdEndRenderPass(vk_render.cmd);
@@ -548,7 +532,6 @@ void video_destroy()
    vkDestroyDescriptorPool(vk.device, vk.pools.desc, NULL);
    vkDestroyDescriptorSetLayout(vk.device, vk_render.descriptor_set_layout, NULL);
 
-   //   buffer_free(vk.device, &ubo);
    int i;
 
    for (i = 0; i < vk_render.swapchain_count; i++)
@@ -568,12 +551,6 @@ void video_destroy()
 
    memset(&vk, 0, sizeof(vk));
    memset(&vk_render, 0, sizeof(vk_render));
-
-#ifdef HAVE_X11
-   XDestroyWindow(video.screen.display, video.screen.window);
-   XCloseDisplay(video.screen.display);
-   video.screen.display = NULL;
-#endif
 
    video.frame.data = NULL;
    debug_log("video destroy\n");
