@@ -9,6 +9,7 @@ void texture_init(VkDevice device, const VkMemoryType *memory_types, const textu
    dst->width = init_info->width;
    dst->height = init_info->height;
    dst->dirty = true;
+   dst->info.sampler = VK_NULL_HANDLE;
 
    {
       VkImageCreateInfo info =
@@ -30,13 +31,21 @@ void texture_init(VkDevice device, const VkMemoryType *memory_types, const textu
          .pQueueFamilyIndices = &init_info->queue_family_index,
          .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
       };
-      dst->layout = info.initialLayout;
+
+//      if((info.format == VK_FORMAT_R5G6B5_UNORM_PACK16)
+//         ||(info.format == VK_FORMAT_R5G5B5A1_UNORM_PACK16))
+//         info.format = VK_FORMAT_A8B8G8R8_UNORM_PACK32;
+
+      dst->format = info.format;
+      dst->info.imageLayout = info.initialLayout;
       vkCreateImage(device, &info, NULL, &dst->image);
 
+      info.format = init_info->format;
       info.tiling = VK_IMAGE_TILING_LINEAR;
       info.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
-      info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-      dst->staging.layout = info.initialLayout;
+      info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;      
+      dst->staging.format = info.format;
+      dst->staging.layout = info.initialLayout;      
       vkCreateImage(device, &info, NULL, &dst->staging.image);
    }
 
@@ -74,23 +83,23 @@ void texture_init(VkDevice device, const VkMemoryType *memory_types, const textu
          VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
          .image = dst->image,
          .viewType = VK_IMAGE_VIEW_TYPE_2D,
-         .format = init_info->format,
+         .format = dst->format,
          .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
          .subresourceRange.levelCount = 1,
          .subresourceRange.layerCount = 1
       };
-      vkCreateImageView(device, &info, NULL, &dst->view);
+      vkCreateImageView(device, &info, NULL, &dst->info.imageView);
    }
 }
 
 void texture_free(VkDevice device, vk_texture_t *texture)
 {
-   vkDestroyImageView(device, texture->view, NULL);
+   vkDestroyImageView(device, texture->info.imageView, NULL);
    vkDestroyImage(device, texture->image, NULL);
    vkDestroyImage(device, texture->staging.image, NULL);
    device_memory_free(device, &texture->mem);
    device_memory_free(device, &texture->staging.mem);
-   texture->view = VK_NULL_HANDLE;
+   texture->info.imageView = VK_NULL_HANDLE;
    texture->image = VK_NULL_HANDLE;
 }
 
@@ -118,10 +127,11 @@ void texture_update(VkCommandBuffer cmd, vk_texture_t *texture)
    barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
    barrier.image  = texture->image;
-   texture->layout = barrier.newLayout;
+   texture->info.imageLayout = barrier.newLayout;
    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1,
       &barrier);
 
+   if(texture->format == texture->staging.format)
    {
       const VkImageCopy copy =
       {
@@ -133,14 +143,27 @@ void texture_update(VkCommandBuffer cmd, vk_texture_t *texture)
          .extent.height = texture->height,
          .extent.depth = 1
       };
-      vkCmdCopyImage(cmd, texture->staging.image, texture->staging.layout, texture->image, texture->layout, 1, &copy);
+      vkCmdCopyImage(cmd, texture->staging.image, texture->staging.layout, texture->image, texture->info.imageLayout, 1, &copy);
+   }
+   else
+   {
+      const VkImageBlit blit =
+      {
+         .srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+         .srcSubresource.layerCount = 1,
+         .dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+         .dstSubresource.layerCount = 1,
+         .srcOffsets = {{0,0,0}, {texture->width, texture->height, 1}},
+         .dstOffsets = {{0,0,0}, {texture->width, texture->height, 1}}
+      };
+      vkCmdBlitImage(cmd, texture->staging.image, texture->staging.layout, texture->image, texture->info.imageLayout, 1, &blit, VK_FILTER_NEAREST);
    }
 
    barrier.srcAccessMask = barrier.dstAccessMask;
    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
    barrier.oldLayout = barrier.newLayout;
    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-   texture->layout = barrier.newLayout;
+   texture->info.imageLayout = barrier.newLayout;
    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, NULL, 0, NULL, 1,
       &barrier);
 
@@ -231,23 +254,24 @@ void device_memory_flush(VkDevice device, const device_memory_t *memory)
 void buffer_init(VkDevice device, const VkMemoryType *memory_types, const buffer_init_info_t *init_info,
    vk_buffer_t *dst)
 {
-   dst->size = init_info->size;
+   dst->info.offset = 0;
+   dst->info.range = init_info->size;
 
    {
       const VkBufferCreateInfo info =
       {
          VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-         .size = dst->size,
+         .size = dst->info.range,
          .usage = init_info->usage,
       };
-      vkCreateBuffer(device, &info, NULL, &dst->handle);
+      vkCreateBuffer(device, &info, NULL, &dst->info.buffer);
    }
 
    {
       memory_init_info_t info =
       {
          .req_flags = init_info->req_flags,
-         .buffer = dst->handle
+         .buffer = dst->info.buffer
       };
       device_memory_init(device, memory_types, &info, &dst->mem);
    }
@@ -262,8 +286,8 @@ void buffer_init(VkDevice device, const VkMemoryType *memory_types, const buffer
 void buffer_free(VkDevice device, vk_buffer_t *buffer)
 {
    device_memory_free(device, &buffer->mem);
-   vkDestroyBuffer(device, buffer->handle, NULL);
-   buffer->handle = VK_NULL_HANDLE;
+   vkDestroyBuffer(device, buffer->info.buffer, NULL);
+   buffer->info.buffer = VK_NULL_HANDLE;
 }
 
 void buffer_flush(VkDevice device, vk_buffer_t *buffer)

@@ -234,49 +234,8 @@ void vulkan_frame_init(vk_context_t* vk, vk_render_context_t* vk_render, int wid
 
       device_memory_flush(vk->device, &frame.tex.staging.mem);
       frame.tex.dirty = true;
-   }
 
-   {
-//      const VkDescriptorBufferInfo buffer_info =
-//      {
-//         .buffer = init_info->ubo_buffer,
-//         .offset = 0,
-//         .range = init_info->ubo_range
-//      };
-      const VkDescriptorImageInfo image_info[] =
-      {
-         {
-            .imageView = frame.tex.view,
-            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-         },
-         {
-            .imageView = frame.tex.view,
-            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-         }
-      };
-
-      const VkWriteDescriptorSet write_set[] =
-      {
-//         {
-//            VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-//            .dstSet = dst->set,
-//            .dstBinding = 0,
-//            .dstArrayElement = 0,
-//            .descriptorCount = 1,
-//            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-//            .pBufferInfo = &buffer_info
-//         },
-         {
-            VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = frame.desc,
-            .dstBinding = 1,
-            .dstArrayElement = 0,
-            .descriptorCount = countof(image_info),
-            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .pImageInfo = image_info
-         }
-      };
-      vkUpdateDescriptorSets(vk->device, countof(write_set), write_set, 0, NULL);
+      vk_update_descriptor_set(vk->device, &frame.tex, NULL, NULL, frame.desc);
    }
 
    video.frame.width = width;
@@ -301,9 +260,9 @@ void vulkan_frame_render(VkCommandBuffer cmd)
    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, frame.pipe_layout, 0, 1, &frame.desc, 0, NULL);
 // vkCmdPushConstants(device.cmd, device.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(uniforms_t), mapped_uniforms);
 
-   vkCmdBindVertexBuffers(cmd, 0, 1, &frame.vbo.handle, &offset);
+   vkCmdBindVertexBuffers(cmd, 0, 1, &frame.vbo.info.buffer, &offset);
 
-   vkCmdDraw(cmd, frame.vbo.size / sizeof(vertex_t), 1, 0, 0);
+   vkCmdDraw(cmd, frame.vbo.info.range / sizeof(vertex_t), 1, 0, 0);
 }
 void vulkan_frame_destroy(VkDevice device)
 {

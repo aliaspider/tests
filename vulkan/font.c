@@ -292,75 +292,8 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
       buffer_init(device, memory_types, &info, &font.atlas.ubo);
    }
 
-   {
-      const VkDescriptorSetAllocateInfo info =
-      {
-         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-         .descriptorPool = descriptor_pool,
-         .descriptorSetCount = 1, &descriptor_set_layout
-      };
-      vkAllocateDescriptorSets(device, &info, &font.atlas.desc);
-   }
-
-
-   {
-      const VkDescriptorBufferInfo buffer_info =
-      {
-         .buffer = font.atlas.ssbo.handle,
-         .offset = 0,
-         .range = sizeof(font_shader_storage_t)
-      };
-      const VkDescriptorBufferInfo uniform_buffer_info =
-      {
-         .buffer = font.atlas.ubo.handle,
-         .offset = 0,
-         .range = sizeof(font_uniforms_t)
-      };
-      const VkDescriptorImageInfo image_info[] =
-      {
-         {
-            .imageView = font.atlas.texture.view,
-            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-         },
-         {
-            .imageView = font.atlas.texture.view,
-            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-         }
-      };
-
-
-      const VkWriteDescriptorSet write_set[] =
-      {
-         {
-            VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = font.atlas.desc,
-            .dstBinding = 0,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .pBufferInfo = &uniform_buffer_info
-         },
-         {
-            VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = font.atlas.desc,
-            .dstBinding = 1,
-            .dstArrayElement = 0,
-            .descriptorCount = countof(image_info),
-            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .pImageInfo = image_info
-         },
-         {
-            VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = font.atlas.desc,
-            .dstBinding = 2,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            .pBufferInfo = &buffer_info
-         },
-      };
-      vkUpdateDescriptorSets(device, countof(write_set), write_set, 0, NULL);
-   }
+   vk_allocate_descriptor_set(device, descriptor_pool, descriptor_set_layout, &font.atlas.desc);
+   vk_update_descriptor_set(device, &font.atlas.texture, &font.atlas.ubo, &font.atlas.ssbo, font.atlas.desc);
 
 
    memset(font.atlas.texture.staging.mem.u8 + font.atlas.texture.staging.mem_layout.offset, 0x0,
@@ -384,7 +317,7 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
          .size = 4096 * sizeof(font_vertex_t)
       };
       buffer_init(device, memory_types, &info, &font.atlas.vbo);
-      font.atlas.vbo.size = 0;
+      font.atlas.vbo.info.range = 0;
    }
 
 
@@ -567,7 +500,7 @@ void vulkan_font_draw_text(const char *text, int x, int y)
    const unsigned char *in = (const unsigned char *)text;
    font_vertex_t *last_space = NULL;
 
-   font_vertex_t *out = (font_vertex_t *)(font.atlas.vbo.mem.u8 + font.atlas.vbo.size);
+   font_vertex_t *out = (font_vertex_t *)(font.atlas.vbo.mem.u8 + font.atlas.vbo.info.range);
    font_vertex_t vertex;
    vertex.color.r = 0;
    vertex.color.g = 0;
@@ -634,14 +567,14 @@ void vulkan_font_draw_text(const char *text, int x, int y)
       (out++)->id = id;
    }
 
-   font.atlas.vbo.size = (uint8_t *)out - font.atlas.vbo.mem.u8;
+   font.atlas.vbo.info.range = (uint8_t *)out - font.atlas.vbo.mem.u8;
 
 
 }
 
 void vulkan_font_update_assets(VkDevice device, VkCommandBuffer cmd)
 {
-   font.atlas.vbo.size = 0;
+   font.atlas.vbo.info.range = 0;
 
 //   vulkan_font_draw_text("Backward compatibility: Backwards compatibility with ASCII and the enormous "
 //      "amount of software designed to process ASCII-encoded text was the main driving "
@@ -686,14 +619,14 @@ void vulkan_font_update_assets(VkDevice device, VkCommandBuffer cmd)
 }
 void vulkan_font_render(VkCommandBuffer cmd)
 {
-   if (!font.atlas.vbo.size)
+   if (!font.atlas.vbo.info.range)
       return;
 
    VkDeviceSize offset = 0;
    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, font.atlas.pipe);
    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, font.atlas.pipe_layout, 0, 1, &font.atlas.desc, 0, NULL);
-   vkCmdBindVertexBuffers(cmd, 0, 1, &font.atlas.vbo.handle, &offset);
-   vkCmdDraw(cmd, font.atlas.vbo.size / sizeof(font_vertex_t), 1, 0, 0);
+   vkCmdBindVertexBuffers(cmd, 0, 1, &font.atlas.vbo.info.buffer, &offset);
+   vkCmdDraw(cmd, font.atlas.vbo.info.range / sizeof(font_vertex_t), 1, 0, 0);
 //   {
 //      VkMappedMemoryRange range =
 //      {

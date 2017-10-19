@@ -363,7 +363,7 @@ void video_init()
          .magFilter = VK_FILTER_NEAREST,
          .minFilter = VK_FILTER_NEAREST,
       };
-      vkCreateSampler(vk.device, &info, NULL, &vk_render.sampler_nearest);
+      vkCreateSampler(vk.device, &info, NULL, &vk_render.samplers.nearest);
    }
 
    {
@@ -373,7 +373,7 @@ void video_init()
          .magFilter = VK_FILTER_LINEAR,
          .minFilter = VK_FILTER_LINEAR,
       };
-      vkCreateSampler(vk.device, &info, NULL, &vk_render.sampler_linear);
+      vkCreateSampler(vk.device, &info, NULL, &vk_render.samplers.linear);
    }
 
    {
@@ -390,7 +390,7 @@ void video_init()
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             .descriptorCount = 2,
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-            .pImmutableSamplers = vk_render.samplers
+            .pImmutableSamplers = (VkSampler*)&vk_render.samplers
          },
          {
             .binding = 2,
@@ -543,8 +543,8 @@ void video_destroy()
    vulkan_font_destroy(vk.device);
    vulkan_frame_destroy(vk.device);
 
-   vkDestroySampler(vk.device, vk_render.sampler_nearest, NULL);
-   vkDestroySampler(vk.device, vk_render.sampler_linear, NULL);
+   vkDestroySampler(vk.device, vk_render.samplers.nearest, NULL);
+   vkDestroySampler(vk.device, vk_render.samplers.linear, NULL);
 
    vkDestroyDescriptorPool(vk.device, vk.pools.desc, NULL);
    vkDestroyDescriptorSetLayout(vk.device, vk_render.descriptor_set_layout, NULL);
@@ -595,7 +595,7 @@ void video_frame_init(int width, int height, screen_format_t format)
       break;
 
    default:
-      vkformat = VK_FORMAT_R8G8B8A8_SRGB;
+      vkformat = VK_FORMAT_R8G8B8A8_UNORM;
       break;
    }
 

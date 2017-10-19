@@ -16,20 +16,21 @@ typedef struct
    VkDeviceSize alignment;
    union
    {
-      void* ptr;
-      uint8_t* u8;
+      void *ptr;
+      uint8_t *u8;
    };
-}device_memory_t;
+} device_memory_t;
 
 typedef struct
 {
    VkMemoryPropertyFlags req_flags;
    VkBuffer buffer;
    VkImage image;
-}memory_init_info_t;
-void device_memory_init(VkDevice device, const VkMemoryType* memory_types, const memory_init_info_t* init_info, device_memory_t* dst);
-void device_memory_free(VkDevice device, device_memory_t* memory);
-void device_memory_flush(VkDevice device, const device_memory_t* memory);
+} memory_init_info_t;
+void device_memory_init(VkDevice device, const VkMemoryType *memory_types, const memory_init_info_t *init_info,
+   device_memory_t *dst);
+void device_memory_free(VkDevice device, device_memory_t *memory);
+void device_memory_flush(VkDevice device, const device_memory_t *memory);
 
 typedef struct
 {
@@ -37,18 +38,18 @@ typedef struct
    {
       device_memory_t mem;
       VkImage image;
+      VkFormat format;
       VkSubresourceLayout mem_layout;
       VkImageLayout layout;
-   }staging;
+   } staging;
    device_memory_t mem;
    VkImage image;
-//   VkSubresourceLayout mem_layout;
-   VkImageLayout layout;
-   VkImageView view;
+   VkFormat format;
+   VkDescriptorImageInfo info;
    int width;
    int height;
    bool dirty;
-}vk_texture_t;
+} vk_texture_t;
 
 typedef struct
 {
@@ -56,27 +57,28 @@ typedef struct
    int width;
    int height;
    VkFormat format;
-}texture_init_info_t;
-void texture_init(VkDevice device, const VkMemoryType* memory_types, const texture_init_info_t *init_info, vk_texture_t* dst);
-void texture_free(VkDevice device, vk_texture_t* texture);
-void texture_update(VkCommandBuffer cmd, vk_texture_t* texture);
+} texture_init_info_t;
+void texture_init(VkDevice device, const VkMemoryType *memory_types, const texture_init_info_t *init_info,
+   vk_texture_t *dst);
+void texture_free(VkDevice device, vk_texture_t *texture);
+void texture_update(VkCommandBuffer cmd, vk_texture_t *texture);
 
 typedef struct
 {
+   VkDescriptorBufferInfo info;
    device_memory_t mem;
-   VkBuffer handle;
-   VkDeviceSize size;
    bool dirty;
-}vk_buffer_t;
+} vk_buffer_t;
 
 typedef struct
 {
    VkBufferUsageFlags usage;
    VkMemoryPropertyFlags req_flags;
    uint32_t size;
-   const void* data;
-}buffer_init_info_t;
-void buffer_init(VkDevice device, const VkMemoryType* memory_types, const buffer_init_info_t* init_info, vk_buffer_t *dst);
+   const void *data;
+} buffer_init_info_t;
+void buffer_init(VkDevice device, const VkMemoryType *memory_types, const buffer_init_info_t *init_info,
+   vk_buffer_t *dst);
 void buffer_flush(VkDevice device, vk_buffer_t *buffer);
 void buffer_free(VkDevice device, vk_buffer_t *buffer);
 
@@ -96,7 +98,7 @@ typedef struct
    } color;
 } vertex_t;
 
-static inline const char* VkResult_to_str(VkResult res)
+static inline const char *VkResult_to_str(VkResult res)
 {
    switch (res)
    {
@@ -129,9 +131,11 @@ static inline const char* VkResult_to_str(VkResult res)
       CASE_TO_STR(VK_ERROR_OUT_OF_POOL_MEMORY_KHR);
       CASE_TO_STR(VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR);
 #undef CASE_TO_STR
+
    default:
-         break;
+      break;
    }
+
    return "unknown";
 
 }
@@ -186,13 +190,81 @@ typedef struct
    VkCommandBuffer cmd;
    VkFence queue_fence;
    VkFence chain_fence;
-   union
+   struct
    {
-      struct
-      {
-         VkSampler sampler_nearest;
-         VkSampler sampler_linear;
-      };
-      VkSampler samplers[2];
-   };
+      VkSampler nearest;
+      VkSampler linear;
+   } samplers;
 } vk_render_context_t;
+
+
+static inline VkResult vk_allocate_descriptor_set(VkDevice device, VkDescriptorPool pool,
+   const VkDescriptorSetLayout layout, VkDescriptorSet *dst)
+{
+   const VkDescriptorSetAllocateInfo info =
+   {
+      VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+      .descriptorPool = pool,
+      .descriptorSetCount = 1, &layout
+   };
+   return vkAllocateDescriptorSets(device, &info, dst);
+}
+
+static inline void vk_update_descriptor_set(VkDevice device, vk_texture_t* texture, vk_buffer_t *ubo, vk_buffer_t *ssbo, VkDescriptorSet dst_set)
+{
+   VkDescriptorImageInfo image_info[2];
+   VkWriteDescriptorSet write_set[3];
+   int write_set_count = 0;
+
+   if(ubo)
+   {
+      VkWriteDescriptorSet set =
+      {
+         VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+         .dstSet = dst_set,
+         .dstBinding = 0,
+         .dstArrayElement = 0,
+         .descriptorCount = 1,
+         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+         .pBufferInfo = &ubo->info
+      };
+      write_set[write_set_count++] = set;
+   }
+
+   if(texture)
+   {
+      image_info[0].sampler = texture->info.sampler;
+      image_info[0].imageView = texture->info.imageView;
+      image_info[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+      image_info[1] = image_info[0];
+
+      const VkWriteDescriptorSet set =
+      {
+         VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+         .dstSet = dst_set,
+         .dstBinding = 1,
+         .dstArrayElement = 0,
+         .descriptorCount = 2,
+         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+         .pImageInfo = image_info
+      };
+      write_set[write_set_count++] = set;
+   }
+
+   if(ssbo)
+   {
+      VkWriteDescriptorSet set =
+      {
+         VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+         .dstSet = dst_set,
+         .dstBinding = 2,
+         .dstArrayElement = 0,
+         .descriptorCount = 1,
+         .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+         .pBufferInfo = &ssbo->info
+      };
+      write_set[write_set_count++] = set;
+   }
+
+   vkUpdateDescriptorSets(device, write_set_count, write_set, 0, NULL);
+}
