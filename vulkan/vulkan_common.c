@@ -422,7 +422,7 @@ uint32_t vk_get_queue_family_index(VkPhysicalDevice gpu, VkQueueFlags required_f
 }
 
 
-static inline VkShaderModule vk_shader_code_init(VkDevice device, const vk_shader_code_t* shader_code)
+static inline VkShaderModule vk_shader_code_init(VkDevice device, const vk_shader_code_t *shader_code)
 {
    VkShaderModule shader;
 
@@ -437,18 +437,19 @@ static inline VkShaderModule vk_shader_code_init(VkDevice device, const vk_shade
    return shader;
 }
 
-void vk_render_init(vk_context_t *vk, vk_render_context_t *vk_render, const vk_pipeline_init_info_t* init_info, vk_render_t *dst)
+void vk_render_init(vk_context_t *vk, vk_render_context_t *vk_render, const vk_pipeline_init_info_t *init_info,
+   vk_render_t *dst)
 {
    vk_texture_init(vk->device, vk->memoryTypes, vk->queue_family_index, &dst->texture);
 
-   if(dst->ssbo.info.range)
+   if (dst->ssbo.info.range)
    {
       dst->ssbo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
       dst->ssbo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
       vk_buffer_init(vk->device, vk->memoryTypes, NULL, &dst->ssbo);
    }
 
-   if(dst->ubo.info.range)
+   if (dst->ubo.info.range)
    {
       dst->ubo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
       dst->ubo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
@@ -459,8 +460,81 @@ void vk_render_init(vk_context_t *vk, vk_render_context_t *vk_render, const vk_p
    dst->vbo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
    vk_buffer_init(vk->device, vk->memoryTypes, NULL, &dst->vbo);
 
-   vk_allocate_descriptor_set(vk->device, vk->pools.desc, vk_render->descriptor_set_layout, &dst->desc);
-   vk_update_descriptor_set(vk->device, &dst->texture, &dst->ubo, &dst->ssbo, dst->desc);
+   {
+      const VkDescriptorSetAllocateInfo info =
+      {
+         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+         .descriptorPool = vk->pools.desc,
+         .descriptorSetCount = 1, &vk_render->descriptor_set_layout
+      };
+      vkAllocateDescriptorSets(vk->device, &info, &dst->desc);
+   }
+
+   {
+      VkWriteDescriptorSet write_set[3];
+      int write_set_count = 0;
+
+      if (dst->ubo.info.buffer)
+      {
+         VkWriteDescriptorSet set =
+         {
+            VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = dst->desc,
+            .dstBinding = 0,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .pBufferInfo = &dst->ubo.info
+         };
+         write_set[write_set_count++] = set;
+      }
+
+      VkDescriptorImageInfo image_info[] =
+      {
+         {
+            .sampler = dst->texture.info.sampler,
+            .imageView = dst->texture.info.imageView,
+            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+         },
+         {
+            .sampler = dst->texture.info.sampler,
+            .imageView = dst->texture.info.imageView,
+            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+         }
+      };
+
+      if (dst->texture.image)
+      {
+         const VkWriteDescriptorSet set =
+         {
+            VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = dst->desc,
+            .dstBinding = 1,
+            .dstArrayElement = 0,
+            .descriptorCount = countof(image_info),
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .pImageInfo = image_info
+         };
+         write_set[write_set_count++] = set;
+      }
+
+      if (dst->ssbo.info.buffer)
+      {
+         VkWriteDescriptorSet set =
+         {
+            VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = dst->desc,
+            .dstBinding = 2,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            .pBufferInfo = &dst->ssbo.info
+         };
+         write_set[write_set_count++] = set;
+      }
+
+      vkUpdateDescriptorSets(vk->device, write_set_count, write_set, 0, NULL);
+   }
 
    {
 #if 0
@@ -555,7 +629,7 @@ void vk_render_init(vk_context_t *vk, vk_render_context_t *vk_render, const vk_p
       {
          VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
          .flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
-         .stageCount = shaders_info[2].module? 3 : 2, shaders_info,
+         .stageCount = shaders_info[2].module ? 3 : 2, shaders_info,
          .pVertexInputState = &vertex_input_state,
          .pInputAssemblyState = &input_assembly_state,
          .pViewportState = &viewport_state,
@@ -570,7 +644,8 @@ void vk_render_init(vk_context_t *vk, vk_render_context_t *vk_render, const vk_p
 
       vkDestroyShaderModule(vk->device, shaders_info[0].module, NULL);
       vkDestroyShaderModule(vk->device, shaders_info[1].module, NULL);
-      if(shaders_info[2].module)
+
+      if (shaders_info[2].module)
          vkDestroyShaderModule(vk->device, shaders_info[2].module, NULL);
    }
 

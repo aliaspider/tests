@@ -5,12 +5,6 @@
 #include "video.h"
 #include "font.h"
 
-typedef struct
-{
-   float val0;
-   float val1;
-} frame_uniforms_t;
-
 static vk_render_t frame;
 
 void vulkan_frame_init(vk_context_t *vk, vk_render_context_t *vk_render, int width, int height, VkFormat format)
@@ -59,7 +53,6 @@ void vulkan_frame_init(vk_context_t *vk, vk_render_context_t *vk_render, int wid
       frame.texture.width = width;
       frame.texture.height = height;
       frame.texture.format = format;
-      frame.ubo.info.range = sizeof(frame_uniforms_t);
       frame.vbo.info.range = sizeof(vertices);
 
       vk_render_init(vk, vk_render, &info, &frame);

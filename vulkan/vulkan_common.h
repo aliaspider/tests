@@ -57,7 +57,11 @@ void texture_update(VkDevice device, VkCommandBuffer cmd, vk_texture_t *texture)
 
 typedef struct
 {
-   VkDescriptorBufferInfo info;
+   union
+   {
+      struct VkDescriptorBufferInfo;
+      VkDescriptorBufferInfo info;
+   };
    device_memory_t mem;
    VkBufferUsageFlags usage;
    bool dirty;
@@ -216,86 +220,6 @@ typedef struct
 }vk_pipeline_init_info_t;
 
 void vk_render_init(vk_context_t *vk, vk_render_context_t *vk_render, const vk_pipeline_init_info_t *init_info, vk_render_t *dst);
-
-static inline VkResult vk_allocate_descriptor_set(VkDevice device, VkDescriptorPool pool,
-   const VkDescriptorSetLayout layout, VkDescriptorSet *dst)
-{
-   const VkDescriptorSetAllocateInfo info =
-   {
-      VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-      .descriptorPool = pool,
-      .descriptorSetCount = 1, &layout
-   };
-   return vkAllocateDescriptorSets(device, &info, dst);
-}
-
-static inline void vk_update_descriptor_set(VkDevice device, vk_texture_t* texture, vk_buffer_t *ubo, vk_buffer_t *ssbo, VkDescriptorSet dst_set)
-{
-   VkWriteDescriptorSet write_set[3];
-   int write_set_count = 0;
-
-   if(ubo && ubo->info.buffer)
-   {
-      VkWriteDescriptorSet set =
-      {
-         VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-         .dstSet = dst_set,
-         .dstBinding = 0,
-         .dstArrayElement = 0,
-         .descriptorCount = 1,
-         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-         .pBufferInfo = &ubo->info
-      };
-      write_set[write_set_count++] = set;
-   }
-
-   VkDescriptorImageInfo image_info[] =
-   {
-      {
-         .sampler = texture->info.sampler,
-         .imageView = texture->info.imageView,
-         .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-      },
-      {
-         .sampler = texture->info.sampler,
-         .imageView = texture->info.imageView,
-         .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-      }
-   };
-
-   if(texture && texture->image)
-   {
-      const VkWriteDescriptorSet set =
-      {
-         VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-         .dstSet = dst_set,
-         .dstBinding = 1,
-         .dstArrayElement = 0,
-         .descriptorCount = countof(image_info),
-         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-         .pImageInfo = image_info
-      };
-      write_set[write_set_count++] = set;
-   }
-
-   if(ssbo && ssbo->info.buffer)
-   {
-      VkWriteDescriptorSet set =
-      {
-         VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-         .dstSet = dst_set,
-         .dstBinding = 2,
-         .dstArrayElement = 0,
-         .descriptorCount = 1,
-         .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-         .pBufferInfo = &ssbo->info
-      };
-      write_set[write_set_count++] = set;
-   }
-
-   vkUpdateDescriptorSets(device, write_set_count, write_set, 0, NULL);
-}
-
 
 typedef union
 {

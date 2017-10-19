@@ -1,7 +1,7 @@
 #version 310 es
 precision highp float;
 
-#if defined(VERTEX_SHADER)
+#ifdef VERTEX_SHADER
 layout(location = 0) in uint id;
 layout(location = 1) in vec3 color;
 layout(location = 2) in vec2 position;
@@ -10,7 +10,7 @@ layout(location = 1) out vec3 color_out;
 layout(location = 2) out vec2 position_out;
 #endif
 
-#if defined(GEOMETRY_SHADER)
+#ifdef GEOMETRY_SHADER
 #extension GL_EXT_geometry_shader : require
 layout(points) in;
 layout(location = 0) in uint id[1];
@@ -34,14 +34,14 @@ layout(set = 0, binding = 2, std140) buffer g_buffer
 };
 #endif
 
-#if defined(FRAGMENT_SHADER)
+#ifdef FRAGMENT_SHADER
 layout(location = 0) in vec2 vTexCoord;
 layout(location = 1) in vec4 vColor;
 layout(location = 0) out vec4 FragColor;
 layout(set = 0, binding = 1, location = 0) uniform highp sampler2D uTex;
 #endif
 
-#if defined(VERTEX_SHADER)
+#ifdef VERTEX_SHADER
 void main()
 {
    id_out = id;
@@ -50,7 +50,7 @@ void main()
 }
 #endif
 
-#if defined(GEOMETRY_SHADER)
+#ifdef GEOMETRY_SHADER
 void main()
 {
    uint c = id[0] & 0xFFu;
@@ -98,7 +98,7 @@ void main()
 }
 #endif
 
-#if defined(FRAGMENT_SHADER)
+#ifdef FRAGMENT_SHADER
 void main()
 {
    FragColor = texture(uTex, vTexCoord).r * vColor;
