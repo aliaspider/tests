@@ -233,72 +233,7 @@ void video_init()
 #error platform not supported
 #endif
 
-#if 0
-   {
-      uint32_t displayProperties_count;
-      vkGetPhysicalDeviceDisplayPropertiesKHR(vk.gpu, &displayProperties_count, NULL);
-      VkDisplayPropertiesKHR displayProperties[displayProperties_count];
-      vkGetPhysicalDeviceDisplayPropertiesKHR(vk.gpu, &displayProperties_count, displayProperties);
-      dst->display = displayProperties[0].display;
-      int i;
-
-      for (i = 0; i < displayProperties_count; i++)
-         printf("0x%08" PRIXPTR " : %s\n", (uintptr_t)displayProperties[i].display,
-            displayProperties[i].displayName);
-
-   }
-   vkGetPhysicalDeviceDisplayPlanePropertiesKHR(vk.gpu, &displayProperties_count, NULL);
-   VkDisplayPlanePropertiesKHR displayPlaneProperties[displayProperties_count];
-   vkGetPhysicalDeviceDisplayPlanePropertiesKHR(vk.gpu, &displayProperties_count, displayPlaneProperties);
-
-   for (i = 0; i < displayProperties_count; i++)
-      printf("0x%08" PRIXPTR " : %i\n", (uintptr_t)displayPlaneProperties[i].currentDisplay,
-         displayPlaneProperties[i].currentStackIndex);
-
-//   uint32_t displayCount = 4;
-//   VK_CHECK(vkGetDisplayPlaneSupportedDisplaysKHR(vk.gpu, 1, &displayCount, &dst->display));
-
-
-//   VK_CHECK(vkGetRandROutputDisplayEXT(vk.gpu, init_info->display, 0x27e, &dst->display));
-//   VK_CHECK(vkAcquireXlibDisplayEXT(vk.gpu, init_info->display, dst->display));
-//   VK_CHECK(vkReleaseDisplayEXT(vk.gpu, dst->display));
-//   exit(0);
-
-
-   uint32_t                   displayModeCount;
-   VK_CHECK(vkGetDisplayModePropertiesKHR(vk.gpu, dst->display, &displayModeCount, NULL));
-   VkDisplayModePropertiesKHR displayModeProperties[displayModeCount];
-   VK_CHECK(vkGetDisplayModePropertiesKHR(vk.gpu, dst->display, &displayModeCount, displayModeProperties));
-   printf("displayModeProperties.parameters.refreshRate : %u\n", displayModeProperties[0].parameters.refreshRate);
-   printf("displayModeProperties.visibleRegion.width : %u\n", displayModeProperties[0].parameters.visibleRegion.width);
-   printf("displayModeProperties.visibleRegion.height : %u\n", displayModeProperties[0].parameters.visibleRegion.height);
-#endif
-
-   {
-      VkSurfaceCapabilitiesKHR surfaceCapabilities;
-      vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vk.gpu, vk.surface, &surfaceCapabilities);
-#if 0
-      VkSurfaceCapabilities2EXT surfaceCapabilities2 = {VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_EXT};
-      vkGetPhysicalDeviceSurfaceCapabilities2EXT(vk.gpu, dst->handle, &surfaceCapabilities2);
-      printf("surfaceCapabilities2.supportedSurfaceCounters : %i\n", surfaceCapabilities2.supportedSurfaceCounters);
-#endif
-      VkBool32 physicalDeviceSurfaceSupport;
-      vkGetPhysicalDeviceSurfaceSupportKHR(vk.gpu, vk.queue_family_index, vk.surface, &physicalDeviceSurfaceSupport);
-
-      uint32_t surfaceFormatcount;
-      vkGetPhysicalDeviceSurfaceFormatsKHR(vk.gpu, vk.surface, &surfaceFormatcount, NULL);
-      VkSurfaceFormatKHR surfaceFormats[surfaceFormatcount];
-      vkGetPhysicalDeviceSurfaceFormatsKHR(vk.gpu, vk.surface, &surfaceFormatcount, surfaceFormats);
-
-      uint32_t presentModeCount;
-      vkGetPhysicalDeviceSurfacePresentModesKHR(vk.gpu, vk.surface, &presentModeCount, NULL);
-      VkPresentModeKHR presentModes[presentModeCount];
-      vkGetPhysicalDeviceSurfacePresentModesKHR(vk.gpu, vk.surface, &presentModeCount, presentModes);
-      int i;
-      for (i = 0; i < presentModeCount; i++)
-         printf("supports present mode %i\n", presentModes[i]);
-   }
-
+   vk_get_surface_props(vk.gpu, vk.queue_family_index, vk.surface);
 
    {
       VkSwapchainCounterCreateInfoEXT swapchainCounterCreateInfo =
@@ -399,7 +334,7 @@ void video_init()
             {
                VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
                .renderPass = vk_render.renderpass,
-               .attachmentCount = 1,                     &vk_render.views[i],
+               .attachmentCount = 1, &vk_render.views[i],
                .width = video.screen.width,
                .height = video.screen.height,
                .layers = 1
@@ -408,6 +343,7 @@ void video_init()
          }
       }
    }
+
    vk_render.viewport.x = 0.0f;
    vk_render.viewport.y = 0.0f;
    vk_render.viewport.width = video.screen.width;
@@ -419,7 +355,6 @@ void video_init()
    vk_render.scissor.offset.y = 0.0f;
    vk_render.scissor.extent.width = video.screen.width;
    vk_render.scissor.extent.height = video.screen.height;
-
 
    {
       const VkDescriptorSetLayoutBinding bindings[] =
@@ -455,7 +390,6 @@ void video_init()
       };
       vkCreateDescriptorSetLayout(vk.device, &info[0], NULL, &vk_render.descriptor_set_layout);
    }
-
 
 
    {
@@ -496,15 +430,15 @@ void video_init()
 void video_frame_update()
 {
    uint32_t image_index;
-   vkWaitForFences(vk.device, 1, &vk_render.chain_fence, VK_TRUE, -1);
+   vkWaitForFences(vk.device, 1, &vk_render.chain_fence, VK_TRUE, UINT64_MAX);
    vkResetFences(vk.device, 1, &vk_render.chain_fence);
    vkAcquireNextImageKHR(vk.device, vk_render.swapchain, UINT64_MAX, NULL, vk_render.chain_fence,
       &image_index);
 
-   vkWaitForFences(vk.device, 1, &vk_render.queue_fence, VK_TRUE, -1);
+   vkWaitForFences(vk.device, 1, &vk_render.queue_fence, VK_TRUE, UINT64_MAX);
    vkResetFences(vk.device, 1, &vk_render.queue_fence);
 
-//   vkWaitForFences(vk.device, 1, &display_fence, VK_TRUE, -1);
+//   vkWaitForFences(vk.device, 1, &display_fence, VK_TRUE, UINT64_MAX);
 //   vkResetFences(vk.device, 1, &display_fence);
 
    {
@@ -522,7 +456,9 @@ void video_frame_update()
    /* renderpass */
    {
       {
-         const VkClearValue clearValue = {{{0.0f, 0.1f, 1.0f, 0.0f}}};
+//         const VkClearValue clearValue = {{{0.0f, 0.1f, 1.0f, 0.0f}}};
+         const VkClearValue clearValue = {.color.float32 = {0.0f, 0.1f, 1.0f, 0.0f}};
+
          const VkRenderPassBeginInfo info =
          {
             VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -547,8 +483,7 @@ void video_frame_update()
       const VkSubmitInfo info =
       {
          VK_STRUCTURE_TYPE_SUBMIT_INFO,
-         .commandBufferCount = 1,
-         .pCommandBuffers = &vk_render.cmd
+         .commandBufferCount = 1, &vk_render.cmd
       };
       vkQueueSubmit(vk.queue, 1, &info, vk_render.queue_fence);
    }

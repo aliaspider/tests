@@ -124,15 +124,16 @@ static struct
 
 static int vulkan_font_get_new_slot(void)
 {
-   int i, map_id;
    unsigned oldest = 0;
+
+   int i;
 
    for (i = 1; i < 256; i++)
       if ((font.atlas.usage_counter - font.atlas.slots[i].last_used) >
          (font.atlas.usage_counter - font.atlas.slots[oldest].last_used))
          oldest = i;
 
-   map_id = font.atlas.slots[oldest].charcode & 0xFF;
+   int map_id = font.atlas.slots[oldest].charcode & 0xFF;
 
    if (font.atlas.uc_map[map_id] == &font.atlas.slots[oldest])
       font.atlas.uc_map[map_id] = font.atlas.slots[oldest].next;
@@ -173,59 +174,61 @@ static int vulkan_font_get_glyph_id(uint32_t charcode)
    font.atlas.slots[id].next       = font.atlas.uc_map[map_id];
    font.atlas.uc_map[map_id] = &font.atlas.slots[id];
 
-   uint8_t *dst = font.atlas.texture.staging.mem.u8 + font.atlas.texture.staging.mem_layout.offset +
-      (id & 0xF) * font.atlas.slot_width + (((id >> 4) * font.atlas.slot_height)) *
-      font.atlas.texture.staging.mem_layout.rowPitch;
-   int row;
+   {
+      uint8_t *dst = font.atlas.texture.staging.mem.u8 + font.atlas.texture.staging.mem_layout.offset +
+         (id & 0xF) * font.atlas.slot_width + (((id >> 4) * font.atlas.slot_height)) *
+         font.atlas.texture.staging.mem_layout.rowPitch;
+      int row;
 #if 1
-   FT_Load_Char(font.ftface, charcode, FT_LOAD_RENDER);
+      FT_Load_Char(font.ftface, charcode, FT_LOAD_RENDER);
 //   FT_Render_Glyph(ftface->glyph, FT_RENDER_MODE_NORMAL);
 
-   uint8_t *src = font.ftface->glyph->bitmap.buffer;
+      uint8_t *src = font.ftface->glyph->bitmap.buffer;
 
-   assert((dst - font.atlas.texture.staging.mem.u8 + font.atlas.texture.staging.mem_layout.rowPitch *
-         (font.ftface->glyph->bitmap.rows + 1) < font.atlas.texture.staging.mem_layout.size));
+      assert((dst - font.atlas.texture.staging.mem.u8 + font.atlas.texture.staging.mem_layout.rowPitch *
+            (font.ftface->glyph->bitmap.rows + 1) < font.atlas.texture.staging.mem_layout.size));
 
-   for (row = 0; row < font.ftface->glyph->bitmap.rows; row++)
-   {
-      memcpy(dst, src, font.ftface->glyph->bitmap.width);
-      src += font.ftface->glyph->bitmap.pitch;
-      dst += font.atlas.texture.staging.mem_layout.rowPitch;
-   }
-
-#else
-   FT_Load_Char(ftface, charcode, FT_LOAD_RENDER | FT_LOAD_MONOCHROME);
-//      FT_Render_Glyph(ftface->glyph, FT_RENDER_MODE_MONO);
-
-   uint8_t *src = ftface->glyph->bitmap.buffer;
-
-   for (row = 0; row < ftface->glyph->bitmap.rows; row++)
-   {
-      int col;
-
-      for (col = 0; col < ftface->glyph->bitmap.width; col++)
+      for (row = 0; row < font.ftface->glyph->bitmap.rows; row++)
       {
-         if (src[col >> 3] & (0x80 >> (col & 0x7)))
-            dst[col] = 255;
+         memcpy(dst, src, font.ftface->glyph->bitmap.width);
+         src += font.ftface->glyph->bitmap.pitch;
+         dst += font.atlas.texture.staging.mem_layout.rowPitch;
       }
 
-      src += ftface->glyph->bitmap.pitch;
-      dst += atlas.staging.mem_layout.rowPitch;
-   }
+#else
+      FT_Load_Char(ftface, charcode, FT_LOAD_RENDER | FT_LOAD_MONOCHROME);
+//      FT_Render_Glyph(ftface->glyph, FT_RENDER_MODE_MONO);
+
+      uint8_t *src = ftface->glyph->bitmap.buffer;
+
+      for (row = 0; row < ftface->glyph->bitmap.rows; row++)
+      {
+         int col;
+
+         for (col = 0; col < ftface->glyph->bitmap.width; col++)
+         {
+            if (src[col >> 3] & (0x80 >> (col & 0x7)))
+               dst[col] = 255;
+         }
+
+         src += ftface->glyph->bitmap.pitch;
+         dst += atlas.staging.mem_layout.rowPitch;
+      }
 
 #endif
+      font.atlas.texture.dirty = true;
+   }
 
-   font.atlas.texture.dirty = true;
+   {
+      font_uniforms_t *uniforms = (font_uniforms_t *)font.atlas.ubo.mem.ptr;
+      uniforms->glyph_metrics[id].x = font.ftface->glyph->metrics.horiBearingX >> 6;
+      uniforms->glyph_metrics[id].y = -font.ftface->glyph->metrics.horiBearingY >> 6;
+      uniforms->glyph_metrics[id].width = font.ftface->glyph->metrics.width >> 6;
+      uniforms->glyph_metrics[id].height = font.ftface->glyph->metrics.height >> 6;
+      uniforms->advance[id] = font.ftface->glyph->metrics.horiAdvance >> 6;
+      font.atlas.ubo.dirty = true;
+   }
 
-   font_uniforms_t *uniforms = (font_uniforms_t *)font.atlas.ubo.mem.ptr;
-
-   uniforms->glyph_metrics[id].x = font.ftface->glyph->metrics.horiBearingX >> 6;
-   uniforms->glyph_metrics[id].y = -font.ftface->glyph->metrics.horiBearingY >> 6;
-   uniforms->glyph_metrics[id].width = font.ftface->glyph->metrics.width >> 6;
-   uniforms->glyph_metrics[id].height = font.ftface->glyph->metrics.height >> 6;
-   uniforms->advance[id] = font.ftface->glyph->metrics.horiAdvance >> 6;
-
-   font.atlas.ubo.dirty = true;
    font.atlas.slots[id].last_used = font.atlas.usage_counter++;
    return id;
 }
@@ -244,7 +247,6 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
 //      const char* font_path = "/usr/share/fonts/75dpi/charR12.pcf.gz";
 //      const char* font_path = "/usr/share/fonts/WindowsFonts/cour.ttf";
 
-
       FT_UInt font_size = 26;
 
       FT_Init_FreeType(&font.ftlib);
@@ -258,7 +260,6 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
       font.max_advance = font.ftface->size->metrics.max_advance >> 6;
       font.atlas.slot_width = font.max_advance;
       font.atlas.slot_height = font.line_height;
-
    }
 
    {
@@ -266,9 +267,9 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
       {
          .queue_family_index = queue_family_index,
          .width = font.atlas.slot_width << 4,
-            .height = font.atlas.slot_height << 4,
-            .format = VK_FORMAT_R8_UNORM,
-            .filter = VK_FILTER_NEAREST
+         .height = font.atlas.slot_height << 4,
+         .format = VK_FORMAT_R8_UNORM,
+         .filter = VK_FILTER_NEAREST
       };
       texture_init(device, memory_types, &info, &font.atlas.texture);
    }
@@ -381,48 +382,84 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
       font.atlas.vbo.size = 0;
    }
 
+
+   {
+#if 0
+      VkPushConstantRange ranges[] =
+      {
+         {
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+            .offset = 0,
+            .size = sizeof(uniforms_t)
+         }
+      };
+#endif
+      const VkPipelineLayoutCreateInfo info =
+      {
+         VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+         .setLayoutCount = 1, &descriptor_set_layout,
+#if 0
+         .pushConstantRangeCount = countof(ranges), ranges
+#endif
+      };
+
+      vkCreatePipelineLayout(device, &info, NULL, &font.atlas.pipe_layout);
+   }
+
    {
       VkShaderModule vertex_shader;
       {
-         static const uint32_t code [] =
+         const uint32_t code [] =
 #include "font.vert.inc"
             ;
-         const VkShaderModuleCreateInfo info =
-         {
-            VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-            .codeSize = sizeof(code),
-            .pCode = code
-         };
+         const VkShaderModuleCreateInfo info = {VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, .codeSize = sizeof(code), .pCode = code};
          vkCreateShaderModule(device, &info, NULL, &vertex_shader);
       }
 
       VkShaderModule fragment_shader;
       {
-         static const uint32_t code [] =
+         const uint32_t code [] =
 #include "font.frag.inc"
             ;
-         const VkShaderModuleCreateInfo info =
-         {
-            VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-            .codeSize = sizeof(code),
-            .pCode = code
-         };
+         const VkShaderModuleCreateInfo info = {VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, .codeSize = sizeof(code), .pCode = code};
          vkCreateShaderModule(device, &info, NULL, &fragment_shader);
       }
 
       VkShaderModule geometry_shader;
       {
-         static const uint32_t code [] =
+         const uint32_t code [] =
 #include "font.geom.inc"
             ;
-         const VkShaderModuleCreateInfo info =
-         {
-            VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-            .codeSize = sizeof(code),
-            .pCode = code
-         };
+         const VkShaderModuleCreateInfo info = {VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, .codeSize = sizeof(code), .pCode = code};
          vkCreateShaderModule(device, &info, NULL, &geometry_shader);
       }
+
+      const VkPipelineShaderStageCreateInfo shaders_info[] =
+      {
+         {
+            VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+            .stage = VK_SHADER_STAGE_VERTEX_BIT,
+            .pName = "main",
+            .module = vertex_shader
+         },
+         {
+            VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+            .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+            .pName = "main",
+            .module = fragment_shader
+         },
+         {
+            VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+            .stage = VK_SHADER_STAGE_GEOMETRY_BIT,
+            .pName = "main",
+            .module = geometry_shader
+         }
+      };
+
+      const VkVertexInputBindingDescription vertex_description =
+      {
+         0, sizeof(font_vertex_t), VK_VERTEX_INPUT_RATE_VERTEX
+      };
 
       const VkVertexInputAttributeDescription attrib_desc[] =
       {
@@ -431,137 +468,77 @@ void vulkan_font_init(VkDevice device, uint32_t queue_family_index, const VkMemo
          {2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(font_vertex_t, position)}
       };
 
+      const VkPipelineVertexInputStateCreateInfo vertex_input_state =
       {
-         {
-#if 0
-            VkPushConstantRange ranges[] =
-            {
-               {
-                  .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-                  .offset = 0,
-                  .size = sizeof(uniforms_t)
-               }
-            };
-#endif
-            const VkPipelineLayoutCreateInfo info =
-            {
-               VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-               .setLayoutCount = 1, &descriptor_set_layout,
-#if 0
-               .pushConstantRangeCount = countof(ranges), ranges
-#endif
-            };
+         VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+         .vertexBindingDescriptionCount = 1, &vertex_description,
+         .vertexAttributeDescriptionCount = countof(attrib_desc), attrib_desc
+      };
 
-            vkCreatePipelineLayout(device, &info, NULL, &font.atlas.pipe_layout);
-         }
+      const VkPipelineInputAssemblyStateCreateInfo input_assembly_state =
+      {
+         VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+         .topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
+         .primitiveRestartEnable = VK_FALSE
+      };
 
-         {
-            const VkPipelineShaderStageCreateInfo shaders_info[] =
-            {
-               {
-                  VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-                  .stage = VK_SHADER_STAGE_VERTEX_BIT,
-                  .pName = "main",
-                  .module = vertex_shader
-               },
-               {
-                  VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-                  .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-                  .pName = "main",
-                  .module = fragment_shader
-               },
-               {
-                  VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-                  .stage = VK_SHADER_STAGE_GEOMETRY_BIT,
-                  .pName = "main",
-                  .module = geometry_shader
-               }
-            };
+      const VkPipelineViewportStateCreateInfo viewport_state =
+      {
+         VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+         .viewportCount = 1, viewport, .scissorCount = 1, scissor
+      };
 
-            const VkVertexInputBindingDescription vertex_description =
-            {
-               0, sizeof(font_vertex_t), VK_VERTEX_INPUT_RATE_VERTEX
-            };
+      const VkPipelineRasterizationStateCreateInfo rasterization_info =
+      {
+         VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+         .lineWidth = 1.0f
+      };
 
-            const VkPipelineVertexInputStateCreateInfo vertex_input_state =
-            {
-               VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-               .vertexBindingDescriptionCount = 1, &vertex_description,
-               .vertexAttributeDescriptionCount = countof(attrib_desc), attrib_desc
-            };
+      const VkPipelineMultisampleStateCreateInfo multisample_state =
+      {
+         VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+         .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+      };
 
-            const VkPipelineInputAssemblyStateCreateInfo input_assembly_state =
-            {
-               VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-               .topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
-               .primitiveRestartEnable = VK_FALSE
-            };
+      const VkPipelineColorBlendAttachmentState attachement_state =
+      {
+         .blendEnable = VK_TRUE,
+         .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+         .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+         .colorBlendOp = VK_BLEND_OP_ADD,
+         .srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+         .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+         .alphaBlendOp = VK_BLEND_OP_ADD,
+         .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+         VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
+      };
 
-            const VkPipelineViewportStateCreateInfo viewport_state =
-            {
-               VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-               .viewportCount = 1, viewport,
-               .scissorCount = 1, scissor
-            };
+      const VkPipelineColorBlendStateCreateInfo colorblend_state =
+      {
+         VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+         .attachmentCount = 1, &attachement_state
+      };
 
-            const VkPipelineRasterizationStateCreateInfo rasterization_info =
-            {
-               VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-               .lineWidth = 1.0f
-            };
-
-            const VkPipelineMultisampleStateCreateInfo multisample_state =
-            {
-               VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-               .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
-            };
-
-            const VkPipelineColorBlendAttachmentState attachement_state =
-            {
-               .blendEnable = VK_FALSE,
-               .blendEnable = VK_TRUE,
-               .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
-               .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-               .colorBlendOp = VK_BLEND_OP_ADD,
-               .srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
-               .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-               .alphaBlendOp = VK_BLEND_OP_ADD,
-               .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-               VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
-            };
-
-            const VkPipelineColorBlendStateCreateInfo colorblend_state =
-            {
-               VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-               .attachmentCount = 1, &attachement_state
-            };
-
-            const VkGraphicsPipelineCreateInfo info =
-            {
-               VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-               .flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
-               .stageCount = countof(shaders_info), shaders_info,
-               .pVertexInputState = &vertex_input_state,
-               .pInputAssemblyState = &input_assembly_state,
-               .pViewportState = &viewport_state,
-               .pRasterizationState = &rasterization_info,
-               .pMultisampleState = &multisample_state,
-               .pColorBlendState = &colorblend_state,
-               .layout = font.atlas.pipe_layout,
-               .renderPass = renderpass,
-               .subpass = 0
-            };
-            vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &info, NULL, &font.atlas.pipe);
-         }
-
-      }
-
+      const VkGraphicsPipelineCreateInfo info =
+      {
+         VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+         .flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
+         .stageCount = countof(shaders_info), shaders_info,
+         .pVertexInputState = &vertex_input_state,
+         .pInputAssemblyState = &input_assembly_state,
+         .pViewportState = &viewport_state,
+         .pRasterizationState = &rasterization_info,
+         .pMultisampleState = &multisample_state,
+         .pColorBlendState = &colorblend_state,
+         .layout = font.atlas.pipe_layout,
+         .renderPass = renderpass,
+         .subpass = 0
+      };
+      vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &info, NULL, &font.atlas.pipe);
       vkDestroyShaderModule(device, vertex_shader, NULL);
       vkDestroyShaderModule(device, fragment_shader, NULL);
       vkDestroyShaderModule(device, geometry_shader, NULL);
    }
-
-
 }
 
 void vulkan_font_destroy(VkDevice device)
@@ -625,7 +602,7 @@ void vulkan_font_draw_text(const char *text, int x, int y)
       int id = vulkan_font_get_glyph_id(charcode);
 
       if ((vertex.position.x + ((font_uniforms_t *)font.atlas.ubo.mem.ptr)->advance[id]) > video.screen.width)
-//      if ((vertex.position.x + max_advance) > video.screen.width)
+//      if ((vertex.position.x + font.max_advance) > video.screen.width)
       {
          vertex.position.x = 0;
          vertex.position.y += font.line_height;
@@ -648,7 +625,6 @@ void vulkan_font_draw_text(const char *text, int x, int y)
 
       *out = vertex;
       vertex.position.x += ((font_uniforms_t *)font.atlas.ubo.mem.ptr)->advance[id];
-
 
       (out++)->id = id;
    }
@@ -711,7 +687,6 @@ void vulkan_font_render(VkCommandBuffer cmd)
    VkDeviceSize offset = 0;
    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, font.atlas.pipe);
    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, font.atlas.pipe_layout, 0, 1, &font.atlas.desc, 0, NULL);
-
    vkCmdBindVertexBuffers(cmd, 0, 1, &font.atlas.vbo.handle, &offset);
    vkCmdDraw(cmd, font.atlas.vbo.size / sizeof(font_vertex_t), 1, 0, 0);
 //   {

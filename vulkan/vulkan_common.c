@@ -93,7 +93,6 @@ void texture_init(VkDevice device, const VkMemoryType *memory_types, const textu
    }
 }
 
-
 void texture_free(VkDevice device, vk_texture_t *texture)
 {
    vkDestroySampler(device, texture->sampler, NULL);
@@ -326,7 +325,76 @@ void vk_get_gpu_props(VkPhysicalDevice gpu)
    for (e = 0; e < deviceExtensionPropertiesCount; e++)
       printf("\t%s\n", pDeviceExtensionProperties[e].extensionName);
 
+#if 0
+   {
+      uint32_t displayProperties_count;
+      vkGetPhysicalDeviceDisplayPropertiesKHR(vk.gpu, &displayProperties_count, NULL);
+      VkDisplayPropertiesKHR displayProperties[displayProperties_count];
+      vkGetPhysicalDeviceDisplayPropertiesKHR(vk.gpu, &displayProperties_count, displayProperties);
+      dst->display = displayProperties[0].display;
+      int i;
 
+      for (i = 0; i < displayProperties_count; i++)
+         printf("0x%08" PRIXPTR " : %s\n", (uintptr_t)displayProperties[i].display,
+            displayProperties[i].displayName);
+
+   }
+   vkGetPhysicalDeviceDisplayPlanePropertiesKHR(vk.gpu, &displayProperties_count, NULL);
+   VkDisplayPlanePropertiesKHR displayPlaneProperties[displayProperties_count];
+   vkGetPhysicalDeviceDisplayPlanePropertiesKHR(vk.gpu, &displayProperties_count, displayPlaneProperties);
+
+   for (i = 0; i < displayProperties_count; i++)
+      printf("0x%08" PRIXPTR " : %i\n", (uintptr_t)displayPlaneProperties[i].currentDisplay,
+         displayPlaneProperties[i].currentStackIndex);
+
+//   uint32_t displayCount = 4;
+//   VK_CHECK(vkGetDisplayPlaneSupportedDisplaysKHR(vk.gpu, 1, &displayCount, &dst->display));
+
+
+//   VK_CHECK(vkGetRandROutputDisplayEXT(vk.gpu, init_info->display, 0x27e, &dst->display));
+//   VK_CHECK(vkAcquireXlibDisplayEXT(vk.gpu, init_info->display, dst->display));
+//   VK_CHECK(vkReleaseDisplayEXT(vk.gpu, dst->display));
+//   exit(0);
+
+
+   uint32_t                   displayModeCount;
+   VK_CHECK(vkGetDisplayModePropertiesKHR(vk.gpu, dst->display, &displayModeCount, NULL));
+   VkDisplayModePropertiesKHR displayModeProperties[displayModeCount];
+   VK_CHECK(vkGetDisplayModePropertiesKHR(vk.gpu, dst->display, &displayModeCount, displayModeProperties));
+   printf("displayModeProperties.parameters.refreshRate : %u\n", displayModeProperties[0].parameters.refreshRate);
+   printf("displayModeProperties.visibleRegion.width : %u\n", displayModeProperties[0].parameters.visibleRegion.width);
+   printf("displayModeProperties.visibleRegion.height : %u\n", displayModeProperties[0].parameters.visibleRegion.height);
+#endif
+
+
+}
+
+void vk_get_surface_props(VkPhysicalDevice gpu, uint32_t queue_family_index, VkSurfaceKHR surface)
+{
+   {
+      VkSurfaceCapabilitiesKHR surfaceCapabilities;
+      vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu, surface, &surfaceCapabilities);
+#if 0
+      VkSurfaceCapabilities2EXT surfaceCapabilities2 = {VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_EXT};
+      vkGetPhysicalDeviceSurfaceCapabilities2EXT(gpu, surface, &surfaceCapabilities2);
+      printf("surfaceCapabilities2.supportedSurfaceCounters : %i\n", surfaceCapabilities2.supportedSurfaceCounters);
+#endif
+      VkBool32 physicalDeviceSurfaceSupport;
+      vkGetPhysicalDeviceSurfaceSupportKHR(gpu, queue_family_index, surface, &physicalDeviceSurfaceSupport);
+
+      uint32_t surfaceFormatcount;
+      vkGetPhysicalDeviceSurfaceFormatsKHR(gpu, surface, &surfaceFormatcount, NULL);
+      VkSurfaceFormatKHR surfaceFormats[surfaceFormatcount];
+      vkGetPhysicalDeviceSurfaceFormatsKHR(gpu, surface, &surfaceFormatcount, surfaceFormats);
+
+      uint32_t presentModeCount;
+      vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, surface, &presentModeCount, NULL);
+      VkPresentModeKHR presentModes[presentModeCount];
+      vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, surface, &presentModeCount, presentModes);
+      int i;
+      for (i = 0; i < presentModeCount; i++)
+         printf("supports present mode %i\n", presentModes[i]);
+   }
 }
 
 uint32_t vk_get_queue_family_index(VkPhysicalDevice gpu, VkQueueFlags required_flags)

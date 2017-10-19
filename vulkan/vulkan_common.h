@@ -144,6 +144,8 @@ void vk_init_instance_pfn(VkInstance instance);
 void vk_init_device_pfn(VkDevice device);
 void vk_get_instance_props(void);
 void vk_get_gpu_props(VkPhysicalDevice gpu);
+void vk_get_surface_props(VkPhysicalDevice gpu, uint32_t queue_family_index, VkSurfaceKHR surface);
+
 uint32_t vk_get_queue_family_index(VkPhysicalDevice gpu, VkQueueFlags required_flags);
 
 

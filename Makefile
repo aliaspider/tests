@@ -83,12 +83,21 @@ $(BUILD_DIR)/%.o: %.c
 %.geom.inc: %.geom
 	glslc -c -mfmt=c $< -o $@
 
+%.vert.inc: %.slang
+	glslc -c -mfmt=c -fshader-stage=vertex -DVERTEX_SHADER $< -o $@
+
+%.frag.inc: %.slang
+	glslc -c -mfmt=c -fshader-stage=fragment -DFRAGMENT_SHADER $< -o $@
+
+%.geom.inc: %.slang
+	glslc -c -mfmt=c -fshader-stage=geometry -DGEOMETRY_SHADER $< -o $@
+
 .lastbuild: ;
 
 clean:
 #	rm -rf objs
 	rm -f $(OBJS) $(OBJS:.o=.depend)
-	rm -f $(BUILD_DIR)/$(TARGET) $(TARGET) vulkan/main.vert.inc vulkan/main.frag.inc .lastbuild
+	rm -f $(BUILD_DIR)/$(TARGET) $(TARGET) vulkan/main.vert.inc vulkan/main.frag.inc vulkan/font.vert.inc vulkan/font.frag.inc vulkan/font.geom.inc .lastbuild
 
 
 -include $(OBJS:.o=.depend)
