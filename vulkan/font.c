@@ -255,29 +255,14 @@ void vulkan_font_init(vk_context_t *vk, vk_render_context_t *vk_render)
    font.atlas.render.texture.width = font.atlas.slot_width << 4;
    font.atlas.render.texture.height = font.atlas.slot_height << 4;
    font.atlas.render.texture.format = VK_FORMAT_R8_UNORM;
-   texture_init(vk->device, vk->memoryTypes, vk->queue_family_index, &font.atlas.render.texture);
+   font.atlas.render.ssbo.info.range = sizeof(font_shader_storage_t);
+   font.atlas.render.ssbo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+   font.atlas.render.ssbo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+   font.atlas.render.ubo.info.range = sizeof(font_uniforms_t);
+   font.atlas.render.ubo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+   font.atlas.render.ubo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 
-   {
-      buffer_init_info_t info =
-      {
-         .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-         .req_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-         .size = sizeof(font_shader_storage_t),
-      };
-      buffer_init(vk->device, vk->memoryTypes, &info, &font.atlas.render.ssbo);
-   }
-   {
-      buffer_init_info_t info =
-      {
-         .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-         .req_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-         .size = sizeof(font_uniforms_t),
-      };
-      buffer_init(vk->device, vk->memoryTypes, &info, &font.atlas.render.ubo);
-   }
-
-   vk_allocate_descriptor_set(vk->device, vk->pools.desc, vk_render->descriptor_set_layout, &font.atlas.render.desc);
-   vk_update_descriptor_set(vk->device, &font.atlas.render.texture, &font.atlas.render.ubo, &font.atlas.render.ssbo, font.atlas.render.desc);
+   vk_render_init(vk, vk_render, &font.atlas.render);
 
 
    memset(font.atlas.render.texture.staging.mem.u8 + font.atlas.render.texture.staging.mem_layout.offset, 0x0,
@@ -293,16 +278,11 @@ void vulkan_font_init(vk_context_t *vk, vk_render_context_t *vk_render)
    uniforms->tex_size.height = font.atlas.render.texture.height;
    font.atlas.render.ubo.dirty = true;
 
-   {
-      buffer_init_info_t info =
-      {
-         .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-         .req_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-         .size = 4096 * sizeof(font_vertex_t)
-      };
-      buffer_init(vk->device, vk->memoryTypes, &info, &font.atlas.render.vbo);
-      font.atlas.render.vbo.info.range = 0;
-   }
+   font.atlas.render.vbo.info.range = 4096 * sizeof(font_vertex_t);
+   font.atlas.render.vbo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+   font.atlas.render.vbo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+   buffer_init(vk->device, vk->memoryTypes, NULL, &font.atlas.render.vbo);
+   font.atlas.render.vbo.info.range = 0;
 
 
    {

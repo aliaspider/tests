@@ -33,25 +33,16 @@ void vulkan_frame_init(vk_context_t *vk, vk_render_context_t *vk_render, int wid
          {{ -1.0f,  1.0f, 0.0f, 1.0f}, {0.0f, 1.0f}, {1.0f, 0.0f, 0.0f, 1.0f}}
       };
 
-      buffer_init_info_t info =
-      {
-         .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-         .req_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-         .size = sizeof(vertices),
-         .data = vertices,
-      };
-      buffer_init(vk->device, vk->memoryTypes, &info, &frame.vbo);
+      frame.vbo.info.range = sizeof(vertices);
+      frame.vbo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+      frame.vbo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+      buffer_init(vk->device, vk->memoryTypes, vertices, &frame.vbo);
    }
 
-   {
-      buffer_init_info_t info =
-      {
-         .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-         .req_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-         .size = sizeof(frame_uniforms_t),
-      };
-      buffer_init(vk->device, vk->memoryTypes, &info, &frame.ubo);
-   }
+   frame.ubo.info.range = sizeof(frame_uniforms_t);
+   frame.ubo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+   frame.ubo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+   buffer_init(vk->device, vk->memoryTypes, NULL, &frame.ubo);
 
    {
       const VkDescriptorSetAllocateInfo info =

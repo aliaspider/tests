@@ -59,18 +59,11 @@ typedef struct
 {
    VkDescriptorBufferInfo info;
    device_memory_t mem;
+   VkBufferUsageFlags usage;
    bool dirty;
 } vk_buffer_t;
 
-typedef struct
-{
-   VkBufferUsageFlags usage;
-   VkMemoryPropertyFlags req_flags;
-   uint32_t size;
-   const void *data;
-} buffer_init_info_t;
-void buffer_init(VkDevice device, const VkMemoryType *memory_types, const buffer_init_info_t *init_info,
-   vk_buffer_t *dst);
+void buffer_init(VkDevice device, const VkMemoryType *memory_types, const void *data, vk_buffer_t *dst);
 void buffer_flush(VkDevice device, vk_buffer_t *buffer);
 void buffer_free(VkDevice device, vk_buffer_t *buffer);
 
@@ -200,7 +193,7 @@ typedef struct
    VkPipelineLayout layout;
 }vk_render_t;
 
-void vk_render_init(vk_context_t vk, vk_render_context_t vk_render, vk_render_t* dst);
+void vk_render_init(vk_context_t *vk, vk_render_context_t *vk_render, vk_render_t* dst);
 
 static inline VkResult vk_allocate_descriptor_set(VkDevice device, VkDescriptorPool pool,
    const VkDescriptorSetLayout layout, VkDescriptorSet *dst)
@@ -216,11 +209,10 @@ static inline VkResult vk_allocate_descriptor_set(VkDevice device, VkDescriptorP
 
 static inline void vk_update_descriptor_set(VkDevice device, vk_texture_t* texture, vk_buffer_t *ubo, vk_buffer_t *ssbo, VkDescriptorSet dst_set)
 {
-   VkDescriptorImageInfo image_info[2];
    VkWriteDescriptorSet write_set[3];
    int write_set_count = 0;
 
-   if(ubo)
+   if(ubo && ubo->info.buffer)
    {
       VkWriteDescriptorSet set =
       {
@@ -235,27 +227,36 @@ static inline void vk_update_descriptor_set(VkDevice device, vk_texture_t* textu
       write_set[write_set_count++] = set;
    }
 
-   if(texture)
+   VkDescriptorImageInfo image_info[] =
    {
-      image_info[0].sampler = texture->info.sampler;
-      image_info[0].imageView = texture->info.imageView;
-      image_info[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-      image_info[1] = image_info[0];
+      {
+         .sampler = texture->info.sampler,
+         .imageView = texture->info.imageView,
+         .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+      },
+      {
+         .sampler = texture->info.sampler,
+         .imageView = texture->info.imageView,
+         .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+      }
+   };
 
+   if(texture && texture->image)
+   {
       const VkWriteDescriptorSet set =
       {
          VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
          .dstSet = dst_set,
          .dstBinding = 1,
          .dstArrayElement = 0,
-         .descriptorCount = 2,
+         .descriptorCount = countof(image_info),
          .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
          .pImageInfo = image_info
       };
       write_set[write_set_count++] = set;
    }
 
-   if(ssbo)
+   if(ssbo && ssbo->info.buffer)
    {
       VkWriteDescriptorSet set =
       {

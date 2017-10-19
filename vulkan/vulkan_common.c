@@ -34,9 +34,9 @@ void texture_init(VkDevice device, const VkMemoryType *memory_types, uint32_t qu
 
       info.tiling = VK_IMAGE_TILING_LINEAR;
       info.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
-      info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;      
+      info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
       dst->staging.format = info.format;
-      dst->staging.layout = info.initialLayout;      
+      dst->staging.layout = info.initialLayout;
       vkCreateImage(device, &info, NULL, &dst->staging.image);
    }
 
@@ -122,7 +122,7 @@ void texture_update(VkCommandBuffer cmd, vk_texture_t *texture)
    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1,
       &barrier);
 
-   if(texture->format == texture->staging.format)
+   if (texture->format == texture->staging.format)
    {
       const VkImageCopy copy =
       {
@@ -134,7 +134,8 @@ void texture_update(VkCommandBuffer cmd, vk_texture_t *texture)
          .extent.height = texture->height,
          .extent.depth = 1
       };
-      vkCmdCopyImage(cmd, texture->staging.image, texture->staging.layout, texture->image, texture->info.imageLayout, 1, &copy);
+      vkCmdCopyImage(cmd, texture->staging.image, texture->staging.layout, texture->image, texture->info.imageLayout, 1,
+         &copy);
    }
    else
    {
@@ -144,10 +145,11 @@ void texture_update(VkCommandBuffer cmd, vk_texture_t *texture)
          .srcSubresource.layerCount = 1,
          .dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
          .dstSubresource.layerCount = 1,
-         .srcOffsets = {{0,0,0}, {texture->width, texture->height, 1}},
-         .dstOffsets = {{0,0,0}, {texture->width, texture->height, 1}}
+         .srcOffsets = {{0, 0, 0}, {texture->width, texture->height, 1}},
+         .dstOffsets = {{0, 0, 0}, {texture->width, texture->height, 1}}
       };
-      vkCmdBlitImage(cmd, texture->staging.image, texture->staging.layout, texture->image, texture->info.imageLayout, 1, &blit, VK_FILTER_NEAREST);
+      vkCmdBlitImage(cmd, texture->staging.image, texture->staging.layout, texture->image, texture->info.imageLayout, 1,
+         &blit, VK_FILTER_NEAREST);
    }
 
    barrier.srcAccessMask = barrier.dstAccessMask;
@@ -242,18 +244,14 @@ void device_memory_flush(VkDevice device, const device_memory_t *memory)
    }
 }
 
-void buffer_init(VkDevice device, const VkMemoryType *memory_types, const buffer_init_info_t *init_info,
-   vk_buffer_t *dst)
+void buffer_init(VkDevice device, const VkMemoryType *memory_types, const void *data, vk_buffer_t *dst)
 {
-   dst->info.offset = 0;
-   dst->info.range = init_info->size;
-
    {
       const VkBufferCreateInfo info =
       {
          VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
          .size = dst->info.range,
-         .usage = init_info->usage,
+         .usage = dst->usage,
       };
       vkCreateBuffer(device, &info, NULL, &dst->info.buffer);
    }
@@ -261,15 +259,15 @@ void buffer_init(VkDevice device, const VkMemoryType *memory_types, const buffer
    {
       memory_init_info_t info =
       {
-         .req_flags = init_info->req_flags,
+         .req_flags = dst->mem.flags,
          .buffer = dst->info.buffer
       };
       device_memory_init(device, memory_types, &info, &dst->mem);
    }
 
-   if (init_info->data && dst->mem.ptr)
+   if (data && dst->mem.ptr)
    {
-      memcpy(dst->mem.ptr, init_info->data, init_info->size);
+      memcpy(dst->mem.ptr, data, dst->info.range);
       device_memory_flush(device, &dst->mem);
    }
 }
@@ -296,6 +294,7 @@ void vk_get_instance_props(void)
    lprops[lprop_count].layerName[0] = '\0';
 
    int l;
+
    for (l = 0; l < lprop_count + 1; l++)
    {
       uint32_t iexprop_count;
@@ -305,6 +304,7 @@ void vk_get_instance_props(void)
       printf("%s (%i)\n", lprops[l].layerName, iexprop_count);
 
       int e;
+
       for (e = 0; e < iexprop_count; e++)
          printf("\t%s\n", iexprops[e].extensionName);
    }
@@ -325,6 +325,7 @@ void vk_get_gpu_props(VkPhysicalDevice gpu)
       pDeviceExtensionProperties);
 
    int e;
+
    for (e = 0; e < deviceExtensionPropertiesCount; e++)
       printf("\t%s\n", pDeviceExtensionProperties[e].extensionName);
 
@@ -395,6 +396,7 @@ void vk_get_surface_props(VkPhysicalDevice gpu, uint32_t queue_family_index, VkS
       VkPresentModeKHR presentModes[presentModeCount];
       vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, surface, &presentModeCount, presentModes);
       int i;
+
       for (i = 0; i < presentModeCount; i++)
          printf("supports present mode %i\n", presentModes[i]);
    }
@@ -409,6 +411,7 @@ uint32_t vk_get_queue_family_index(VkPhysicalDevice gpu, VkQueueFlags required_f
    vkGetPhysicalDeviceQueueFamilyProperties(gpu, &queueFamilyPropertyCount, pQueueFamilyProperties);
 
    int i;
+
    for (i = 0; i < queueFamilyPropertyCount; i++)
       if ((pQueueFamilyProperties[i].queueFlags & required_flags) == required_flags)
          return i;
@@ -416,8 +419,12 @@ uint32_t vk_get_queue_family_index(VkPhysicalDevice gpu, VkQueueFlags required_f
    return 0;
 }
 
-void vk_render_init(vk_context_t vk, vk_render_context_t vk_render, vk_render_t* dst)
+void vk_render_init(vk_context_t *vk, vk_render_context_t *vk_render, vk_render_t *dst)
 {
-
+   texture_init(vk->device, vk->memoryTypes, vk->queue_family_index, &dst->texture);
+   buffer_init(vk->device, vk->memoryTypes, NULL, &dst->ssbo);
+   buffer_init(vk->device, vk->memoryTypes, NULL, &dst->ubo);
+   vk_allocate_descriptor_set(vk->device, vk->pools.desc, vk_render->descriptor_set_layout, &dst->desc);
+   vk_update_descriptor_set(vk->device, &dst->texture, &dst->ubo, &dst->ssbo, dst->desc);
 
 }
