@@ -14,6 +14,7 @@ typedef struct
    VkMemoryPropertyFlags flags;
    VkDeviceSize size;
    VkDeviceSize alignment;
+   VkSubresourceLayout layout;
    union
    {
       void *ptr;
@@ -39,7 +40,6 @@ typedef struct
       device_memory_t mem;
       VkImage image;
       VkFormat format;
-      VkSubresourceLayout mem_layout;
       VkImageLayout layout;
    } staging;
    device_memory_t mem;

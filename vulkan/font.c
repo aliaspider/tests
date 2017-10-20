@@ -59,7 +59,7 @@ static struct
    {
       int slot_width;
       int slot_height;
-      atlas_slot_t slots[256];
+      atlas_slot_t slot_map[256];
       atlas_slot_t *uc_map[256];
       unsigned usage_counter;
    } atlas;
@@ -147,8 +147,10 @@ void vulkan_font_init(vk_context_t *vk, vk_render_context_t *vk_render)
       vk_pipeline_init(vk, vk_render, &info, &font.p);
    }
 
-   memset(font.p.texture.staging.mem.u8 + font.p.texture.staging.mem_layout.offset, 0x0,
-      font.p.texture.staging.mem_layout.size - font.p.texture.staging.mem_layout.offset);
+   {
+      device_memory_t *mem = &font.p.texture.staging.mem;
+      memset(mem->u8 + mem->layout.offset, 0x0, mem->layout.size - mem->layout.offset);
+   }
 
    font.p.texture.dirty = true;
 
@@ -172,27 +174,32 @@ void vulkan_font_destroy(VkDevice device)
 
 static int vulkan_font_get_new_slot(void)
 {
-   unsigned oldest = 0;
-
    int i;
+   unsigned oldest = 0;
+   atlas_slot_t *const slot_map = font.atlas.slot_map;
 
    for (i = 1; i < 256; i++)
-      if ((font.atlas.usage_counter - font.atlas.slots[i].last_used) >
-         (font.atlas.usage_counter - font.atlas.slots[oldest].last_used))
-         oldest = i;
-
-   int map_id = font.atlas.slots[oldest].charcode & 0xFF;
-
-   if (font.atlas.uc_map[map_id] == &font.atlas.slots[oldest])
-      font.atlas.uc_map[map_id] = font.atlas.slots[oldest].next;
-   else if (font.atlas.uc_map[map_id])
    {
-      atlas_slot_t *ptr = font.atlas.uc_map[map_id];
+      unsigned usage_counter = font.atlas.usage_counter;
 
-      while (ptr->next && ptr->next != &font.atlas.slots[oldest])
+      if ((usage_counter - slot_map[i].last_used) > (usage_counter - slot_map[oldest].last_used))
+         oldest = i;
+   }
+
+   int map_id = font.atlas.slot_map[oldest].charcode & 0xFF;
+
+   atlas_slot_t **const uc_map = font.atlas.uc_map;
+
+   if (uc_map[map_id] == &slot_map[oldest])
+      uc_map[map_id] = slot_map[oldest].next;
+   else if (uc_map[map_id])
+   {
+      atlas_slot_t *ptr = uc_map[map_id];
+
+      while (ptr->next && ptr->next != &slot_map[oldest])
          ptr = ptr->next;
 
-      ptr->next = font.atlas.slots[oldest].next;
+      ptr->next = slot_map[oldest].next;
    }
 
    return oldest;
@@ -205,32 +212,31 @@ static void ft_font_render_glyph(unsigned charcode, int slot_id)
 
       FT_Load_Char(font.ftface, charcode, FT_LOAD_RENDER | (font.monochrome ? FT_LOAD_MONOCHROME : 0));
 
-      uint8_t *src = font.ftface->glyph->bitmap.buffer;
+      FT_Bitmap *bitmap = &font.ftface->glyph->bitmap;
+      uint8_t *src = bitmap->buffer;
+      device_memory_t *mem = &font.p.texture.staging.mem;
+      uint8_t *dst = mem->u8 + mem->layout.offset + (slot_id & 0xF) * font.atlas.slot_width +
+         (((slot_id >> 4) * font.atlas.slot_height)) * mem->layout.rowPitch;
 
-      uint8_t *dst = font.p.texture.staging.mem.u8 + font.p.texture.staging.mem_layout.offset +
-         (slot_id & 0xF) * font.atlas.slot_width + (((slot_id >> 4) * font.atlas.slot_height)) *
-         font.p.texture.staging.mem_layout.rowPitch;
+      assert((dst - mem->u8 + mem->layout.rowPitch * (bitmap->rows + 1) < mem->layout.size));
 
-      assert((dst - font.p.texture.staging.mem.u8 + font.p.texture.staging.mem_layout.rowPitch *
-            (font.ftface->glyph->bitmap.rows + 1) < font.p.texture.staging.mem_layout.size));
-
-      for (row = 0; row < font.ftface->glyph->bitmap.rows; row++)
+      for (row = 0; row < bitmap->rows; row++)
       {
          if (font.monochrome)
          {
             int col;
 
-            for (col = 0; col < font.ftface->glyph->bitmap.width; col++)
+            for (col = 0; col < bitmap->width; col++)
             {
                if (src[col >> 3] & (0x80 >> (col & 0x7)))
                   dst[col] = 255;
             }
          }
          else
-            memcpy(dst, src, font.ftface->glyph->bitmap.width);
+            memcpy(dst, src, bitmap->width);
 
-         src += font.ftface->glyph->bitmap.pitch;
-         dst += font.p.texture.staging.mem_layout.rowPitch;
+         src += bitmap->pitch;
+         dst += mem->layout.rowPitch;
       }
 
       font.p.texture.dirty = true;
@@ -259,7 +265,7 @@ static int vulkan_font_get_slot_id(uint32_t charcode)
          if (atlas_slot->charcode == charcode)
          {
             atlas_slot->last_used = ++font.atlas.usage_counter;
-            return atlas_slot - font.atlas.slots;
+            return atlas_slot - font.atlas.slot_map;
          }
 
          atlas_slot = atlas_slot->next;
@@ -267,13 +273,13 @@ static int vulkan_font_get_slot_id(uint32_t charcode)
    }
 
    int slot_id = vulkan_font_get_new_slot();
-   font.atlas.slots[slot_id].charcode   = charcode;
-   font.atlas.slots[slot_id].next       = font.atlas.uc_map[map_id];
-   font.atlas.uc_map[map_id] = &font.atlas.slots[slot_id];
+   font.atlas.slot_map[slot_id].charcode = charcode;
+   font.atlas.slot_map[slot_id].next = font.atlas.uc_map[map_id];
+   font.atlas.uc_map[map_id] = &font.atlas.slot_map[slot_id];
 
    ft_font_render_glyph(charcode, slot_id);
 
-   font.atlas.slots[slot_id].last_used = ++font.atlas.usage_counter;
+   font.atlas.slot_map[slot_id].last_used = ++font.atlas.usage_counter;
    return slot_id;
 }
 
@@ -345,7 +351,8 @@ void vulkan_font_draw_text(const char *text, int x, int y)
          else
          {
             vertex.position.x = 0;
-            if(last_space == out)
+
+            if (last_space == out)
                continue;
          }
       }

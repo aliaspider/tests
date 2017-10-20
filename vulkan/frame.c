@@ -61,14 +61,14 @@ void vulkan_frame_init(vk_context_t *vk, vk_render_context_t *vk_render, int wid
       frame.vbo.dirty = true;
    }
 
-   memset(frame.texture.staging.mem.u8 + frame.texture.staging.mem_layout.offset, 0xFF,
-      frame.texture.staging.mem_layout.size - frame.texture.staging.mem_layout.offset);
+   memset(frame.texture.staging.mem.u8 + frame.texture.staging.mem.layout.offset, 0xFF,
+      frame.texture.staging.mem.layout.size - frame.texture.staging.mem.layout.offset);
    frame.texture.dirty = true;
 
    video.frame.width = width;
    video.frame.height = height;
-   video.frame.pitch = frame.texture.staging.mem_layout.rowPitch / 4;
-   video.frame.data = frame.texture.staging.mem.u8 + frame.texture.staging.mem_layout.offset;
+   video.frame.pitch = frame.texture.staging.mem.layout.rowPitch / 4;
+   video.frame.data = frame.texture.staging.mem.u8 + frame.texture.staging.mem.layout.offset;
 }
 
 void vulkan_frame_update(VkDevice device, VkCommandBuffer cmd)
