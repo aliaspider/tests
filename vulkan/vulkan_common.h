@@ -193,9 +193,9 @@ typedef struct
    vk_buffer_t ubo;
    vk_buffer_t ssbo;
    VkDescriptorSet desc;
-   VkPipeline pipe;
-   VkPipelineLayout pipeline_layout;
-}vk_render_t;
+   VkPipeline handle;
+   VkPipelineLayout layout;
+}vk_pipeline_t;
 
 typedef struct
 {
@@ -219,8 +219,8 @@ typedef struct
    const VkPipelineColorBlendAttachmentState* color_blend_attachement_state;
 }vk_pipeline_init_info_t;
 
-void vk_render_init(vk_context_t *vk, vk_render_context_t *vk_render, const vk_pipeline_init_info_t *init_info, vk_render_t *dst);
-void vk_render_destroy(VkDevice device, vk_render_t *render);
+void vk_pipeline_init(vk_context_t *vk, vk_render_context_t *vk_render, const vk_pipeline_init_info_t *init_info, vk_pipeline_t *dst);
+void vk_pipeline_destroy(VkDevice device, vk_pipeline_t *render);
 
 typedef union
 {

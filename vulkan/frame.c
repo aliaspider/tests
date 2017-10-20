@@ -5,7 +5,7 @@
 #include "video.h"
 #include "font.h"
 
-static vk_render_t frame;
+static vk_pipeline_t frame;
 
 void vulkan_frame_init(vk_context_t *vk, vk_render_context_t *vk_render, int width, int height, VkFormat format)
 {
@@ -55,7 +55,7 @@ void vulkan_frame_init(vk_context_t *vk, vk_render_context_t *vk_render, int wid
       frame.texture.format = format;
       frame.vbo.info.range = sizeof(vertices);
 
-      vk_render_init(vk, vk_render, &info, &frame);
+      vk_pipeline_init(vk, vk_render, &info, &frame);
 
       memcpy(frame.vbo.mem.ptr, vertices, sizeof(vertices));
       frame.vbo.dirty = true;
@@ -79,8 +79,8 @@ void vulkan_frame_update(VkDevice device, VkCommandBuffer cmd)
 void vulkan_frame_render(VkCommandBuffer cmd)
 {
    VkDeviceSize offset = 0;
-   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, frame.pipe);
-   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, frame.pipeline_layout, 0, 1, &frame.desc, 0, NULL);
+   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, frame.handle);
+   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, frame.layout, 0, 1, &frame.desc, 0, NULL);
 // vkCmdPushConstants(device.cmd, device.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(uniforms_t), mapped_uniforms);
 
    vkCmdBindVertexBuffers(cmd, 0, 1, &frame.vbo.info.buffer, &offset);
@@ -90,5 +90,5 @@ void vulkan_frame_render(VkCommandBuffer cmd)
 
 void vulkan_frame_destroy(VkDevice device)
 {
-   vk_render_destroy(device, &frame);
+   vk_pipeline_destroy(device, &frame);
 }

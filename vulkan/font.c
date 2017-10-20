@@ -53,7 +53,7 @@ static struct
    int line_height;
    int ascender;
    int max_advance;
-   vk_render_t render;
+   vk_pipeline_t p;
    bool monochrome;
    struct
    {
@@ -136,37 +136,37 @@ void vulkan_font_init(vk_context_t *vk, vk_render_context_t *vk_render)
          .color_blend_attachement_state = &color_blend_attachement_state,
       };
 
-      font.render.texture.width = font.atlas.slot_width << 4;
-      font.render.texture.height = font.atlas.slot_height << 4;
-      font.render.texture.format = VK_FORMAT_R8_UNORM;
+      font.p.texture.width = font.atlas.slot_width << 4;
+      font.p.texture.height = font.atlas.slot_height << 4;
+      font.p.texture.format = VK_FORMAT_R8_UNORM;
 
-      font.render.ssbo.info.range = sizeof(font_shader_storage_t);
-      font.render.ubo.info.range = sizeof(font_uniforms_t);
-      font.render.vbo.info.range = 4096 * sizeof(font_vertex_t);
+      font.p.ssbo.info.range = sizeof(font_shader_storage_t);
+      font.p.ubo.info.range = sizeof(font_uniforms_t);
+      font.p.vbo.info.range = 4096 * sizeof(font_vertex_t);
 
-      vk_render_init(vk, vk_render, &info, &font.render);
+      vk_pipeline_init(vk, vk_render, &info, &font.p);
    }
 
-   memset(font.render.texture.staging.mem.u8 + font.render.texture.staging.mem_layout.offset, 0x0,
-      font.render.texture.staging.mem_layout.size - font.render.texture.staging.mem_layout.offset);
+   memset(font.p.texture.staging.mem.u8 + font.p.texture.staging.mem_layout.offset, 0x0,
+      font.p.texture.staging.mem_layout.size - font.p.texture.staging.mem_layout.offset);
 
-   font.render.texture.dirty = true;
+   font.p.texture.dirty = true;
 
-   font_uniforms_t *uniforms = (font_uniforms_t *)font.render.ubo.mem.ptr;
+   font_uniforms_t *uniforms = (font_uniforms_t *)font.p.ubo.mem.ptr;
    uniforms->vp_size.width = video.screen.width;
    uniforms->vp_size.height = video.screen.height;
-   uniforms->tex_size.width = font.render.texture.width;
-   uniforms->tex_size.height = font.render.texture.height;
-   font.render.ubo.dirty = true;
+   uniforms->tex_size.width = font.p.texture.width;
+   uniforms->tex_size.height = font.p.texture.height;
+   font.p.ubo.dirty = true;
 
-   font.render.vbo.info.range = 0;
+   font.p.vbo.info.range = 0;
 }
 
 void vulkan_font_destroy(VkDevice device)
 {
    FT_Done_Face(font.ftface);
    FT_Done_FreeType(font.ftlib);
-   vk_render_destroy(device, &font.render);
+   vk_pipeline_destroy(device, &font.p);
 }
 
 
@@ -207,12 +207,12 @@ static void ft_font_render_glyph(unsigned charcode, int slot_id)
 
       uint8_t *src = font.ftface->glyph->bitmap.buffer;
 
-      uint8_t *dst = font.render.texture.staging.mem.u8 + font.render.texture.staging.mem_layout.offset +
+      uint8_t *dst = font.p.texture.staging.mem.u8 + font.p.texture.staging.mem_layout.offset +
          (slot_id & 0xF) * font.atlas.slot_width + (((slot_id >> 4) * font.atlas.slot_height)) *
-         font.render.texture.staging.mem_layout.rowPitch;
+         font.p.texture.staging.mem_layout.rowPitch;
 
-      assert((dst - font.render.texture.staging.mem.u8 + font.render.texture.staging.mem_layout.rowPitch *
-            (font.ftface->glyph->bitmap.rows + 1) < font.render.texture.staging.mem_layout.size));
+      assert((dst - font.p.texture.staging.mem.u8 + font.p.texture.staging.mem_layout.rowPitch *
+            (font.ftface->glyph->bitmap.rows + 1) < font.p.texture.staging.mem_layout.size));
 
       for (row = 0; row < font.ftface->glyph->bitmap.rows; row++)
       {
@@ -230,20 +230,20 @@ static void ft_font_render_glyph(unsigned charcode, int slot_id)
             memcpy(dst, src, font.ftface->glyph->bitmap.width);
 
          src += font.ftface->glyph->bitmap.pitch;
-         dst += font.render.texture.staging.mem_layout.rowPitch;
+         dst += font.p.texture.staging.mem_layout.rowPitch;
       }
 
-      font.render.texture.dirty = true;
+      font.p.texture.dirty = true;
    }
 
    {
-      font_uniforms_t *uniforms = (font_uniforms_t *)font.render.ubo.mem.ptr;
+      font_uniforms_t *uniforms = (font_uniforms_t *)font.p.ubo.mem.ptr;
       uniforms->glyph_metrics[slot_id].x = font.ftface->glyph->metrics.horiBearingX >> 6;
       uniforms->glyph_metrics[slot_id].y = -font.ftface->glyph->metrics.horiBearingY >> 6;
       uniforms->glyph_metrics[slot_id].width = font.ftface->glyph->metrics.width >> 6;
       uniforms->glyph_metrics[slot_id].height = font.ftface->glyph->metrics.height >> 6;
       uniforms->advance[slot_id] = font.ftface->glyph->metrics.horiAdvance >> 6;
-      font.render.ubo.dirty = true;
+      font.p.ubo.dirty = true;
    }
 }
 
@@ -282,7 +282,7 @@ void vulkan_font_draw_text(const char *text, int x, int y)
    const unsigned char *in = (const unsigned char *)text;
    font_vertex_t *last_space = NULL;
 
-   font_vertex_t *out = (font_vertex_t *)(font.render.vbo.mem.u8 + font.render.vbo.info.range);
+   font_vertex_t *out = (font_vertex_t *)(font.p.vbo.mem.u8 + font.p.vbo.info.range);
    font_vertex_t vertex;
    vertex.color.r = 0;
    vertex.color.g = 0;
@@ -321,7 +321,7 @@ void vulkan_font_draw_text(const char *text, int x, int y)
 
       int slot_id = vulkan_font_get_slot_id(charcode);
 
-      if ((vertex.position.x + ((font_uniforms_t *)font.render.ubo.mem.ptr)->advance[slot_id]) > video.screen.width)
+      if ((vertex.position.x + ((font_uniforms_t *)font.p.ubo.mem.ptr)->advance[slot_id]) > video.screen.width)
 //      if ((vertex.position.x + font.max_advance) > video.screen.width)
       {
          vertex.position.y += font.line_height;
@@ -351,19 +351,19 @@ void vulkan_font_draw_text(const char *text, int x, int y)
       }
 
       *out = vertex;
-      vertex.position.x += ((font_uniforms_t *)font.render.ubo.mem.ptr)->advance[slot_id];
+      vertex.position.x += ((font_uniforms_t *)font.p.ubo.mem.ptr)->advance[slot_id];
 
       (out++)->slot_id = slot_id;
    }
 
-   font.render.vbo.info.range = (uint8_t *)out - font.render.vbo.mem.u8;
+   font.p.vbo.info.range = (uint8_t *)out - font.p.vbo.mem.u8;
 
 
 }
 
 void vulkan_font_update_assets(VkDevice device, VkCommandBuffer cmd)
 {
-   font.render.vbo.info.range = 0;
+   font.p.vbo.info.range = 0;
 
    vulkan_font_draw_text("Backward compatibility: Backwards compatibility with ASCII and the enormous "
       "amount of software designed to process ASCII-encoded text was the main driving "
@@ -395,29 +395,29 @@ void vulkan_font_update_assets(VkDevice device, VkCommandBuffer cmd)
 
 //   vulkan_font_draw_text("ettf", 40, 220);
 
-   if (font.render.texture.dirty)
-      texture_update(device, cmd, &font.render.texture);
+   if (font.p.texture.dirty)
+      texture_update(device, cmd, &font.p.texture);
 
-   if (font.render.vbo.dirty)
-      buffer_flush(device, &font.render.vbo);
+   if (font.p.vbo.dirty)
+      buffer_flush(device, &font.p.vbo);
 
-   if (font.render.ubo.dirty)
-      buffer_flush(device, &font.render.ubo);
+   if (font.p.ubo.dirty)
+      buffer_flush(device, &font.p.ubo);
 
-   if (font.render.ssbo.dirty)
-      buffer_flush(device, &font.render.ssbo);
+   if (font.p.ssbo.dirty)
+      buffer_flush(device, &font.p.ssbo);
 }
 
 void vulkan_font_render(VkCommandBuffer cmd)
 {
-   if ((font.render.vbo.info.range - font.render.vbo.info.offset) == 0)
+   if ((font.p.vbo.info.range - font.p.vbo.info.offset) == 0)
       return;
 
-   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, font.render.pipe);
-   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, font.render.pipeline_layout, 0, 1, &font.render.desc, 0,
+   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, font.p.handle);
+   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, font.p.layout, 0, 1, &font.p.desc, 0,
       NULL);
-   vkCmdBindVertexBuffers(cmd, 0, 1, &font.render.vbo.info.buffer, &font.render.vbo.info.offset);
-   vkCmdDraw(cmd, (font.render.vbo.info.range - font.render.vbo.info.offset) / sizeof(font_vertex_t), 1, 0, 0);
+   vkCmdBindVertexBuffers(cmd, 0, 1, &font.p.vbo.info.buffer, &font.p.vbo.info.offset);
+   vkCmdDraw(cmd, (font.p.vbo.info.range - font.p.vbo.info.offset) / sizeof(font_vertex_t), 1, 0, 0);
 //   {
 //      VkMappedMemoryRange range =
 //      {

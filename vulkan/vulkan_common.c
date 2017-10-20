@@ -437,8 +437,8 @@ static inline VkShaderModule vk_shader_code_init(VkDevice device, const vk_shade
    return shader;
 }
 
-void vk_render_init(vk_context_t *vk, vk_render_context_t *vk_render, const vk_pipeline_init_info_t *init_info,
-   vk_render_t *dst)
+void vk_pipeline_init(vk_context_t *vk, vk_render_context_t *vk_render, const vk_pipeline_init_info_t *init_info,
+   vk_pipeline_t *dst)
 {
    vk_texture_init(vk->device, vk->memoryTypes, vk->queue_family_index, &dst->texture);
 
@@ -556,7 +556,7 @@ void vk_render_init(vk_context_t *vk, vk_render_context_t *vk_render, const vk_p
 #endif
       };
 
-      vkCreatePipelineLayout(vk->device, &info, NULL, &dst->pipeline_layout);
+      vkCreatePipelineLayout(vk->device, &info, NULL, &dst->layout);
    }
 
    {
@@ -636,11 +636,11 @@ void vk_render_init(vk_context_t *vk, vk_render_context_t *vk_render, const vk_p
          .pRasterizationState = &rasterization_info,
          .pMultisampleState = &multisample_state,
          .pColorBlendState = &colorblend_state,
-         .layout = dst->pipeline_layout,
+         .layout = dst->layout,
          .renderPass = vk_render->renderpass,
          .subpass = 0
       };
-      vkCreateGraphicsPipelines(vk->device, VK_NULL_HANDLE, 1, &info, NULL, &dst->pipe);
+      vkCreateGraphicsPipelines(vk->device, VK_NULL_HANDLE, 1, &info, NULL, &dst->handle);
 
       vkDestroyShaderModule(vk->device, shaders_info[0].module, NULL);
       vkDestroyShaderModule(vk->device, shaders_info[1].module, NULL);
@@ -651,10 +651,10 @@ void vk_render_init(vk_context_t *vk, vk_render_context_t *vk_render, const vk_p
 
 }
 
-void vk_render_destroy(VkDevice device, vk_render_t *render)
+void vk_pipeline_destroy(VkDevice device, vk_pipeline_t *render)
 {
-   vkDestroyPipelineLayout(device, render->pipeline_layout, NULL);
-   vkDestroyPipeline(device, render->pipe, NULL);
+   vkDestroyPipelineLayout(device, render->layout, NULL);
+   vkDestroyPipeline(device, render->handle, NULL);
    buffer_free(device, &render->vbo);
    buffer_free(device, &render->ubo);
    buffer_free(device, &render->ssbo);
