@@ -581,7 +581,7 @@ void vk_context_destroy(vk_context_t *vk)
    vkDestroyDevice(vk->device, NULL);
    vkDestroyDebugReportCallbackEXT(vk->instance, vk->debug_cb, NULL);
    vkDestroyInstance(vk->instance, NULL);
-   memset(&vk, 0, sizeof(vk));
+   memset(vk, 0, sizeof(*vk));
 }
 
 void vk_render_targets_init(vk_context_t *vk, int count, screen_t *screens, vk_render_target_t *render_targets)
@@ -750,7 +750,7 @@ void vk_render_targets_destroy(vk_context_t *vk, int count, vk_render_target_t *
       vkDestroySurfaceKHR(vk->instance, render_targets[i].surface, NULL);
    }
 
-   memset(&render_targets, 0, count * sizeof(*render_targets));
+   memset(render_targets, 0, count * sizeof(*render_targets));
 
 
 }
