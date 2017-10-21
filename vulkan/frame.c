@@ -6,6 +6,22 @@
 #include "video.h"
 #include "font.h"
 
+typedef struct
+{
+   struct
+   {
+      float x, y, z, w;
+   } position;
+   struct
+   {
+      float u, v;
+   } texcoord;
+   struct
+   {
+      float r, g, b, a;
+   } color;
+} vertex_t;
+
 static vk_pipeline_t frame;
 
 void vulkan_frame_init(vk_context_t *vk, int width, int height, VkFormat format)

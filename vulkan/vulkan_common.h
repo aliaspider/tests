@@ -10,6 +10,63 @@
 #define MAX_SWAPCHAIN_IMAGES 8
 #define countof(a) (sizeof(a)/ sizeof(*a))
 
+#define VK_CHECK(vk_call) do{VkResult res = vk_call; if (res != VK_SUCCESS) {printf("%s:%i:%s:%s --> %s(%i)\n", __FILE__, __LINE__, __FUNCTION__, #vk_call, VkResult_to_str(res), res);fflush(stdout);}}while(0)
+const char *VkResult_to_str(VkResult res);
+
+typedef struct
+{
+   VkInstance instance;
+   VkDebugReportCallbackEXT debug_cb;
+   VkPhysicalDevice gpu;
+   union
+   {
+      struct
+      {
+         uint32_t memoryTypeCount;
+         VkMemoryType memoryTypes[VK_MAX_MEMORY_TYPES];
+      };
+      VkPhysicalDeviceMemoryProperties mem;
+   };
+   VkDevice device;
+   uint32_t queue_family_index;
+   VkQueue queue;
+   VkFence queue_fence;
+   struct
+   {
+      VkCommandPool cmd;
+      VkDescriptorPool desc;
+   } pools;
+   VkDescriptorSetLayout descriptor_set_layout;
+   VkPipelineLayout pipeline_layout;
+   struct
+   {
+      VkSampler nearest;
+      VkSampler linear;
+   } samplers;
+   VkRenderPass renderpass;
+} vk_context_t;
+
+void vk_context_init(vk_context_t* vk);
+void vk_context_destroy(vk_context_t* vk);
+
+typedef struct
+{
+   VkSurfaceKHR surface;
+   screen_t* screen;
+   VkDisplayKHR display;
+   VkSwapchainKHR swapchain;
+   VkRect2D scissor;
+   VkViewport viewport;
+   uint32_t swapchain_count;
+   VkImageView views[MAX_SWAPCHAIN_IMAGES];
+   VkFramebuffer framebuffers[MAX_SWAPCHAIN_IMAGES];
+   VkCommandBuffer cmd;
+   VkFence chain_fence;
+} vk_render_target_t;
+
+void vk_render_targets_init(vk_context_t* vk, int count, screen_t* screens, vk_render_target_t* render_targets);
+void vk_render_targets_destroy(vk_context_t* vk, int count, vk_render_target_t* render_targets);
+
 typedef struct
 {
    VkDeviceMemory handle;
@@ -73,120 +130,6 @@ typedef struct
 void vk_buffer_init(VkDevice device, const VkMemoryType *memory_types, const void *data, vk_buffer_t *dst);
 void buffer_flush(VkDevice device, vk_buffer_t *buffer);
 void buffer_free(VkDevice device, vk_buffer_t *buffer);
-
-typedef struct
-{
-   struct
-   {
-      float x, y, z, w;
-   } position;
-   struct
-   {
-      float u, v;
-   } texcoord;
-   struct
-   {
-      float r, g, b, a;
-   } color;
-} vertex_t;
-
-static inline const char *VkResult_to_str(VkResult res)
-{
-   switch (res)
-   {
-#define CASE_TO_STR(res) case res: return #res;
-      CASE_TO_STR(VK_SUCCESS);
-      CASE_TO_STR(VK_NOT_READY);
-      CASE_TO_STR(VK_TIMEOUT);
-      CASE_TO_STR(VK_EVENT_SET);
-      CASE_TO_STR(VK_EVENT_RESET);
-      CASE_TO_STR(VK_INCOMPLETE);
-      CASE_TO_STR(VK_ERROR_OUT_OF_HOST_MEMORY);
-      CASE_TO_STR(VK_ERROR_OUT_OF_DEVICE_MEMORY);
-      CASE_TO_STR(VK_ERROR_INITIALIZATION_FAILED);
-      CASE_TO_STR(VK_ERROR_DEVICE_LOST);
-      CASE_TO_STR(VK_ERROR_MEMORY_MAP_FAILED);
-      CASE_TO_STR(VK_ERROR_LAYER_NOT_PRESENT);
-      CASE_TO_STR(VK_ERROR_EXTENSION_NOT_PRESENT);
-      CASE_TO_STR(VK_ERROR_FEATURE_NOT_PRESENT);
-      CASE_TO_STR(VK_ERROR_INCOMPATIBLE_DRIVER);
-      CASE_TO_STR(VK_ERROR_TOO_MANY_OBJECTS);
-      CASE_TO_STR(VK_ERROR_FORMAT_NOT_SUPPORTED);
-      CASE_TO_STR(VK_ERROR_FRAGMENTED_POOL);
-      CASE_TO_STR(VK_ERROR_SURFACE_LOST_KHR);
-      CASE_TO_STR(VK_ERROR_NATIVE_WINDOW_IN_USE_KHR);
-      CASE_TO_STR(VK_SUBOPTIMAL_KHR);
-      CASE_TO_STR(VK_ERROR_OUT_OF_DATE_KHR);
-      CASE_TO_STR(VK_ERROR_INCOMPATIBLE_DISPLAY_KHR);
-      CASE_TO_STR(VK_ERROR_VALIDATION_FAILED_EXT);
-      CASE_TO_STR(VK_ERROR_INVALID_SHADER_NV);
-      CASE_TO_STR(VK_ERROR_OUT_OF_POOL_MEMORY_KHR);
-      CASE_TO_STR(VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR);
-#undef CASE_TO_STR
-
-   default:
-      break;
-   }
-
-   return "unknown";
-
-}
-
-#define VK_CHECK(vk_call) do{VkResult res = vk_call; if (res != VK_SUCCESS) {printf("%s:%i:%s:%s --> %s(%i)\n", __FILE__, __LINE__, __FUNCTION__, #vk_call, VkResult_to_str(res), res);fflush(stdout);}}while(0)
-
-typedef struct
-{
-   VkInstance instance;
-   VkDebugReportCallbackEXT debug_cb;
-   VkPhysicalDevice gpu;
-   union
-   {
-      struct
-      {
-         uint32_t memoryTypeCount;
-         VkMemoryType memoryTypes[VK_MAX_MEMORY_TYPES];
-      };
-      VkPhysicalDeviceMemoryProperties mem;
-   };
-   VkDevice device;
-   uint32_t queue_family_index;
-   VkQueue queue;
-   VkFence queue_fence;
-   struct
-   {
-      VkCommandPool cmd;
-      VkDescriptorPool desc;
-   } pools;
-   VkDescriptorSetLayout descriptor_set_layout;
-   VkPipelineLayout pipeline_layout;
-   struct
-   {
-      VkSampler nearest;
-      VkSampler linear;
-   } samplers;
-   VkRenderPass renderpass;
-} vk_context_t;
-
-void vk_context_init(vk_context_t* vk);
-void vk_context_destroy(vk_context_t* vk);
-
-typedef struct
-{
-   VkSurfaceKHR surface;
-   screen_t* screen;
-   VkDisplayKHR display;
-   VkSwapchainKHR swapchain;
-   VkRect2D scissor;
-   VkViewport viewport;
-   uint32_t swapchain_count;
-   VkImageView views[MAX_SWAPCHAIN_IMAGES];
-   VkFramebuffer framebuffers[MAX_SWAPCHAIN_IMAGES];
-   VkCommandBuffer cmd;
-   VkFence chain_fence;
-} vk_render_target_t;
-
-void vk_render_targets_init(vk_context_t* vk, int count, screen_t* screens, vk_render_target_t* render_targets);
-void vk_render_targets_destroy(vk_context_t* vk, int count, vk_render_target_t* render_targets);
 
 typedef struct
 {
