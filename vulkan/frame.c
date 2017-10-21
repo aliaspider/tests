@@ -5,6 +5,7 @@
 #include "frame.h"
 #include "video.h"
 #include "font.h"
+
 static vk_pipeline_t frame;
 
 void vulkan_frame_init(vk_context_t *vk, int width, int height, VkFormat format)
