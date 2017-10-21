@@ -290,7 +290,6 @@ void vulkan_font_draw_text(const char *text, int x, int y, int max_width)
    vertex.color.b = 0;
    vertex.position.x = x;
    vertex.position.y = y + font.ascender;
-   vertex.slot_id = 'p';
 
    while (*in)
    {
@@ -370,7 +369,8 @@ void vulkan_font_update_assets(VkDevice device, VkCommandBuffer cmd)
    font.p.vbo.info.range = 0;
    vulkan_font_draw_text(video.fps, 0, 0, video.screens[0].width);
 
-   snprintf(buffer, sizeof(buffer), "[%c] %i, %i", input.pointer.touch1 ? '#' : ' ', input.pointer.x, input.pointer.y);
+   snprintf(buffer, sizeof(buffer), "[%c,%c,%c] %i, %i", input.pointer.touch1 ? '#' : ' ',
+            input.pointer.touch2 ? '#' : ' ', input.pointer.touch3 ? '#' : ' ', input.pointer.x, input.pointer.y);
    vulkan_font_draw_text(buffer, 0, 20, video.screens[0].width);
 
 //   static int text_pos_y = 100;
@@ -414,8 +414,8 @@ void vulkan_font_update_assets(VkDevice device, VkCommandBuffer cmd)
    if (font.p.ubo.dirty)
       buffer_flush(device, &font.p.ubo);
 
-   if (font.p.ssbo.dirty)
-      buffer_flush(device, &font.p.ssbo);
+//   if (font.p.ssbo.dirty)
+//      buffer_flush(device, &font.p.ssbo);
 }
 
 void vulkan_font_render(VkCommandBuffer cmd)

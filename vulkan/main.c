@@ -9,7 +9,7 @@
 #include "font.h"
 
 static vk_context_t vk;
-static vk_render_context_t vk_render[MAX_SCREENS];
+static vk_render_target_t render_targets[MAX_SCREENS];
 
 static VkBool32 vulkan_debug_report_callback(VkDebugReportFlagsEXT flags,
    VkDebugReportObjectTypeEXT objectType,
@@ -319,23 +319,23 @@ void video_init()
 
    for (i = 0; i < video.screen_count; i++)
    {
-      vk_render[i].screen = &video.screens[i];
+      render_targets[i].screen = &video.screens[i];
 
 #ifdef VK_USE_PLATFORM_XLIB_KHR
       VkXlibSurfaceCreateInfoKHR info =
       {
          VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR,
-         .dpy = vk_render[i].screen->display,
-         .window = vk_render[i].screen->window
+         .dpy = render_targets[i].screen->display,
+         .window = render_targets[i].screen->window
       };
-      vkCreateXlibSurfaceKHR(vk.instance, &info, NULL, &vk_render[i].surface);
+      vkCreateXlibSurfaceKHR(vk.instance, &info, NULL, &render_targets[i].surface);
 #elif defined(VK_USE_PLATFORM_WIN32_KHR)
 
 #else
 #error platform not supported
 #endif
 
-      vk_get_surface_props(vk.gpu, vk.queue_family_index, vk_render[i].surface);
+      vk_get_surface_props(vk.gpu, vk.queue_family_index, render_targets[i].surface);
 
       {
          VkSwapchainCounterCreateInfoEXT swapchainCounterCreateInfo =
@@ -348,12 +348,12 @@ void video_init()
          {
             VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
             .pNext = &swapchainCounterCreateInfo,
-            .surface = vk_render[i].surface,
+            .surface = render_targets[i].surface,
             .minImageCount = 2,
             .imageFormat = VK_FORMAT_B8G8R8A8_UNORM,
             .imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
-            .imageExtent.width = vk_render[i].screen->width,
-            .imageExtent.height = vk_render[i].screen->height,
+            .imageExtent.width = render_targets[i].screen->width,
+            .imageExtent.height = render_targets[i].screen->height,
             .imageArrayLayers = 1,
             .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
             .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
@@ -365,22 +365,22 @@ void video_init()
 //         .presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR,
             .clipped = VK_TRUE
          };
-         VK_CHECK(vkCreateSwapchainKHR(vk.device, &info, NULL, &vk_render[i].swapchain));
+         VK_CHECK(vkCreateSwapchainKHR(vk.device, &info, NULL, &render_targets[i].swapchain));
       }
 
       {
-         vkGetSwapchainImagesKHR(vk.device, vk_render[i].swapchain, &vk_render[i].swapchain_count, NULL);
+         vkGetSwapchainImagesKHR(vk.device, render_targets[i].swapchain, &render_targets[i].swapchain_count, NULL);
 
-         if (vk_render[i].swapchain_count > MAX_SWAPCHAIN_IMAGES)
-            vk_render[i].swapchain_count = MAX_SWAPCHAIN_IMAGES;
+         if (render_targets[i].swapchain_count > MAX_SWAPCHAIN_IMAGES)
+            render_targets[i].swapchain_count = MAX_SWAPCHAIN_IMAGES;
 
-         VkImage swapchainImages[vk_render[i].swapchain_count];
-         vkGetSwapchainImagesKHR(vk.device, vk_render[i].swapchain, &vk_render[i].swapchain_count,
+         VkImage swapchainImages[render_targets[i].swapchain_count];
+         vkGetSwapchainImagesKHR(vk.device, render_targets[i].swapchain, &render_targets[i].swapchain_count,
             swapchainImages);
 
          int j;
 
-         for (j = 0; j < vk_render[i].swapchain_count; j++)
+         for (j = 0; j < render_targets[i].swapchain_count; j++)
          {
             {
                VkImageViewCreateInfo info =
@@ -393,7 +393,7 @@ void video_init()
                   .subresourceRange.levelCount = 1,
                   .subresourceRange.layerCount = 1
                };
-               vkCreateImageView(vk.device, &info, NULL, &vk_render[i].views[j]);
+               vkCreateImageView(vk.device, &info, NULL, &render_targets[i].views[j]);
             }
 
             {
@@ -401,27 +401,27 @@ void video_init()
                {
                   VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
                   .renderPass = vk.renderpass,
-                  .attachmentCount = 1, &vk_render[i].views[j],
-                  .width = vk_render[i].screen->width,
-                  .height = vk_render[i].screen->height,
+                  .attachmentCount = 1, &render_targets[i].views[j],
+                  .width = render_targets[i].screen->width,
+                  .height = render_targets[i].screen->height,
                   .layers = 1
                };
-               vkCreateFramebuffer(vk.device, &info, NULL, &vk_render[i].framebuffers[j]);
+               vkCreateFramebuffer(vk.device, &info, NULL, &render_targets[i].framebuffers[j]);
             }
          }
       }
 
-      vk_render[i].viewport.x = 0.0f;
-      vk_render[i].viewport.y = 0.0f;
-      vk_render[i].viewport.width = vk_render[i].screen->width;
-      vk_render[i].viewport.height = vk_render[i].screen->height;
-      vk_render[i].viewport.minDepth = -1.0f;
-      vk_render[i].viewport.maxDepth =  1.0f;
+      render_targets[i].viewport.x = 0.0f;
+      render_targets[i].viewport.y = 0.0f;
+      render_targets[i].viewport.width = render_targets[i].screen->width;
+      render_targets[i].viewport.height = render_targets[i].screen->height;
+      render_targets[i].viewport.minDepth = -1.0f;
+      render_targets[i].viewport.maxDepth =  1.0f;
 
-      vk_render[i].scissor.offset.x = 0.0f;
-      vk_render[i].scissor.offset.y = 0.0f;
-      vk_render[i].scissor.extent.width = vk_render[i].screen->width;
-      vk_render[i].scissor.extent.height = vk_render[i].screen->height;
+      render_targets[i].scissor.offset.x = 0.0f;
+      render_targets[i].scissor.offset.y = 0.0f;
+      render_targets[i].scissor.extent.width = render_targets[i].screen->width;
+      render_targets[i].scissor.extent.height = render_targets[i].screen->height;
 
       {
          const VkCommandBufferAllocateInfo info =
@@ -431,7 +431,7 @@ void video_init()
             .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
             .commandBufferCount = 1
          };
-         vkAllocateCommandBuffers(vk.device, &info, &vk_render[i].cmd);
+         vkAllocateCommandBuffers(vk.device, &info, &render_targets[i].cmd);
       }
 
       {
@@ -440,7 +440,7 @@ void video_init()
             VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
             .flags = VK_FENCE_CREATE_SIGNALED_BIT
          };
-         vkCreateFence(vk.device, &info, NULL, &vk_render[i].chain_fence);
+         vkCreateFence(vk.device, &info, NULL, &render_targets[i].chain_fence);
       }
 
 //   {
@@ -470,9 +470,9 @@ void video_frame_update()
    int i;
    for (i = 0; i < video.screen_count; i++)
    {
-      vkWaitForFences(vk.device, 1, &vk_render[i].chain_fence, VK_TRUE, UINT64_MAX);
-      vkResetFences(vk.device, 1, &vk_render[i].chain_fence);
-      vkAcquireNextImageKHR(vk.device, vk_render[i].swapchain, UINT64_MAX, NULL, vk_render[i].chain_fence,
+      vkWaitForFences(vk.device, 1, &render_targets[i].chain_fence, VK_TRUE, UINT64_MAX);
+      vkResetFences(vk.device, 1, &render_targets[i].chain_fence);
+      vkAcquireNextImageKHR(vk.device, render_targets[i].swapchain, UINT64_MAX, NULL, render_targets[i].chain_fence,
          &image_indices[i]);
 
 
@@ -485,19 +485,14 @@ void video_frame_update()
             VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
             .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
          };
-         vkBeginCommandBuffer(vk_render[i].cmd, &info);
+         vkBeginCommandBuffer(render_targets[i].cmd, &info);
       }
 
       if(i == 0)
       {
-         vulkan_frame_update(vk.device, vk_render[i].cmd);
-         vulkan_font_update_assets(vk.device, vk_render[i].cmd);
+         vulkan_frame_update(vk.device, render_targets[i].cmd);
+         vulkan_font_update_assets(vk.device, render_targets[i].cmd);
       }
-
-      float push_constants[2] = {vk_render[i].viewport.width, vk_render[i].viewport.height};
-      vkCmdPushConstants(vk_render[i].cmd, vk.pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(push_constants), push_constants);
-      vkCmdSetViewport(vk_render[i].cmd, 0, 1, &vk_render[i].viewport);
-      vkCmdSetScissor(vk_render[i].cmd, 0, 1, &vk_render[i].scissor);
 
       /* renderpass */
       {
@@ -509,25 +504,33 @@ void video_frame_update()
             {
                VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
                .renderPass = vk.renderpass,
-               .framebuffer = vk_render[i].framebuffers[image_indices[i]],
-               .renderArea = vk_render[i].scissor,
+               .framebuffer = render_targets[i].framebuffers[image_indices[i]],
+               .renderArea = render_targets[i].scissor,
                .clearValueCount = 1,
                .pClearValues = &clearValue
             };
-            vkCmdBeginRenderPass(vk_render[i].cmd, &info, VK_SUBPASS_CONTENTS_INLINE);
+            vkCmdBeginRenderPass(render_targets[i].cmd, &info, VK_SUBPASS_CONTENTS_INLINE);
          }
 
-//         if(i == 0)
-            vulkan_frame_render(vk_render[i].cmd);
-//         else
-            vulkan_font_render(vk_render[i].cmd);
+         {
+            float push_constants[2] = {render_targets[i].viewport.width, render_targets[i].viewport.height};
+            vkCmdPushConstants(render_targets[i].cmd, vk.pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(push_constants), push_constants);
+         }
 
-         vkCmdEndRenderPass(vk_render[i].cmd);
+         vkCmdSetViewport(render_targets[i].cmd, 0, 1, &render_targets[i].viewport);
+         vkCmdSetScissor(render_targets[i].cmd, 0, 1, &render_targets[i].scissor);
+
+//         if(i == 0)
+            vulkan_frame_render(render_targets[i].cmd);
+//         else
+            vulkan_font_render(render_targets[i].cmd);
+
+         vkCmdEndRenderPass(render_targets[i].cmd);
       }
 
-      vkEndCommandBuffer(vk_render[i].cmd);
-      cmds[i] = vk_render[i].cmd;
-      swapchains[i] = vk_render[i].swapchain;
+      vkEndCommandBuffer(render_targets[i].cmd);
+      cmds[i] = render_targets[i].cmd;
+      swapchains[i] = render_targets[i].swapchain;
    }
 
    {
@@ -569,8 +572,8 @@ void video_destroy()
 
    for (i = 0; i < video.screen_count; i++)
    {
-      vkWaitForFences(vk.device, 1, &vk_render[i].chain_fence, VK_TRUE, UINT64_MAX);
-      vkDestroyFence(vk.device, vk_render[i].chain_fence, NULL);
+      vkWaitForFences(vk.device, 1, &render_targets[i].chain_fence, VK_TRUE, UINT64_MAX);
+      vkDestroyFence(vk.device, render_targets[i].chain_fence, NULL);
    }
 
 //   vkWaitForFences(vk.device, 1, &display_fence, VK_TRUE, UINT64_MAX);
@@ -584,14 +587,14 @@ void video_destroy()
    for (i = 0; i < video.screen_count; i++)
    {
 
-      for (j = 0; j < vk_render[i].swapchain_count; j++)
+      for (j = 0; j < render_targets[i].swapchain_count; j++)
       {
-         vkDestroyImageView(vk.device, vk_render[i].views[j], NULL);
-         vkDestroyFramebuffer(vk.device, vk_render[i].framebuffers[j], NULL);
+         vkDestroyImageView(vk.device, render_targets[i].views[j], NULL);
+         vkDestroyFramebuffer(vk.device, render_targets[i].framebuffers[j], NULL);
       }
 
-      vkDestroySwapchainKHR(vk.device, vk_render[i].swapchain, NULL);
-      vkDestroySurfaceKHR(vk.instance, vk_render[i].surface, NULL);
+      vkDestroySwapchainKHR(vk.device, render_targets[i].swapchain, NULL);
+      vkDestroySurfaceKHR(vk.instance, render_targets[i].surface, NULL);
    }
 
    vkDestroyDescriptorPool(vk.device, vk.pools.desc, NULL);
@@ -606,7 +609,7 @@ void video_destroy()
    vkDestroyInstance(vk.instance, NULL);
 
    memset(&vk, 0, sizeof(vk));
-   memset(&vk_render, 0, sizeof(vk_render));
+   memset(&render_targets, 0, sizeof(render_targets));
 
    video.frame.data = NULL;
    debug_log("video destroy\n");

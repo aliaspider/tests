@@ -75,11 +75,19 @@ void input_x11_update()
          case ButtonPress:
             if(e.xbutton.button == Button1)
                input.pointer.touch1 = 1;
+            if(e.xbutton.button == Button2)
+               input.pointer.touch2 = 1;
+            if(e.xbutton.button == Button3)
+               input.pointer.touch3 = 1;
             break;
 
          case ButtonRelease:
             if(e.xbutton.button == Button1)
                input.pointer.touch1 = 0;
+            if(e.xbutton.button == Button2)
+               input.pointer.touch2 = 0;
+            if(e.xbutton.button == Button3)
+               input.pointer.touch3 = 0;
             break;
 
          case MotionNotify:

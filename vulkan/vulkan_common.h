@@ -189,7 +189,7 @@ typedef struct
    VkFramebuffer framebuffers[MAX_SWAPCHAIN_IMAGES];
    VkCommandBuffer cmd;
    VkFence chain_fence;
-} vk_render_context_t;
+} vk_render_target_t;
 
 typedef struct
 {

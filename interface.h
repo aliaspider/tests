@@ -88,6 +88,7 @@ typedef struct
    int y;
    bool touch1;
    bool touch2;
+   bool touch3;
 }pointer_t;
 
 typedef struct
