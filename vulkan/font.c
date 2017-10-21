@@ -51,7 +51,7 @@ static struct
 {
    FT_Library ftlib;
    FT_Face ftface;
-   int line_height;
+   float line_height;
    int ascender;
    int max_advance;
    vk_pipeline_t p;

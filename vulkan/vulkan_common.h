@@ -176,6 +176,9 @@ typedef struct
    VkRenderPass renderpass;
 } vk_context_t;
 
+void vk_context_init(vk_context_t* vk);
+void vk_context_destroy(vk_context_t* vk);
+
 typedef struct
 {
    VkSurfaceKHR surface;
@@ -190,6 +193,9 @@ typedef struct
    VkCommandBuffer cmd;
    VkFence chain_fence;
 } vk_render_target_t;
+
+void vk_render_targets_init(vk_context_t* vk, int count, screen_t* screens, vk_render_target_t* render_targets);
+void vk_render_targets_destroy(vk_context_t* vk, int count, vk_render_target_t* render_targets);
 
 typedef struct
 {
