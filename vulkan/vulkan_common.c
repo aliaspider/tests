@@ -288,7 +288,7 @@ void buffer_flush(VkDevice device, vk_buffer_t *buffer)
    buffer->dirty = false;
 }
 
-void vk_get_instance_props(void)
+static void vk_get_instance_props(void)
 {
    uint32_t lprop_count;
    vkEnumerateInstanceLayerProperties(&lprop_count, NULL);
@@ -315,7 +315,7 @@ void vk_get_instance_props(void)
    fflush(stdout);
 }
 
-void vk_get_gpu_props(VkPhysicalDevice gpu)
+static void vk_get_gpu_props(VkPhysicalDevice gpu)
 {
    VkPhysicalDeviceProperties gpu_props;
    vkGetPhysicalDeviceProperties(gpu, &gpu_props);
@@ -376,7 +376,7 @@ void vk_get_gpu_props(VkPhysicalDevice gpu)
 
 }
 
-void vk_get_surface_props(VkPhysicalDevice gpu, uint32_t queue_family_index, VkSurfaceKHR surface)
+static void vk_get_surface_props(VkPhysicalDevice gpu, uint32_t queue_family_index, VkSurfaceKHR surface)
 {
    {
       VkSurfaceCapabilitiesKHR surfaceCapabilities;
@@ -405,7 +405,7 @@ void vk_get_surface_props(VkPhysicalDevice gpu, uint32_t queue_family_index, VkS
    }
 }
 
-uint32_t vk_get_queue_family_index(VkPhysicalDevice gpu, VkQueueFlags required_flags)
+static uint32_t vk_get_queue_family_index(VkPhysicalDevice gpu, VkQueueFlags required_flags)
 {
    uint32_t queueFamilyPropertyCount;
    vkGetPhysicalDeviceQueueFamilyProperties(gpu, &queueFamilyPropertyCount, NULL);
@@ -681,6 +681,9 @@ static VkBool32 vulkan_debug_report_callback(VkDebugReportFlagsEXT flags,
    assert((flags & VK_DEBUG_REPORT_ERROR_BIT_EXT) == 0);
    return VK_FALSE;
 }
+
+static void vk_init_instance_pfn(VkInstance instance);
+static void vk_init_device_pfn(VkDevice device);
 
 void vk_context_init(vk_context_t *vk)
 {
@@ -1147,4 +1150,130 @@ void vk_context_destroy(vk_context_t *vk)
    vkDestroyDebugReportCallbackEXT(vk->instance, vk->debug_cb, NULL);
    vkDestroyInstance(vk->instance, NULL);
    memset(&vk, 0, sizeof(vk));
+}
+
+
+#define VK_INST_FN_LIST    \
+   VK_FN(vkCreateDebugReportCallbackEXT);\
+   VK_FN(vkDestroyDebugReportCallbackEXT);\
+   VK_FN(vkCreateDebugReportCallbackEXT);\
+   VK_FN(vkDestroyDebugReportCallbackEXT);\
+   VK_FN(vkRegisterDisplayEventEXT);\
+   VK_FN(vkGetPhysicalDeviceSurfaceCapabilities2EXT);\
+   VK_FN(vkReleaseDisplayEXT);\
+   VK_FN(vkAcquireXlibDisplayEXT);\
+   VK_FN(vkGetRandROutputDisplayEXT);
+
+#define VK_DEV_FN_LIST    \
+   VK_FN(vkGetRefreshCycleDurationGOOGLE);\
+   VK_FN(vkGetPastPresentationTimingGOOGLE);\
+   VK_FN(vkGetSwapchainCounterEXT);
+
+#define VK_FN(fn)     static PFN_##fn fn##p
+
+VK_INST_FN_LIST
+VK_DEV_FN_LIST
+
+#undef VK_FN
+
+
+static void vk_init_instance_pfn(VkInstance instance)
+{
+#define VK_FN(fn)     fn##p = (PFN_##fn)vkGetInstanceProcAddr(instance, #fn);
+   VK_INST_FN_LIST
+#undef VK_FN
+}
+
+static void vk_init_device_pfn(VkDevice device)
+{
+#define VK_FN(fn)      fn##p = (PFN_##fn)vkGetDeviceProcAddr(device, #fn);
+   VK_DEV_FN_LIST
+#undef VK_FN
+}
+
+
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(
+   VkInstance instance, const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
+      const VkAllocationCallbacks *pAllocator, VkDebugReportCallbackEXT *pCallback)
+{
+   return vkCreateDebugReportCallbackEXTp(instance, pCreateInfo, pAllocator, pCallback);
+}
+
+VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback,const VkAllocationCallbacks *pAllocator)
+{
+   return vkDestroyDebugReportCallbackEXTp(instance, callback, pAllocator);
+}
+
+
+VKAPI_ATTR VkResult VKAPI_CALL vkRegisterDisplayEventEXT(
+    VkDevice                                    device,
+    VkDisplayKHR                                display,
+    const VkDisplayEventInfoEXT*                pDisplayEventInfo,
+    const VkAllocationCallbacks*                pAllocator,
+    VkFence*                                    pFence)
+{
+   return vkRegisterDisplayEventEXTp(device, display, pDisplayEventInfo, pAllocator, pFence);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceCapabilities2EXT(
+    VkPhysicalDevice                            physicalDevice,
+    VkSurfaceKHR                                surface,
+    VkSurfaceCapabilities2EXT*                  pSurfaceCapabilities)
+{
+   return vkGetPhysicalDeviceSurfaceCapabilities2EXTp(physicalDevice, surface, pSurfaceCapabilities);
+}
+
+#ifdef VK_USE_PLATFORM_XLIB_XRANDR_EXT
+
+VKAPI_ATTR VkResult VKAPI_CALL vkReleaseDisplayEXT(
+    VkPhysicalDevice                            physicalDevice,
+    VkDisplayKHR                                display)
+{
+   return vkReleaseDisplayEXTp(physicalDevice, display);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkAcquireXlibDisplayEXT(
+    VkPhysicalDevice                            physicalDevice,
+    Display*                                    dpy,
+    VkDisplayKHR                                display)
+{
+   return vkAcquireXlibDisplayEXTp(physicalDevice, dpy, display);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkGetRandROutputDisplayEXT(
+    VkPhysicalDevice                            physicalDevice,
+    Display*                                    dpy,
+    RROutput                                    rrOutput,
+    VkDisplayKHR*                               pDisplay)
+{
+   return vkGetRandROutputDisplayEXTp(physicalDevice, dpy, rrOutput, pDisplay);
+}
+
+#endif
+
+VKAPI_ATTR VkResult VKAPI_CALL vkGetRefreshCycleDurationGOOGLE(
+    VkDevice                                    device,
+    VkSwapchainKHR                              swapchain,
+    VkRefreshCycleDurationGOOGLE*               pDisplayTimingProperties)
+{
+   return vkGetRefreshCycleDurationGOOGLEp(device, swapchain, pDisplayTimingProperties);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkGetPastPresentationTimingGOOGLE(
+    VkDevice                                    device,
+    VkSwapchainKHR                              swapchain,
+    uint32_t*                                   pPresentationTimingCount,
+    VkPastPresentationTimingGOOGLE*             pPresentationTimings)
+{
+   return vkGetPastPresentationTimingGOOGLEp(device, swapchain, pPresentationTimingCount, pPresentationTimings);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainCounterEXT(
+    VkDevice                                    device,
+    VkSwapchainKHR                              swapchain,
+    VkSurfaceCounterFlagBitsEXT                 counter,
+    uint64_t*                                   pCounterValue)
+{
+   return vkGetSwapchainCounterEXTp(device, swapchain, counter, pCounterValue);
+
 }

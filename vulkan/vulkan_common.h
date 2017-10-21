@@ -134,15 +134,6 @@ static inline const char *VkResult_to_str(VkResult res)
 
 #define VK_CHECK(vk_call) do{VkResult res = vk_call; if (res != VK_SUCCESS) {printf("%s:%i:%s:%s --> %s(%i)\n", __FILE__, __LINE__, __FUNCTION__, #vk_call, VkResult_to_str(res), res);fflush(stdout);}}while(0)
 
-void vk_init_instance_pfn(VkInstance instance);
-void vk_init_device_pfn(VkDevice device);
-void vk_get_instance_props(void);
-void vk_get_gpu_props(VkPhysicalDevice gpu);
-void vk_get_surface_props(VkPhysicalDevice gpu, uint32_t queue_family_index, VkSurfaceKHR surface);
-
-uint32_t vk_get_queue_family_index(VkPhysicalDevice gpu, VkQueueFlags required_flags);
-
-
 typedef struct
 {
    VkInstance instance;

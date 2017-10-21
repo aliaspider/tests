@@ -30,7 +30,6 @@ endif
 OBJS += vulkan/font.o
 OBJS += vulkan/frame.o
 OBJS += vulkan/main.o
-OBJS += vulkan/stubs.o
 OBJS += vulkan/vulkan_common.o
 
 OBJS := $(addprefix $(BUILD_DIR)/,$(OBJS))
