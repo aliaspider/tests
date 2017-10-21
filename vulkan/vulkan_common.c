@@ -437,8 +437,7 @@ static inline VkShaderModule vk_shader_code_init(VkDevice device, const vk_shade
    return shader;
 }
 
-void vk_pipeline_init(vk_context_t *vk, vk_render_context_t *vk_render, const vk_pipeline_init_info_t *init_info,
-   vk_pipeline_t *dst)
+void vk_pipeline_init(vk_context_t *vk, const vk_pipeline_init_info_t *init_info, vk_pipeline_t *dst)
 {
    if(dst->texture.image)
       dst->texture.is_reference = true;
@@ -607,7 +606,7 @@ void vk_pipeline_init(vk_context_t *vk, vk_render_context_t *vk_render, const vk
       const VkPipelineViewportStateCreateInfo viewport_state =
       {
          VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-         .viewportCount = 1, &vk_render->viewport, .scissorCount = 1, &vk_render->scissor
+         .viewportCount = 1, &init_info->render_contexts[0].viewport, .scissorCount = 1, &init_info->render_contexts[0].scissor
       };
 
       const VkPipelineRasterizationStateCreateInfo rasterization_info =
@@ -640,7 +639,7 @@ void vk_pipeline_init(vk_context_t *vk, vk_render_context_t *vk_render, const vk
          .pMultisampleState = &multisample_state,
          .pColorBlendState = &colorblend_state,
          .layout = dst->layout,
-         .renderPass = vk_render->renderpass,
+         .renderPass = init_info->render_contexts[0].renderpass,
          .subpass = 0
       };
       vkCreateGraphicsPipelines(vk->device, VK_NULL_HANDLE, 1, &info, NULL, &dst->handle);

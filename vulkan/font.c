@@ -67,7 +67,7 @@ static struct
    } atlas;
 } font;
 
-void vulkan_font_init(vk_context_t *vk, vk_render_context_t *vk_render)
+void vulkan_font_init(vk_context_t *vk, vk_render_context_t *render_contexts, int render_contexts_count)
 {
 
    {
@@ -136,6 +136,7 @@ void vulkan_font_init(vk_context_t *vk, vk_render_context_t *vk_render)
          .attrib_desc = attrib_desc,
          .topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
          .color_blend_attachement_state = &color_blend_attachement_state,
+         .render_contexts_count = render_contexts_count, render_contexts
       };
 
       font.p.texture.width = font.atlas.slot_width << 4;
@@ -146,7 +147,7 @@ void vulkan_font_init(vk_context_t *vk, vk_render_context_t *vk_render)
       font.p.ubo.info.range = sizeof(font_uniforms_t);
       font.p.vbo.info.range = 4096 * sizeof(font_vertex_t);
 
-      vk_pipeline_init(vk, vk_render, &info, &font.p);
+      vk_pipeline_init(vk, &info, &font.p);
    }
 
    {
@@ -157,8 +158,8 @@ void vulkan_font_init(vk_context_t *vk, vk_render_context_t *vk_render)
    font.p.texture.dirty = true;
 
    font_uniforms_t *uniforms = (font_uniforms_t *)font.p.ubo.mem.ptr;
-   uniforms->vp_size.width = vk_render->screen->width;
-   uniforms->vp_size.height = vk_render->screen->height;
+   uniforms->vp_size.width = render_contexts->screen->width;
+   uniforms->vp_size.height = render_contexts->screen->height;
    uniforms->tex_size.width = font.p.texture.width;
    uniforms->tex_size.height = font.p.texture.height;
    font.p.ubo.dirty = true;

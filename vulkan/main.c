@@ -438,7 +438,7 @@ void video_init()
 //   }
    }
 
-   vulkan_font_init(&vk, &vk_render[1]);
+   vulkan_font_init(&vk, vk_render, video.screen_count);
 
 }
 
@@ -609,7 +609,7 @@ void video_frame_init(int width, int height, screen_format_t format)
       break;
    }
 
-   vulkan_frame_init(&vk, &vk_render[1], width, height, vkformat);
+   vulkan_frame_init(&vk, vk_render, video.screen_count, width, height, vkformat);
 }
 
 const video_t video_vulkan =

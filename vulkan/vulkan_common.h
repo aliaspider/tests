@@ -221,9 +221,11 @@ typedef struct
    const VkVertexInputAttributeDescription* attrib_desc;
    VkPrimitiveTopology topology;
    const VkPipelineColorBlendAttachmentState* color_blend_attachement_state;
+   int render_contexts_count;
+   vk_render_context_t* render_contexts;
 }vk_pipeline_init_info_t;
 
-void vk_pipeline_init(vk_context_t *vk, vk_render_context_t *vk_render, const vk_pipeline_init_info_t *init_info, vk_pipeline_t *dst);
+void vk_pipeline_init(vk_context_t *vk, const vk_pipeline_init_info_t *init_info, vk_pipeline_t *dst);
 void vk_pipeline_destroy(VkDevice device, vk_pipeline_t *render);
 
 typedef union

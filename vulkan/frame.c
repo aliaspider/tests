@@ -7,7 +7,7 @@
 
 static vk_pipeline_t frame;
 
-void vulkan_frame_init(vk_context_t *vk, vk_render_context_t *vk_render, int width, int height, VkFormat format)
+void vulkan_frame_init(vk_context_t *vk, vk_render_context_t* render_contexts, int render_contexts_count, int width, int height, VkFormat format)
 {
    {
       const vertex_t vertices[] =
@@ -48,6 +48,7 @@ void vulkan_frame_init(vk_context_t *vk, vk_render_context_t *vk_render, int wid
          .attrib_desc = attrib_desc,
          .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN,
          .color_blend_attachement_state = &color_blend_attachement_state,
+         .render_contexts_count = render_contexts_count, render_contexts
       };
 
       frame.texture.width = width;
@@ -55,7 +56,7 @@ void vulkan_frame_init(vk_context_t *vk, vk_render_context_t *vk_render, int wid
       frame.texture.format = format;
       frame.vbo.info.range = sizeof(vertices);
 
-      vk_pipeline_init(vk, vk_render, &info, &frame);
+      vk_pipeline_init(vk, &info, &frame);
 
       memcpy(frame.vbo.mem.ptr, vertices, sizeof(vertices));
       frame.vbo.dirty = true;
