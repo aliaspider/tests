@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <vulkan/vulkan.h>
 
+#include "video.h"
+
 #define MAX_SWAPCHAIN_IMAGES 8
 #define countof(a) (sizeof(a)/ sizeof(*a))
 
@@ -49,6 +51,7 @@ typedef struct
    int width;
    int height;
    bool dirty;
+   bool is_reference;
 } vk_texture_t;
 
 void vk_texture_init(VkDevice device, const VkMemoryType *memory_types, uint32_t queue_family_index, vk_texture_t *dst);
@@ -157,17 +160,25 @@ typedef struct
    VkDevice device;
    uint32_t queue_family_index;
    VkQueue queue;
+   VkFence queue_fence;
    VkSurfaceKHR surface;
-   VkDisplayKHR display;
    struct
    {
       VkCommandPool cmd;
       VkDescriptorPool desc;
    } pools;
+   VkDescriptorSetLayout descriptor_set_layout;
+   struct
+   {
+      VkSampler nearest;
+      VkSampler linear;
+   } samplers;
 } vk_context_t;
 
 typedef struct
 {
+   screen_t* screen;
+   VkDisplayKHR display;
    VkSwapchainKHR swapchain;
    VkRect2D scissor;
    VkViewport viewport;
@@ -175,15 +186,8 @@ typedef struct
    uint32_t swapchain_count;
    VkImageView views[MAX_SWAPCHAIN_IMAGES];
    VkFramebuffer framebuffers[MAX_SWAPCHAIN_IMAGES];
-   VkDescriptorSetLayout descriptor_set_layout;
    VkCommandBuffer cmd;
-   VkFence queue_fence;
    VkFence chain_fence;
-   struct
-   {
-      VkSampler nearest;
-      VkSampler linear;
-   } samplers;
 } vk_render_context_t;
 
 typedef struct

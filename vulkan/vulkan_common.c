@@ -440,7 +440,10 @@ static inline VkShaderModule vk_shader_code_init(VkDevice device, const vk_shade
 void vk_pipeline_init(vk_context_t *vk, vk_render_context_t *vk_render, const vk_pipeline_init_info_t *init_info,
    vk_pipeline_t *dst)
 {
-   vk_texture_init(vk->device, vk->memoryTypes, vk->queue_family_index, &dst->texture);
+   if(dst->texture.image)
+      dst->texture.is_reference = true;
+   else
+      vk_texture_init(vk->device, vk->memoryTypes, vk->queue_family_index, &dst->texture);
 
    if (dst->ssbo.info.range)
    {
@@ -465,7 +468,7 @@ void vk_pipeline_init(vk_context_t *vk, vk_render_context_t *vk_render, const vk
       {
          VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
          .descriptorPool = vk->pools.desc,
-         .descriptorSetCount = 1, &vk_render->descriptor_set_layout
+         .descriptorSetCount = 1, &vk->descriptor_set_layout
       };
       vkAllocateDescriptorSets(vk->device, &info, &dst->desc);
    }
@@ -550,7 +553,7 @@ void vk_pipeline_init(vk_context_t *vk, vk_render_context_t *vk_render, const vk
       const VkPipelineLayoutCreateInfo info =
       {
          VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-         .setLayoutCount = 1, &vk_render->descriptor_set_layout,
+         .setLayoutCount = 1, &vk->descriptor_set_layout,
 #if 0
          .pushConstantRangeCount = countof(ranges), ranges
 #endif

@@ -1,3 +1,4 @@
+#pragma once
 
 #ifdef HAVE_X11
 #include <X11/Xutil.h>
@@ -5,6 +6,7 @@
 
 #include "interface.h"
 
+#define MAX_SCREENS 4
 typedef struct
 {
    int width;
@@ -29,8 +31,10 @@ typedef struct video_t
    void (*frame_init)(int width, int height, screen_format_t format);
    void (*frame_update)();
    void (*destroy)();
-   screen_t screen;
+   int screen_count;
+   screen_t screens[MAX_SCREENS];
    frame_t frame;
+   char fps[256];
 }video_t;
 
 extern const video_t video_vulkan;

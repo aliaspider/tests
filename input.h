@@ -1,4 +1,4 @@
-
+#pragma once
 
 #include "interface.h"
 
@@ -8,6 +8,7 @@ typedef struct
    void (*destroy)();
    void (*update)();
    pad_t pad;
+   pointer_t pointer;
 }input_t;
 
 #ifdef __WIN32__

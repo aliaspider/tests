@@ -11,22 +11,37 @@ void platform_init()
 {
 #ifdef HAVE_X11
    XInitThreads();
-   video.screen.display = XOpenDisplay(NULL);
-   video.screen.window  = XCreateSimpleWindow(video.screen.display,
-         DefaultRootWindow(video.screen.display), 0, 0, video.screen.width, video.screen.height, 0, 0, 0);
-   XStoreName(video.screen.display, video.screen.window, "Vulkan Test");
-   XSelectInput(video.screen.display, video.screen.window,
-      ExposureMask | FocusChangeMask | KeyPressMask | KeyReleaseMask);
-   XMapWindow(video.screen.display, video.screen.window);
+   Display *display = XOpenDisplay(NULL);
+   int i;
+
+   for (i = 0; i < video.screen_count; i++)
+   {
+      video.screens[i].display = display;
+      video.screens[i].window  = XCreateSimpleWindow(video.screens[i].display,
+            DefaultRootWindow(video.screens[i].display), 0, 0, video.screens[i].width, video.screens[i].height, 0, 0, 0);
+      XStoreName(video.screens[i].display, video.screens[i].window, "Vulkan Test");
+      XSelectInput(video.screens[i].display, video.screens[i].window,
+         ExposureMask | FocusChangeMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask);
+      XMapWindow(video.screens[i].display, video.screens[i].window);
+   }
+
 #endif
 }
 
 void platform_destroy()
-{   
+{
 #ifdef HAVE_X11
-   XDestroyWindow(video.screen.display, video.screen.window);
-   XCloseDisplay(video.screen.display);
-   video.screen.display = NULL;
+   Display *display = video.screens[0].display;
+
+   int i;
+
+   for (i = 0; i < video.screen_count; i++)
+   {
+      XDestroyWindow(video.screens[i].display, video.screens[i].window);
+      video.screens[i].display = NULL;
+   }
+
+   XCloseDisplay(display);
 #endif
 }
 

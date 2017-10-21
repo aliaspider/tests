@@ -9,7 +9,7 @@
 #include "font.h"
 
 static vk_context_t vk;
-static vk_render_context_t vk_render;
+static vk_render_context_t vk_render[MAX_SCREENS];
 
 static VkBool32 vulkan_debug_report_callback(VkDebugReportFlagsEXT flags,
    VkDebugReportObjectTypeEXT objectType,
@@ -29,7 +29,7 @@ static VkBool32 vulkan_debug_report_callback(VkDebugReportFlagsEXT flags,
    printf("[%-14s - %-11s] %s\n", pLayerPrefix, debugFlags_str[i], pMessage);
 
 #ifdef HAVE_X11
-   XAutoRepeatOn(video.screen.display);
+   XAutoRepeatOn(video.screens[0].display);
 #endif
 
    assert((flags & VK_DEBUG_REPORT_ERROR_BIT_EXT) == 0);
@@ -201,145 +201,6 @@ void video_init()
       vkCreateDescriptorPool(vk.device, &info, NULL, &vk.pools.desc);
    }
 
-#ifdef VK_USE_PLATFORM_XLIB_KHR
-   {
-      VkXlibSurfaceCreateInfoKHR info =
-      {
-         VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR,
-         .dpy = video.screen.display,
-         .window = video.screen.window
-      };
-      vkCreateXlibSurfaceKHR(vk.instance, &info, NULL, &vk.surface);
-   }
-#elif defined(VK_USE_PLATFORM_WIN32_KHR)
-
-#else
-#error platform not supported
-#endif
-
-   vk_get_surface_props(vk.gpu, vk.queue_family_index, vk.surface);
-
-   {
-      VkSwapchainCounterCreateInfoEXT swapchainCounterCreateInfo =
-      {
-         VK_STRUCTURE_TYPE_SWAPCHAIN_COUNTER_CREATE_INFO_EXT,
-         .surfaceCounters = VK_SURFACE_COUNTER_VBLANK_EXT
-      };
-
-      VkSwapchainCreateInfoKHR info =
-      {
-         VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-         .pNext = &swapchainCounterCreateInfo,
-         .surface = vk.surface,
-         .minImageCount = 2,
-         .imageFormat = VK_FORMAT_B8G8R8A8_UNORM,
-         .imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
-         .imageExtent.width = video.screen.width,
-         .imageExtent.height = video.screen.height,
-         .imageArrayLayers = 1,
-         .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-         .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
-         .preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
-         .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-//         .presentMode = VK_PRESENT_MODE_FIFO_KHR,
-//         .presentMode = VK_PRESENT_MODE_FIFO_RELAXED_KHR,
-//         .presentMode = VK_PRESENT_MODE_MAILBOX_KHR,
-//         .presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR,
-         .clipped = VK_TRUE
-      };
-      VK_CHECK(vkCreateSwapchainKHR(vk.device, &info, NULL, &vk_render.swapchain));
-   }
-
-   {
-      VkAttachmentDescription attachmentDescriptions[] =
-      {
-         {
-            0, VK_FORMAT_B8G8R8A8_UNORM, VK_SAMPLE_COUNT_1_BIT,
-            VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
-            VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-         }
-      };
-
-      VkAttachmentReference ColorAttachment =
-      {
-         0,
-         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-      };
-
-      VkSubpassDescription subpassDescriptions[] =
-      {
-         {
-            .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-            .colorAttachmentCount = 1, &ColorAttachment,
-         }
-      };
-
-      VkRenderPassCreateInfo renderPassCreateInfo =
-      {
-         VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-         .attachmentCount = countof(attachmentDescriptions), attachmentDescriptions,
-         .subpassCount = countof(subpassDescriptions), subpassDescriptions,
-      };
-
-      vkCreateRenderPass(vk.device, &renderPassCreateInfo, NULL, &vk_render.renderpass);
-   }
-
-   {
-      vkGetSwapchainImagesKHR(vk.device, vk_render.swapchain, &vk_render.swapchain_count, NULL);
-
-      if (vk_render.swapchain_count > MAX_SWAPCHAIN_IMAGES)
-         vk_render.swapchain_count = MAX_SWAPCHAIN_IMAGES;
-
-      VkImage swapchainImages[vk_render.swapchain_count];
-      vkGetSwapchainImagesKHR(vk.device, vk_render.swapchain, &vk_render.swapchain_count,
-         swapchainImages);
-
-      int i;
-
-      for (i = 0; i < vk_render.swapchain_count; i++)
-      {
-         {
-            VkImageViewCreateInfo info =
-            {
-               VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-               .image = swapchainImages[i],
-               .viewType = VK_IMAGE_VIEW_TYPE_2D,
-               .format = VK_FORMAT_B8G8R8A8_UNORM,
-               .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-               .subresourceRange.levelCount = 1,
-               .subresourceRange.layerCount = 1
-            };
-            vkCreateImageView(vk.device, &info, NULL, &vk_render.views[i]);
-         }
-
-         {
-            VkFramebufferCreateInfo info =
-            {
-               VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-               .renderPass = vk_render.renderpass,
-               .attachmentCount = 1, &vk_render.views[i],
-               .width = video.screen.width,
-               .height = video.screen.height,
-               .layers = 1
-            };
-            vkCreateFramebuffer(vk.device, &info, NULL, &vk_render.framebuffers[i]);
-         }
-      }
-   }
-
-   vk_render.viewport.x = 0.0f;
-   vk_render.viewport.y = 0.0f;
-   vk_render.viewport.width = video.screen.width;
-   vk_render.viewport.height = video.screen.height;
-   vk_render.viewport.minDepth = -1.0f;
-   vk_render.viewport.maxDepth =  1.0f;
-
-   vk_render.scissor.offset.x = 0.0f;
-   vk_render.scissor.offset.y = 0.0f;
-   vk_render.scissor.extent.width = video.screen.width;
-   vk_render.scissor.extent.height = video.screen.height;
-
    {
       const VkSamplerCreateInfo info =
       {
@@ -347,7 +208,7 @@ void video_init()
          .magFilter = VK_FILTER_NEAREST,
          .minFilter = VK_FILTER_NEAREST,
       };
-      vkCreateSampler(vk.device, &info, NULL, &vk_render.samplers.nearest);
+      vkCreateSampler(vk.device, &info, NULL, &vk.samplers.nearest);
    }
 
    {
@@ -357,7 +218,7 @@ void video_init()
          .magFilter = VK_FILTER_LINEAR,
          .minFilter = VK_FILTER_LINEAR,
       };
-      vkCreateSampler(vk.device, &info, NULL, &vk_render.samplers.linear);
+      vkCreateSampler(vk.device, &info, NULL, &vk.samplers.linear);
    }
 
    {
@@ -374,7 +235,7 @@ void video_init()
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             .descriptorCount = 2,
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-            .pImmutableSamplers = (VkSampler *) &vk_render.samplers
+            .pImmutableSamplers = (VkSampler *) &vk.samplers
          },
          {
             .binding = 2,
@@ -392,19 +253,7 @@ void video_init()
 
          }
       };
-      vkCreateDescriptorSetLayout(vk.device, &info[0], NULL, &vk_render.descriptor_set_layout);
-   }
-
-
-   {
-      const VkCommandBufferAllocateInfo info =
-      {
-         VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-         .commandPool = vk.pools.cmd,
-         .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-         .commandBufferCount = 1
-      };
-      vkAllocateCommandBuffers(vk.device, &info, &vk_render.cmd);
+      vkCreateDescriptorSetLayout(vk.device, &info[0], NULL, &vk.descriptor_set_layout);
    }
 
    {
@@ -413,9 +262,171 @@ void video_init()
          VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
          .flags = VK_FENCE_CREATE_SIGNALED_BIT
       };
-      vkCreateFence(vk.device, &info, NULL, &vk_render.chain_fence);
-      vkCreateFence(vk.device, &info, NULL, &vk_render.queue_fence);
+      vkCreateFence(vk.device, &info, NULL, &vk.queue_fence);
    }
+
+   int i;
+
+   for (i = 0; i < video.screen_count; i++)
+   {
+      vk_render[i].screen = &video.screens[i];
+
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+      VkXlibSurfaceCreateInfoKHR info =
+      {
+         VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR,
+         .dpy = vk_render[i].screen->display,
+         .window = vk_render[i].screen->window
+      };
+      vkCreateXlibSurfaceKHR(vk.instance, &info, NULL, &vk.surface);
+#elif defined(VK_USE_PLATFORM_WIN32_KHR)
+
+#else
+#error platform not supported
+#endif
+
+      vk_get_surface_props(vk.gpu, vk.queue_family_index, vk.surface);
+
+      {
+         VkSwapchainCounterCreateInfoEXT swapchainCounterCreateInfo =
+         {
+            VK_STRUCTURE_TYPE_SWAPCHAIN_COUNTER_CREATE_INFO_EXT,
+            .surfaceCounters = VK_SURFACE_COUNTER_VBLANK_EXT
+         };
+
+         VkSwapchainCreateInfoKHR info =
+         {
+            VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+            .pNext = &swapchainCounterCreateInfo,
+            .surface = vk.surface,
+            .minImageCount = 2,
+            .imageFormat = VK_FORMAT_B8G8R8A8_UNORM,
+            .imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
+            .imageExtent.width = vk_render[i].screen->width,
+            .imageExtent.height = vk_render[i].screen->height,
+            .imageArrayLayers = 1,
+            .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+            .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
+            .preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
+            .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+//         .presentMode = VK_PRESENT_MODE_FIFO_KHR,
+//         .presentMode = VK_PRESENT_MODE_FIFO_RELAXED_KHR,
+//         .presentMode = VK_PRESENT_MODE_MAILBOX_KHR,
+//         .presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR,
+            .clipped = VK_TRUE
+         };
+         VK_CHECK(vkCreateSwapchainKHR(vk.device, &info, NULL, &vk_render[i].swapchain));
+      }
+
+      {
+         VkAttachmentDescription attachmentDescriptions[] =
+         {
+            {
+               0, VK_FORMAT_B8G8R8A8_UNORM, VK_SAMPLE_COUNT_1_BIT,
+               VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
+               VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+               VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+            }
+         };
+
+         VkAttachmentReference ColorAttachment =
+         {
+            0,
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+         };
+
+         VkSubpassDescription subpassDescriptions[] =
+         {
+            {
+               .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+               .colorAttachmentCount = 1, &ColorAttachment,
+            }
+         };
+
+         VkRenderPassCreateInfo renderPassCreateInfo =
+         {
+            VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+            .attachmentCount = countof(attachmentDescriptions), attachmentDescriptions,
+            .subpassCount = countof(subpassDescriptions), subpassDescriptions,
+         };
+
+         vkCreateRenderPass(vk.device, &renderPassCreateInfo, NULL, &vk_render[i].renderpass);
+      }
+
+      {
+         vkGetSwapchainImagesKHR(vk.device, vk_render[i].swapchain, &vk_render[i].swapchain_count, NULL);
+
+         if (vk_render[i].swapchain_count > MAX_SWAPCHAIN_IMAGES)
+            vk_render[i].swapchain_count = MAX_SWAPCHAIN_IMAGES;
+
+         VkImage swapchainImages[vk_render[i].swapchain_count];
+         vkGetSwapchainImagesKHR(vk.device, vk_render[i].swapchain, &vk_render[i].swapchain_count,
+            swapchainImages);
+
+         int j;
+
+         for (j = 0; j < vk_render[i].swapchain_count; j++)
+         {
+            {
+               VkImageViewCreateInfo info =
+               {
+                  VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+                  .image = swapchainImages[j],
+                  .viewType = VK_IMAGE_VIEW_TYPE_2D,
+                  .format = VK_FORMAT_B8G8R8A8_UNORM,
+                  .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                  .subresourceRange.levelCount = 1,
+                  .subresourceRange.layerCount = 1
+               };
+               vkCreateImageView(vk.device, &info, NULL, &vk_render[i].views[j]);
+            }
+
+            {
+               VkFramebufferCreateInfo info =
+               {
+                  VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+                  .renderPass = vk_render[i].renderpass,
+                  .attachmentCount = 1, &vk_render[i].views[j],
+                  .width = vk_render[i].screen->width,
+                  .height = vk_render[i].screen->height,
+                  .layers = 1
+               };
+               vkCreateFramebuffer(vk.device, &info, NULL, &vk_render[i].framebuffers[j]);
+            }
+         }
+      }
+
+      vk_render[i].viewport.x = 0.0f;
+      vk_render[i].viewport.y = 0.0f;
+      vk_render[i].viewport.width = vk_render[i].screen->width;
+      vk_render[i].viewport.height = vk_render[i].screen->height;
+      vk_render[i].viewport.minDepth = -1.0f;
+      vk_render[i].viewport.maxDepth =  1.0f;
+
+      vk_render[i].scissor.offset.x = 0.0f;
+      vk_render[i].scissor.offset.y = 0.0f;
+      vk_render[i].scissor.extent.width = vk_render[i].screen->width;
+      vk_render[i].scissor.extent.height = vk_render[i].screen->height;
+
+      {
+         const VkCommandBufferAllocateInfo info =
+         {
+            VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+            .commandPool = vk.pools.cmd,
+            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+            .commandBufferCount = 1
+         };
+         vkAllocateCommandBuffers(vk.device, &info, &vk_render[i].cmd);
+      }
+
+      {
+         VkFenceCreateInfo info =
+         {
+            VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+            .flags = VK_FENCE_CREATE_SIGNALED_BIT
+         };
+         vkCreateFence(vk.device, &info, NULL, &vk_render[i].chain_fence);
+      }
 
 //   {
 //      VkDisplayEventInfoEXT displayEventInfo =
@@ -425,82 +436,99 @@ void video_init()
 //      };
 //      VK_CHECK(vkRegisterDisplayEventEXT(vk.device, surface.display, &displayEventInfo, NULL, &display_fence));
 //   }
+   }
 
-   vulkan_font_init(&vk, &vk_render);
+   vulkan_font_init(&vk, &vk_render[1]);
 
 }
 
 void video_frame_update()
 {
-   uint32_t image_index;
-   vkWaitForFences(vk.device, 1, &vk_render.chain_fence, VK_TRUE, UINT64_MAX);
-   vkResetFences(vk.device, 1, &vk_render.chain_fence);
-   vkAcquireNextImageKHR(vk.device, vk_render.swapchain, UINT64_MAX, NULL, vk_render.chain_fence,
-      &image_index);
+   uint32_t image_indices[MAX_SCREENS];
+   VkCommandBuffer cmds[MAX_SCREENS];
+   VkSwapchainKHR swapchains[MAX_SCREENS];
 
-   vkWaitForFences(vk.device, 1, &vk_render.queue_fence, VK_TRUE, UINT64_MAX);
-   vkResetFences(vk.device, 1, &vk_render.queue_fence);
+   vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, UINT64_MAX);
+   vkResetFences(vk.device, 1, &vk.queue_fence);
+
+//   video.screen_count = 1;
+   int i;
+   for (i = 0; i < video.screen_count; i++)
+   {
+      vkWaitForFences(vk.device, 1, &vk_render[i].chain_fence, VK_TRUE, UINT64_MAX);
+      vkResetFences(vk.device, 1, &vk_render[i].chain_fence);
+      vkAcquireNextImageKHR(vk.device, vk_render[i].swapchain, UINT64_MAX, NULL, vk_render[i].chain_fence,
+         &image_indices[i]);
+
 
 //   vkWaitForFences(vk.device, 1, &display_fence, VK_TRUE, UINT64_MAX);
 //   vkResetFences(vk.device, 1, &display_fence);
 
-   {
-      const VkCommandBufferBeginInfo info =
       {
-         VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-         .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
-      };
-      vkBeginCommandBuffer(vk_render.cmd, &info);
-   }
-
-   vulkan_frame_update(vk.device, vk_render.cmd);
-   vulkan_font_update_assets(vk.device, vk_render.cmd);
-
-   /* renderpass */
-   {
-      {
-//         const VkClearValue clearValue = {{{0.0f, 0.1f, 1.0f, 0.0f}}};
-         const VkClearValue clearValue = {.color.float32 = {0.0f, 0.1f, 1.0f, 0.0f}};
-
-         const VkRenderPassBeginInfo info =
+         const VkCommandBufferBeginInfo info =
          {
-            VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-            .renderPass = vk_render.renderpass,
-            .framebuffer = vk_render.framebuffers[image_index],
-            .renderArea = vk_render.scissor,
-            .clearValueCount = 1,
-            .pClearValues = &clearValue
+            VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
          };
-         vkCmdBeginRenderPass(vk_render.cmd, &info, VK_SUBPASS_CONTENTS_INLINE);
+         vkBeginCommandBuffer(vk_render[i].cmd, &info);
       }
 
-      vulkan_frame_render(vk_render.cmd);
-      vulkan_font_render(vk_render.cmd);
+      if(i == 0)
+         vulkan_frame_update(vk.device, vk_render[i].cmd);
+      else
+         vulkan_font_update_assets(vk.device, vk_render[i].cmd);
 
-      vkCmdEndRenderPass(vk_render.cmd);
+      /* renderpass */
+      {
+         {
+//         const VkClearValue clearValue = {{{0.0f, 0.1f, 1.0f, 0.0f}}};
+            const VkClearValue clearValue = {.color.float32 = {0.0f, 0.1f, 1.0f, 0.0f}};
+
+            const VkRenderPassBeginInfo info =
+            {
+               VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+               .renderPass = vk_render[i].renderpass,
+               .framebuffer = vk_render[i].framebuffers[image_indices[i]],
+               .renderArea = vk_render[i].scissor,
+               .clearValueCount = 1,
+               .pClearValues = &clearValue
+            };
+            vkCmdBeginRenderPass(vk_render[i].cmd, &info, VK_SUBPASS_CONTENTS_INLINE);
+         }
+
+//         if(i == 0)
+//            vulkan_frame_render(vk_render[i].cmd);
+//         else
+            vulkan_font_render(vk_render[i].cmd);
+
+         vkCmdEndRenderPass(vk_render[i].cmd);
+      }
+
+      vkEndCommandBuffer(vk_render[i].cmd);
+      cmds[i] = vk_render[i].cmd;
+      swapchains[i] = vk_render[i].swapchain;
    }
-
-   vkEndCommandBuffer(vk_render.cmd);
 
    {
       const VkSubmitInfo info =
       {
          VK_STRUCTURE_TYPE_SUBMIT_INFO,
-         .commandBufferCount = 1, &vk_render.cmd
+         .commandBufferCount = video.screen_count, cmds
       };
-      vkQueueSubmit(vk.queue, 1, &info, vk_render.queue_fence);
+      vkQueueSubmit(vk.queue, 1, &info, vk.queue_fence);
    }
 
    {
       const VkPresentInfoKHR info =
       {
          VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-         .swapchainCount = 1,
-         .pSwapchains = &vk_render.swapchain,
-         .pImageIndices = &image_index
+         .swapchainCount = video.screen_count,
+         .pSwapchains = swapchains,
+         .pImageIndices = image_indices
       };
       vkQueuePresentKHR(vk.queue, &info);
    }
+
 #if 0
    {
       uint64_t vblank_counter = 0;
@@ -513,12 +541,16 @@ void video_frame_update()
 
 void video_destroy()
 {
+   int i, j;
 
-   vkWaitForFences(vk.device, 1, &vk_render.queue_fence, VK_TRUE, UINT64_MAX);
-   vkDestroyFence(vk.device, vk_render.queue_fence, NULL);
+   vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, UINT64_MAX);
+   vkDestroyFence(vk.device, vk.queue_fence, NULL);
 
-   vkWaitForFences(vk.device, 1, &vk_render.chain_fence, VK_TRUE, UINT64_MAX);
-   vkDestroyFence(vk.device, vk_render.chain_fence, NULL);
+   for (i = 0; i < video.screen_count; i++)
+   {
+      vkWaitForFences(vk.device, 1, &vk_render[i].chain_fence, VK_TRUE, UINT64_MAX);
+      vkDestroyFence(vk.device, vk_render[i].chain_fence, NULL);
+   }
 
 //   vkWaitForFences(vk.device, 1, &display_fence, VK_TRUE, UINT64_MAX);
 //   vkDestroyFence(vk.device, display_fence, NULL);
@@ -526,22 +558,24 @@ void video_destroy()
    vulkan_font_destroy(vk.device);
    vulkan_frame_destroy(vk.device);
 
-   vkDestroySampler(vk.device, vk_render.samplers.nearest, NULL);
-   vkDestroySampler(vk.device, vk_render.samplers.linear, NULL);
-
    vkDestroyDescriptorPool(vk.device, vk.pools.desc, NULL);
-   vkDestroyDescriptorSetLayout(vk.device, vk_render.descriptor_set_layout, NULL);
 
-   int i;
+   vkDestroyDescriptorSetLayout(vk.device, vk.descriptor_set_layout, NULL);
+   vkDestroySampler(vk.device, vk.samplers.nearest, NULL);
+   vkDestroySampler(vk.device, vk.samplers.linear, NULL);
 
-   for (i = 0; i < vk_render.swapchain_count; i++)
+   for (i = 0; i < video.screen_count; i++)
    {
-      vkDestroyImageView(vk.device, vk_render.views[i], NULL);
-      vkDestroyFramebuffer(vk.device, vk_render.framebuffers[i], NULL);
-   }
 
-   vkDestroySwapchainKHR(vk.device, vk_render.swapchain, NULL);
-   vkDestroyRenderPass(vk.device, vk_render.renderpass, NULL);
+      for (j = 0; j < vk_render[i].swapchain_count; j++)
+      {
+         vkDestroyImageView(vk.device, vk_render[i].views[j], NULL);
+         vkDestroyFramebuffer(vk.device, vk_render[i].framebuffers[j], NULL);
+      }
+
+      vkDestroySwapchainKHR(vk.device, vk_render[i].swapchain, NULL);
+      vkDestroyRenderPass(vk.device, vk_render[i].renderpass, NULL);
+   }
 
    vkDestroySurfaceKHR(vk.instance, vk.surface, NULL);
    vkDestroyCommandPool(vk.device, vk.pools.cmd, NULL);
@@ -575,7 +609,7 @@ void video_frame_init(int width, int height, screen_format_t format)
       break;
    }
 
-   vulkan_frame_init(&vk, &vk_render, width, height, vkformat);
+   vulkan_frame_init(&vk, &vk_render[1], width, height, vkformat);
 }
 
 const video_t video_vulkan =

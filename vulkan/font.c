@@ -1,6 +1,7 @@
 
 #include <ctype.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -9,6 +10,7 @@
 #include "vulkan_common.h"
 #include "font.h"
 #include "video.h"
+#include "input.h"
 
 #define VK_ATLAS_WIDTH  512
 #define VK_ATLAS_HEIGHT 512
@@ -155,8 +157,8 @@ void vulkan_font_init(vk_context_t *vk, vk_render_context_t *vk_render)
    font.p.texture.dirty = true;
 
    font_uniforms_t *uniforms = (font_uniforms_t *)font.p.ubo.mem.ptr;
-   uniforms->vp_size.width = video.screen.width;
-   uniforms->vp_size.height = video.screen.height;
+   uniforms->vp_size.width = vk_render->screen->width;
+   uniforms->vp_size.height = vk_render->screen->height;
    uniforms->tex_size.width = font.p.texture.width;
    uniforms->tex_size.height = font.p.texture.height;
    font.p.ubo.dirty = true;
@@ -207,50 +209,46 @@ static int vulkan_font_get_new_slot(void)
 
 static void ft_font_render_glyph(unsigned charcode, int slot_id)
 {
+   int row;
+
+   FT_Load_Char(font.ftface, charcode, FT_LOAD_RENDER | (font.monochrome ? FT_LOAD_MONOCHROME : 0));
+
+   FT_Bitmap *bitmap = &font.ftface->glyph->bitmap;
+   uint8_t *src = bitmap->buffer;
+   device_memory_t *mem = &font.p.texture.staging.mem;
+   uint8_t *dst = mem->u8 + mem->layout.offset + (slot_id & 0xF) * font.atlas.slot_width +
+      (((slot_id >> 4) * font.atlas.slot_height)) * mem->layout.rowPitch;
+
+   assert((dst - mem->u8 + mem->layout.rowPitch * (bitmap->rows + 1) < mem->layout.size));
+
+   for (row = 0; row < bitmap->rows; row++)
    {
-      int row;
-
-      FT_Load_Char(font.ftface, charcode, FT_LOAD_RENDER | (font.monochrome ? FT_LOAD_MONOCHROME : 0));
-
-      FT_Bitmap *bitmap = &font.ftface->glyph->bitmap;
-      uint8_t *src = bitmap->buffer;
-      device_memory_t *mem = &font.p.texture.staging.mem;
-      uint8_t *dst = mem->u8 + mem->layout.offset + (slot_id & 0xF) * font.atlas.slot_width +
-         (((slot_id >> 4) * font.atlas.slot_height)) * mem->layout.rowPitch;
-
-      assert((dst - mem->u8 + mem->layout.rowPitch * (bitmap->rows + 1) < mem->layout.size));
-
-      for (row = 0; row < bitmap->rows; row++)
+      if (font.monochrome)
       {
-         if (font.monochrome)
+         int col;
+
+         for (col = 0; col < bitmap->width; col++)
          {
-            int col;
-
-            for (col = 0; col < bitmap->width; col++)
-            {
-               if (src[col >> 3] & (0x80 >> (col & 0x7)))
-                  dst[col] = 255;
-            }
+            if (src[col >> 3] & (0x80 >> (col & 0x7)))
+               dst[col] = 255;
          }
-         else
-            memcpy(dst, src, bitmap->width);
-
-         src += bitmap->pitch;
-         dst += mem->layout.rowPitch;
       }
+      else
+         memcpy(dst, src, bitmap->width);
 
-      font.p.texture.dirty = true;
+      src += bitmap->pitch;
+      dst += mem->layout.rowPitch;
    }
 
-   {
-      font_uniforms_t *uniforms = (font_uniforms_t *)font.p.ubo.mem.ptr;
-      uniforms->glyph_metrics[slot_id].x = font.ftface->glyph->metrics.horiBearingX >> 6;
-      uniforms->glyph_metrics[slot_id].y = -font.ftface->glyph->metrics.horiBearingY >> 6;
-      uniforms->glyph_metrics[slot_id].width = font.ftface->glyph->metrics.width >> 6;
-      uniforms->glyph_metrics[slot_id].height = font.ftface->glyph->metrics.height >> 6;
-      uniforms->advance[slot_id] = font.ftface->glyph->metrics.horiAdvance >> 6;
-      font.p.ubo.dirty = true;
-   }
+   font.p.texture.dirty = true;
+
+   font_uniforms_t *uniforms = (font_uniforms_t *)font.p.ubo.mem.ptr;
+   uniforms->glyph_metrics[slot_id].x = font.ftface->glyph->metrics.horiBearingX >> 6;
+   uniforms->glyph_metrics[slot_id].y = -font.ftface->glyph->metrics.horiBearingY >> 6;
+   uniforms->glyph_metrics[slot_id].width = font.ftface->glyph->metrics.width >> 6;
+   uniforms->glyph_metrics[slot_id].height = font.ftface->glyph->metrics.height >> 6;
+   uniforms->advance[slot_id] = font.ftface->glyph->metrics.horiAdvance >> 6;
+   font.p.ubo.dirty = true;
 }
 
 static int vulkan_font_get_slot_id(uint32_t charcode)
@@ -327,12 +325,14 @@ void vulkan_font_draw_text(const char *text, int x, int y)
 
       int slot_id = vulkan_font_get_slot_id(charcode);
 
-      if ((vertex.position.x + ((font_uniforms_t *)font.p.ubo.mem.ptr)->advance[slot_id]) > video.screen.width)
+      if ((vertex.position.x + ((font_uniforms_t *)font.p.ubo.mem.ptr)->advance[slot_id]) > ((
+               font_uniforms_t *)font.p.ubo.mem.ptr)->vp_size.width)
 //      if ((vertex.position.x + font.max_advance) > video.screen.width)
       {
          vertex.position.y += font.line_height;
 
-         if (last_space && (last_space + 1 < out) && (last_space + (video.screen.width / (2 * font.max_advance))) > out)
+         if (last_space && (last_space + 1 < out) &&
+            (last_space + (int)(((font_uniforms_t *)font.p.ubo.mem.ptr)->vp_size.width / (2 * font.max_advance))) > out)
          {
             font_vertex_t *ptr = last_space + 1;
             int old_x = ptr->position.x;
@@ -370,33 +370,40 @@ void vulkan_font_draw_text(const char *text, int x, int y)
 
 void vulkan_font_update_assets(VkDevice device, VkCommandBuffer cmd)
 {
+   char buffer[512];
    font.p.vbo.info.range = 0;
+   vulkan_font_draw_text(video.fps, 0, 0);
 
-   vulkan_font_draw_text("Backward compatibility: Backwards compatibility with ASCII and the enormous "
-      "amount of software designed to process ASCII-encoded text was the main driving "
-      "force behind the design of UTF-8. In UTF-8, single bytes with values in the range "
-      "of 0 to 127 map directly to Unicode code points in the ASCII range. Single bytes "
-      "in this range represent characters, as they do in ASCII.\n\nMoreover, 7-bit bytes "
-      "(bytes where the most significant bit is 0) never appear in a multi-byte sequence, "
-      "and no valid multi-byte sequence decodes to an ASCII code-point. A sequence of 7-bit "
-      "bytes is both valid ASCII and valid UTF-8, and under either interpretation represents "
-      "the same sequence of characters.\n\nTherefore, the 7-bit bytes in a UTF-8 stream represent "
-      "all and only the ASCII characters in the stream. Thus, many text processors, parsers, "
-      "protocols, file formats, text display programs etc., which use ASCII characters for "
-      "formatting and control purposes will continue to work as intended by treating the UTF-8 "
-      "byte stream as a sequence of single-byte characters, without decoding the multi-byte sequences. "
-      "ASCII characters on which the processing turns, such as punctuation, whitespace, and control "
-      "characters will never be encoded as multi-byte sequences. It is therefore safe for such "
-      "processors to simply ignore or pass-through the multi-byte sequences, without decoding them. "
-      "For example, ASCII whitespace may be used to tokenize a UTF-8 stream into words; "
-      "ASCII line-feeds may be used to split a UTF-8 stream into lines; and ASCII NUL ", 0, 0);
+   snprintf(buffer, sizeof(buffer), "[%c] %i, %i", input.pointer.touch1 ? '#' : ' ', input.pointer.x, input.pointer.y);
+   vulkan_font_draw_text(buffer, 0, 20);
+
+//   static int text_pos_y = 100;
+
+//   vulkan_font_draw_text("Backward compatibility: Backwards compatibility with ASCII and the enormous "
+//      "amount of software designed to process ASCII-encoded text was the main driving "
+//      "force behind the design of UTF-8. In UTF-8, single bytes with values in the range "
+//      "of 0 to 127 map directly to Unicode code points in the ASCII range. Single bytes "
+//      "in this range represent characters, as they do in ASCII.\n\nMoreover, 7-bit bytes "
+//      "(bytes where the most significant bit is 0) never appear in a multi-byte sequence, "
+//      "and no valid multi-byte sequence decodes to an ASCII code-point. A sequence of 7-bit "
+//      "bytes is both valid ASCII and valid UTF-8, and under either interpretation represents "
+//      "the same sequence of characters.\n\nTherefore, the 7-bit bytes in a UTF-8 stream represent "
+//      "all and only the ASCII characters in the stream. Thus, many text processors, parsers, "
+//      "protocols, file formats, text display programs etc., which use ASCII characters for "
+//      "formatting and control purposes will continue to work as intended by treating the UTF-8 "
+//      "byte stream as a sequence of single-byte characters, without decoding the multi-byte sequences. "
+//      "ASCII characters on which the processing turns, such as punctuation, whitespace, and control "
+//      "characters will never be encoded as multi-byte sequences. It is therefore safe for such "
+//      "processors to simply ignore or pass-through the multi-byte sequences, without decoding them. "
+//      "For example, ASCII whitespace may be used to tokenize a UTF-8 stream into words; "
+//      "ASCII line-feeds may be used to split a UTF-8 stream into lines; and ASCII NUL ", 0, text_pos_y);
 
 //   vulkan_font_draw_text("北海道の有名なかん光地、知床半島で、黒いキツネがさつえいされました。"
 //      "地元斜里町の町立知床博物館が、タヌキをかんさつするためにおいていた自動さつえいカメラがき重なすがたをとらえました＝"
 //      "写真・同館ていきょう。同館の学芸員も「はじめて見た」とおどろいています。"
 //      "黒い毛皮のために昔、ゆ入したキツネの子そんとも言われてますが、はっきりしません。"
 //      "北海道の先住みん族、アイヌのみん話にも黒いキツネが登場し、神せいな生き物とされているそうです。",
-//      0, 0);
+//      0, text_pos_y);
 
 //   vulkan_font_draw_text("gl_Position.xy = pos + 2.0 * vec2(0.0, glyph_metrics[c].w) / vp_size;", 0, 32);
 

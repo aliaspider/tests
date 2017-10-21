@@ -31,8 +31,11 @@ int main(int argc, char **argv)
 #endif
 #endif
 
-   video.screen.width = 640;
-   video.screen.height = 480;
+   video.screen_count = 2;
+   video.screens[0].width = 640;
+   video.screens[0].height = 480;
+   video.screens[1].width = 640;
+   video.screens[1].height = 800;
 
    platform_init();
 
@@ -63,19 +66,19 @@ int main(int argc, char **argv)
       if(input.pad.meta.exit)
          break;
 
-      module_run_info_t info = {};
-      uint32_t sound_buffer[40000 + 2064];
-      do
-      {
-         info.screen.ptr = video.frame.data;
-         info.pitch = video.frame.pitch;
-         info.max_samples = 40000;
-         info.sound_buffer.u32 = sound_buffer;
-         info.pad = &input.pad;
-         module_run(&info);
-         //         debug_log("info.max_samples : %i", info.max_samples);
-      }
-      while (!info.frame_completed);
+//      module_run_info_t info = {};
+//      uint32_t sound_buffer[40000 + 2064];
+//      do
+//      {
+//         info.screen.ptr = video.frame.data;
+//         info.pitch = video.frame.pitch;
+//         info.max_samples = 40000;
+//         info.sound_buffer.u32 = sound_buffer;
+//         info.pad = &input.pad;
+//         module_run(&info);
+//         //         debug_log("info.max_samples : %i", info.max_samples);
+//      }
+//      while (!info.frame_completed);
 
 //      audio.play(info.sound_buffer.ptr, info.max_samples);
 
@@ -87,12 +90,15 @@ int main(int argc, char **argv)
                    (end_time.tv_nsec - start_time.tv_nsec) / 1000000000.0f;
       frames++;
 
+      snprintf(video.fps, sizeof(video.fps), "fps: %f", frames / diff);
       if (diff > 0.5f)
       {
-         printf("\rfps: %f", frames / diff);
+
+//         snprintf(video.fps, sizeof(video.fps), "fps: %f", frames / diff);
+////         printf("\r%s", video.fps);
          frames = 0;
          start_time = end_time;
-         fflush(stdout);
+//         fflush(stdout);
       }
 
 

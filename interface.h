@@ -84,6 +84,14 @@ typedef struct
 
 typedef struct
 {
+   int x;
+   int y;
+   bool touch1;
+   bool touch2;
+}pointer_t;
+
+typedef struct
+{
    int output_width;
    int output_height;
    screen_format_t screen_format;
