@@ -36,6 +36,8 @@ int main(int argc, char **argv)
    video.screens[0].height = 480;
    video.screens[1].width = 640;
    video.screens[1].height = 800;
+   video.screens[2].width = 256;
+   video.screens[2].height = 224;
 
    platform_init();
 

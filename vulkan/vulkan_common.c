@@ -203,30 +203,30 @@ void device_memory_init(VkDevice device, const VkMemoryType *memory_types, const
          .allocationSize = dst->size,
          .memoryTypeIndex = type - memory_types
       };
-      vkAllocateMemory(device, &info, NULL, &dst->handles);
+      vkAllocateMemory(device, &info, NULL, &dst->handle);
    }
 
    if (init_info->req_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
-      vkMapMemory(device, dst->handles, 0, dst->size, 0, &dst->ptr);
+      vkMapMemory(device, dst->handle, 0, dst->size, 0, &dst->ptr);
    else
       dst->ptr = NULL;
 
    if (init_info->buffer)
-      vkBindBufferMemory(device, init_info->buffer, dst->handles, 0);
+      vkBindBufferMemory(device, init_info->buffer, dst->handle, 0);
    else
-      vkBindImageMemory(device, init_info->image, dst->handles, 0);
+      vkBindImageMemory(device, init_info->image, dst->handle, 0);
 }
 
 void device_memory_free(VkDevice device, device_memory_t *memory)
 {
    if (memory->ptr)
-      vkUnmapMemory(device, memory->handles);
+      vkUnmapMemory(device, memory->handle);
 
-   vkFreeMemory(device, memory->handles, NULL);
+   vkFreeMemory(device, memory->handle, NULL);
 
    memory->ptr = NULL;
    memory->flags = 0;
-   memory->handles = VK_NULL_HANDLE;
+   memory->handle = VK_NULL_HANDLE;
 }
 
 void device_memory_flush(VkDevice device, const device_memory_t *memory)
@@ -238,7 +238,7 @@ void device_memory_flush(VkDevice device, const device_memory_t *memory)
       VkMappedMemoryRange range =
       {
          VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
-         .memory = memory->handles,
+         .memory = memory->handle,
          .offset = 0,
          .size = memory->size
       };
@@ -540,7 +540,6 @@ void vk_pipeline_init(vk_context_t *vk, const vk_pipeline_init_info_t *init_info
 
 
    dst->layout = vk->pipeline_layout;
-   dst->count = init_info->render_contexts_count;
 
    {
       const VkPipelineShaderStageCreateInfo shaders_info[] =
@@ -584,17 +583,16 @@ void vk_pipeline_init(vk_context_t *vk, const vk_pipeline_init_info_t *init_info
          .primitiveRestartEnable = VK_FALSE
       };
 
-      VkPipelineViewportStateCreateInfo viewport_state [MAX_SCREENS] =
+      VkPipelineViewportStateCreateInfo viewport_state =
       {
-         {
-            VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-            .viewportCount = 1, &init_info->render_contexts[0].viewport, .scissorCount = 1, &init_info->render_contexts[0].scissor
-         }
+         VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+         .viewportCount = 1, .scissorCount = 1
       };
 
       const VkPipelineRasterizationStateCreateInfo rasterization_info =
       {
          VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+//         .rasterizerDiscardEnable = VK_TRUE,
          .lineWidth = 1.0f
       };
 
@@ -610,6 +608,13 @@ void vk_pipeline_init(vk_context_t *vk, const vk_pipeline_init_info_t *init_info
          .attachmentCount = 1, init_info->color_blend_attachement_state
       };
 
+      const VkDynamicState dynamic_states[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+      const VkPipelineDynamicStateCreateInfo dynamic_state_info =
+      {
+         VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+         .dynamicStateCount = countof(dynamic_states), dynamic_states
+      };
+
       VkGraphicsPipelineCreateInfo info[MAX_SCREENS] =
       {
          {
@@ -618,31 +623,17 @@ void vk_pipeline_init(vk_context_t *vk, const vk_pipeline_init_info_t *init_info
             .stageCount = shaders_info[2].module ? 3 : 2, shaders_info,
             .pVertexInputState = &vertex_input_state,
             .pInputAssemblyState = &input_assembly_state,
-            .pViewportState = &viewport_state[0],
+            .pViewportState = &viewport_state,
             .pRasterizationState = &rasterization_info,
             .pMultisampleState = &multisample_state,
             .pColorBlendState = &colorblend_state,
+            .pDynamicState = &dynamic_state_info,
             .layout = dst->layout,
-            .renderPass = init_info->render_contexts[0].renderpass,
+            .renderPass = vk->renderpass,
             .subpass = 0
          }
       };
-      int i;
-      {
-         for (i = 1; i < init_info->render_contexts_count; i++)
-         {
-            viewport_state[i] = viewport_state[0];
-            viewport_state[i].pViewports = &init_info->render_contexts[i].viewport;
-            viewport_state[i].pScissors = &init_info->render_contexts[i].scissor;
-
-            info[i] = info[0];
-            info[i].basePipelineIndex = 0;
-            info[i].flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT | VK_PIPELINE_CREATE_DERIVATIVE_BIT;
-            info[i].pViewportState = &viewport_state[i];
-            info[i].renderPass = init_info->render_contexts[0].renderpass;
-         }
-      }
-      vkCreateGraphicsPipelines(vk->device, VK_NULL_HANDLE, init_info->render_contexts_count, info, NULL, dst->handles);
+      vkCreateGraphicsPipelines(vk->device, VK_NULL_HANDLE, 1, info, NULL, &dst->handle);
 
       vkDestroyShaderModule(vk->device, shaders_info[0].module, NULL);
       vkDestroyShaderModule(vk->device, shaders_info[1].module, NULL);
@@ -655,9 +646,7 @@ void vk_pipeline_init(vk_context_t *vk, const vk_pipeline_init_info_t *init_info
 
 void vk_pipeline_destroy(VkDevice device, vk_pipeline_t *render)
 {
-   int i;
-   for(i = 0; i < render->count; i++)
-      vkDestroyPipeline(device, render->handles[i], NULL);
+   vkDestroyPipeline(device, render->handle, NULL);
    buffer_free(device, &render->vbo);
    buffer_free(device, &render->ubo);
    buffer_free(device, &render->ssbo);

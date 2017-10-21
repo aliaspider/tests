@@ -12,7 +12,7 @@
 
 typedef struct
 {
-   VkDeviceMemory handles;
+   VkDeviceMemory handle;
    VkMemoryPropertyFlags flags;
    VkDeviceSize size;
    VkDeviceSize alignment;
@@ -173,6 +173,7 @@ typedef struct
       VkSampler nearest;
       VkSampler linear;
    } samplers;
+   VkRenderPass renderpass;
 } vk_context_t;
 
 typedef struct
@@ -183,7 +184,6 @@ typedef struct
    VkSwapchainKHR swapchain;
    VkRect2D scissor;
    VkViewport viewport;
-   VkRenderPass renderpass;
    uint32_t swapchain_count;
    VkImageView views[MAX_SWAPCHAIN_IMAGES];
    VkFramebuffer framebuffers[MAX_SWAPCHAIN_IMAGES];
@@ -198,8 +198,7 @@ typedef struct
    vk_buffer_t ubo;
    vk_buffer_t ssbo;
    VkDescriptorSet desc;
-   int count;
-   VkPipeline handles[MAX_SCREENS];
+   VkPipeline handle;
    VkPipelineLayout layout;
 }vk_pipeline_t;
 
@@ -223,8 +222,6 @@ typedef struct
    const VkVertexInputAttributeDescription* attrib_desc;
    VkPrimitiveTopology topology;
    const VkPipelineColorBlendAttachmentState* color_blend_attachement_state;
-   int render_contexts_count;
-   vk_render_context_t* render_contexts;
 }vk_pipeline_init_info_t;
 
 void vk_pipeline_init(vk_context_t *vk, const vk_pipeline_init_info_t *init_info, vk_pipeline_t *dst);

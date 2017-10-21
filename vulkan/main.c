@@ -277,6 +277,41 @@ void video_init()
    }
 
    {
+      VkAttachmentDescription attachmentDescriptions[] =
+      {
+         {
+            0, VK_FORMAT_B8G8R8A8_UNORM, VK_SAMPLE_COUNT_1_BIT,
+            VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
+            VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+         }
+      };
+
+      VkAttachmentReference ColorAttachment =
+      {
+         0,
+         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+      };
+
+      VkSubpassDescription subpassDescriptions[] =
+      {
+         {
+            .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+            .colorAttachmentCount = 1, &ColorAttachment,
+         }
+      };
+
+      VkRenderPassCreateInfo renderPassCreateInfo =
+      {
+         VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+         .attachmentCount = countof(attachmentDescriptions), attachmentDescriptions,
+         .subpassCount = countof(subpassDescriptions), subpassDescriptions,
+      };
+
+      vkCreateRenderPass(vk.device, &renderPassCreateInfo, NULL, &vk.renderpass);
+   }
+
+   {
       VkFenceCreateInfo info =
       {
          VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
@@ -339,41 +374,6 @@ void video_init()
       }
 
       {
-         VkAttachmentDescription attachmentDescriptions[] =
-         {
-            {
-               0, VK_FORMAT_B8G8R8A8_UNORM, VK_SAMPLE_COUNT_1_BIT,
-               VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
-               VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
-               VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-            }
-         };
-
-         VkAttachmentReference ColorAttachment =
-         {
-            0,
-            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-         };
-
-         VkSubpassDescription subpassDescriptions[] =
-         {
-            {
-               .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-               .colorAttachmentCount = 1, &ColorAttachment,
-            }
-         };
-
-         VkRenderPassCreateInfo renderPassCreateInfo =
-         {
-            VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-            .attachmentCount = countof(attachmentDescriptions), attachmentDescriptions,
-            .subpassCount = countof(subpassDescriptions), subpassDescriptions,
-         };
-
-         vkCreateRenderPass(vk.device, &renderPassCreateInfo, NULL, &vk_render[i].renderpass);
-      }
-
-      {
          vkGetSwapchainImagesKHR(vk.device, vk_render[i].swapchain, &vk_render[i].swapchain_count, NULL);
 
          if (vk_render[i].swapchain_count > MAX_SWAPCHAIN_IMAGES)
@@ -405,7 +405,7 @@ void video_init()
                VkFramebufferCreateInfo info =
                {
                   VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-                  .renderPass = vk_render[i].renderpass,
+                  .renderPass = vk.renderpass,
                   .attachmentCount = 1, &vk_render[i].views[j],
                   .width = vk_render[i].screen->width,
                   .height = vk_render[i].screen->height,
@@ -458,7 +458,7 @@ void video_init()
 //   }
    }
 
-   vulkan_font_init(&vk, vk_render, video.screen_count);
+   vulkan_font_init(&vk);
 
 }
 
@@ -494,12 +494,15 @@ void video_frame_update()
       }
 
       if(i == 0)
+      {
          vulkan_frame_update(vk.device, vk_render[i].cmd);
-      else
          vulkan_font_update_assets(vk.device, vk_render[i].cmd);
+      }
 
-      float push_constants[2] = {video.screens[i].width, video.screens[i].height};
+      float push_constants[2] = {vk_render[i].viewport.width, vk_render[i].viewport.height};
       vkCmdPushConstants(vk_render[i].cmd, vk.pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(push_constants), push_constants);
+      vkCmdSetViewport(vk_render[i].cmd, 0, 1, &vk_render[i].viewport);
+      vkCmdSetScissor(vk_render[i].cmd, 0, 1, &vk_render[i].scissor);
 
       /* renderpass */
       {
@@ -510,7 +513,7 @@ void video_frame_update()
             const VkRenderPassBeginInfo info =
             {
                VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-               .renderPass = vk_render[i].renderpass,
+               .renderPass = vk.renderpass,
                .framebuffer = vk_render[i].framebuffers[image_indices[i]],
                .renderArea = vk_render[i].scissor,
                .clearValueCount = 1,
@@ -520,9 +523,9 @@ void video_frame_update()
          }
 
 //         if(i == 0)
-            vulkan_frame_render(vk_render[i].cmd, i);
+            vulkan_frame_render(vk_render[i].cmd);
 //         else
-            vulkan_font_render(vk_render[i].cmd, i);
+            vulkan_font_render(vk_render[i].cmd);
 
          vkCmdEndRenderPass(vk_render[i].cmd);
       }
@@ -581,12 +584,7 @@ void video_destroy()
    vulkan_font_destroy(vk.device);
    vulkan_frame_destroy(vk.device);
 
-   vkDestroyDescriptorPool(vk.device, vk.pools.desc, NULL);
 
-   vkDestroySampler(vk.device, vk.samplers.nearest, NULL);
-   vkDestroySampler(vk.device, vk.samplers.linear, NULL);
-   vkDestroyDescriptorSetLayout(vk.device, vk.descriptor_set_layout, NULL);
-   vkDestroyPipelineLayout(vk.device, vk.pipeline_layout, NULL);
 
    for (i = 0; i < video.screen_count; i++)
    {
@@ -598,10 +596,15 @@ void video_destroy()
       }
 
       vkDestroySwapchainKHR(vk.device, vk_render[i].swapchain, NULL);
-      vkDestroyRenderPass(vk.device, vk_render[i].renderpass, NULL);
       vkDestroySurfaceKHR(vk.instance, vk_render[i].surface, NULL);
    }
 
+   vkDestroyDescriptorPool(vk.device, vk.pools.desc, NULL);
+   vkDestroySampler(vk.device, vk.samplers.nearest, NULL);
+   vkDestroySampler(vk.device, vk.samplers.linear, NULL);
+   vkDestroyDescriptorSetLayout(vk.device, vk.descriptor_set_layout, NULL);
+   vkDestroyPipelineLayout(vk.device, vk.pipeline_layout, NULL);
+   vkDestroyRenderPass(vk.device, vk.renderpass, NULL);
    vkDestroyCommandPool(vk.device, vk.pools.cmd, NULL);
    vkDestroyDevice(vk.device, NULL);
    vkDestroyDebugReportCallbackEXT(vk.instance, vk.debug_cb, NULL);
@@ -633,7 +636,7 @@ void video_frame_init(int width, int height, screen_format_t format)
       break;
    }
 
-   vulkan_frame_init(&vk, vk_render, video.screen_count, width, height, vkformat);
+   vulkan_frame_init(&vk, width, height, vkformat);
 }
 
 const video_t video_vulkan =

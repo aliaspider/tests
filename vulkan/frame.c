@@ -2,12 +2,12 @@
 #include <string.h>
 
 #include "vulkan_common.h"
+#include "frame.h"
 #include "video.h"
 #include "font.h"
-
 static vk_pipeline_t frame;
 
-void vulkan_frame_init(vk_context_t *vk, vk_render_context_t* render_contexts, int render_contexts_count, int width, int height, VkFormat format)
+void vulkan_frame_init(vk_context_t *vk, int width, int height, VkFormat format)
 {
    {
       const vertex_t vertices[] =
@@ -48,7 +48,6 @@ void vulkan_frame_init(vk_context_t *vk, vk_render_context_t* render_contexts, i
          .attrib_desc = attrib_desc,
          .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN,
          .color_blend_attachement_state = &color_blend_attachement_state,
-         .render_contexts_count = render_contexts_count, render_contexts,
       };
 
       frame.texture.width = width;
@@ -74,16 +73,15 @@ void vulkan_frame_init(vk_context_t *vk, vk_render_context_t* render_contexts, i
 
 void vulkan_frame_update(VkDevice device, VkCommandBuffer cmd)
 {
-   texture_update(device, cmd, &frame.texture);
+//   if(frame.texture.dirty)
+      texture_update(device, cmd, &frame.texture);
 }
 
-void vulkan_frame_render(VkCommandBuffer cmd, int screen_id)
+void vulkan_frame_render(VkCommandBuffer cmd)
 {
    VkDeviceSize offset = 0;
-   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, frame.handles[screen_id]);
+   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, frame.handle);
    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, frame.layout, 0, 1, &frame.desc, 0, NULL);
-// vkCmdPushConstants(device.cmd, device.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(uniforms_t), mapped_uniforms);
-
    vkCmdBindVertexBuffers(cmd, 0, 1, &frame.vbo.info.buffer, &offset);
 
    vkCmdDraw(cmd, frame.vbo.info.range / sizeof(vertex_t), 1, 0, 0);

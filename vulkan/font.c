@@ -66,7 +66,7 @@ static struct
    } atlas;
 } font;
 
-void vulkan_font_init(vk_context_t *vk, vk_render_context_t *render_contexts, int render_contexts_count)
+void vulkan_font_init(vk_context_t *vk)
 {
 
    {
@@ -135,7 +135,6 @@ void vulkan_font_init(vk_context_t *vk, vk_render_context_t *render_contexts, in
          .attrib_desc = attrib_desc,
          .topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
          .color_blend_attachement_state = &color_blend_attachement_state,
-         .render_contexts_count = render_contexts_count, render_contexts,
       };
 
       font.p.texture.width = font.atlas.slot_width << 4;
@@ -419,12 +418,12 @@ void vulkan_font_update_assets(VkDevice device, VkCommandBuffer cmd)
       buffer_flush(device, &font.p.ssbo);
 }
 
-void vulkan_font_render(VkCommandBuffer cmd, int screen_id)
+void vulkan_font_render(VkCommandBuffer cmd)
 {
    if ((font.p.vbo.info.range - font.p.vbo.info.offset) == 0)
       return;
 
-   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, font.p.handles[screen_id]);
+   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, font.p.handle);
    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, font.p.layout, 0, 1, &font.p.desc, 0, NULL);
 
    vkCmdBindVertexBuffers(cmd, 0, 1, &font.p.vbo.info.buffer, &font.p.vbo.info.offset);
