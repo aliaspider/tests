@@ -202,24 +202,19 @@ void video_init()
    }
 
    {
-      const VkSamplerCreateInfo info =
+      VkSamplerCreateInfo info =
       {
          VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
          .magFilter = VK_FILTER_NEAREST,
          .minFilter = VK_FILTER_NEAREST,
       };
       vkCreateSampler(vk.device, &info, NULL, &vk.samplers.nearest);
-   }
 
-   {
-      const VkSamplerCreateInfo info =
-      {
-         VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-         .magFilter = VK_FILTER_LINEAR,
-         .minFilter = VK_FILTER_LINEAR,
-      };
+      info.magFilter = VK_FILTER_LINEAR;
+      info.minFilter = VK_FILTER_LINEAR;
       vkCreateSampler(vk.device, &info, NULL, &vk.samplers.linear);
    }
+
 
    {
       const VkDescriptorSetLayoutBinding bindings[] =
