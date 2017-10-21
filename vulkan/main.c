@@ -22,6 +22,28 @@ void video_init()
    vulkan_font_init(&vk);
 }
 
+void video_frame_init(int width, int height, screen_format_t format)
+{
+   VkFormat vkformat;
+
+   switch (format)
+   {
+   case screen_format_RGB565:
+      vkformat = VK_FORMAT_R5G6B5_UNORM_PACK16;
+      break;
+
+   case screen_format_ARGB5551:
+      vkformat = VK_FORMAT_R5G5B5A1_UNORM_PACK16;
+      break;
+
+   default:
+      vkformat = VK_FORMAT_R8G8B8A8_UNORM;
+      break;
+   }
+
+   vulkan_frame_init(&vk, width, height, vkformat);
+}
+
 void video_frame_update()
 {
    uint32_t image_indices[MAX_SCREENS];
@@ -144,28 +166,6 @@ void video_destroy()
 
    video.frame.data = NULL;
    debug_log("video destroy\n");
-}
-
-void video_frame_init(int width, int height, screen_format_t format)
-{
-   VkFormat vkformat;
-
-   switch (format)
-   {
-   case screen_format_RGB565:
-      vkformat = VK_FORMAT_R5G6B5_UNORM_PACK16;
-      break;
-
-   case screen_format_ARGB5551:
-      vkformat = VK_FORMAT_R5G5B5A1_UNORM_PACK16;
-      break;
-
-   default:
-      vkformat = VK_FORMAT_R8G8B8A8_UNORM;
-      break;
-   }
-
-   vulkan_frame_init(&vk, width, height, vkformat);
 }
 
 const video_t video_vulkan =
