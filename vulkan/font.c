@@ -22,7 +22,6 @@ typedef struct
 
 typedef struct
 {
-   vec2 vp_size;
    vec2 tex_size;
    vec4 glyph_metrics[256];
    float advance[256];
@@ -136,7 +135,7 @@ void vulkan_font_init(vk_context_t *vk, vk_render_context_t *render_contexts, in
          .attrib_desc = attrib_desc,
          .topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
          .color_blend_attachement_state = &color_blend_attachement_state,
-         .render_contexts_count = render_contexts_count, render_contexts
+         .render_contexts_count = render_contexts_count, render_contexts,
       };
 
       font.p.texture.width = font.atlas.slot_width << 4;
@@ -158,8 +157,6 @@ void vulkan_font_init(vk_context_t *vk, vk_render_context_t *render_contexts, in
    font.p.texture.dirty = true;
 
    font_uniforms_t *uniforms = (font_uniforms_t *)font.p.ubo.mem.ptr;
-   uniforms->vp_size.width = render_contexts->screen->width;
-   uniforms->vp_size.height = render_contexts->screen->height;
    uniforms->tex_size.width = font.p.texture.width;
    uniforms->tex_size.height = font.p.texture.height;
    font.p.ubo.dirty = true;
@@ -282,7 +279,7 @@ static int vulkan_font_get_slot_id(uint32_t charcode)
    return slot_id;
 }
 
-void vulkan_font_draw_text(const char *text, int x, int y)
+void vulkan_font_draw_text(const char *text, int x, int y, int max_width)
 {
    const unsigned char *in = (const unsigned char *)text;
    font_vertex_t *last_space = NULL;
@@ -326,14 +323,13 @@ void vulkan_font_draw_text(const char *text, int x, int y)
 
       int slot_id = vulkan_font_get_slot_id(charcode);
 
-      if ((vertex.position.x + ((font_uniforms_t *)font.p.ubo.mem.ptr)->advance[slot_id]) > ((
-               font_uniforms_t *)font.p.ubo.mem.ptr)->vp_size.width)
+      if ((vertex.position.x + ((font_uniforms_t *)font.p.ubo.mem.ptr)->advance[slot_id]) > max_width)
 //      if ((vertex.position.x + font.max_advance) > video.screen.width)
       {
          vertex.position.y += font.line_height;
 
          if (last_space && (last_space + 1 < out) &&
-            (last_space + (int)(((font_uniforms_t *)font.p.ubo.mem.ptr)->vp_size.width / (2 * font.max_advance))) > out)
+            (last_space + (max_width / (2 * font.max_advance))) > out)
          {
             font_vertex_t *ptr = last_space + 1;
             int old_x = ptr->position.x;
@@ -373,10 +369,10 @@ void vulkan_font_update_assets(VkDevice device, VkCommandBuffer cmd)
 {
    char buffer[512];
    font.p.vbo.info.range = 0;
-   vulkan_font_draw_text(video.fps, 0, 0);
+   vulkan_font_draw_text(video.fps, 0, 0, video.screens[0].width);
 
    snprintf(buffer, sizeof(buffer), "[%c] %i, %i", input.pointer.touch1 ? '#' : ' ', input.pointer.x, input.pointer.y);
-   vulkan_font_draw_text(buffer, 0, 20);
+   vulkan_font_draw_text(buffer, 0, 20, video.screens[0].width);
 
 //   static int text_pos_y = 100;
 
@@ -397,18 +393,18 @@ void vulkan_font_update_assets(VkDevice device, VkCommandBuffer cmd)
 //      "characters will never be encoded as multi-byte sequences. It is therefore safe for such "
 //      "processors to simply ignore or pass-through the multi-byte sequences, without decoding them. "
 //      "For example, ASCII whitespace may be used to tokenize a UTF-8 stream into words; "
-//      "ASCII line-feeds may be used to split a UTF-8 stream into lines; and ASCII NUL ", 0, text_pos_y);
+//      "ASCII line-feeds may be used to split a UTF-8 stream into lines; and ASCII NUL ", 0, text_pos_y, video.screens[0].width);
 
 //   vulkan_font_draw_text("北海道の有名なかん光地、知床半島で、黒いキツネがさつえいされました。"
 //      "地元斜里町の町立知床博物館が、タヌキをかんさつするためにおいていた自動さつえいカメラがき重なすがたをとらえました＝"
 //      "写真・同館ていきょう。同館の学芸員も「はじめて見た」とおどろいています。"
 //      "黒い毛皮のために昔、ゆ入したキツネの子そんとも言われてますが、はっきりしません。"
 //      "北海道の先住みん族、アイヌのみん話にも黒いキツネが登場し、神せいな生き物とされているそうです。",
-//      0, text_pos_y);
+//      0, text_pos_y, video.screens[0].width);
 
-//   vulkan_font_draw_text("gl_Position.xy = pos + 2.0 * vec2(0.0, glyph_metrics[c].w) / vp_size;", 0, 32);
+//   vulkan_font_draw_text("gl_Position.xy = pos + 2.0 * vec2(0.0, glyph_metrics[c].w) / vp_size;", 0, 32, video.screens[0].width);
 
-//   vulkan_font_draw_text("ettf", 40, 220);
+//   vulkan_font_draw_text("ettf", 40, 220, video.screens[0].width);
 
    if (font.p.texture.dirty)
       texture_update(device, cmd, &font.p.texture);
@@ -423,14 +419,14 @@ void vulkan_font_update_assets(VkDevice device, VkCommandBuffer cmd)
       buffer_flush(device, &font.p.ssbo);
 }
 
-void vulkan_font_render(VkCommandBuffer cmd)
+void vulkan_font_render(VkCommandBuffer cmd, int screen_id)
 {
    if ((font.p.vbo.info.range - font.p.vbo.info.offset) == 0)
       return;
 
-   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, font.p.handle);
-   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, font.p.layout, 0, 1, &font.p.desc, 0,
-      NULL);
+   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, font.p.handles[screen_id]);
+   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, font.p.layout, 0, 1, &font.p.desc, 0, NULL);
+
    vkCmdBindVertexBuffers(cmd, 0, 1, &font.p.vbo.info.buffer, &font.p.vbo.info.offset);
    vkCmdDraw(cmd, (font.p.vbo.info.range - font.p.vbo.info.offset) / sizeof(font_vertex_t), 1, 0, 0);
 //   {

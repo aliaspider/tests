@@ -48,7 +48,7 @@ void vulkan_frame_init(vk_context_t *vk, vk_render_context_t* render_contexts, i
          .attrib_desc = attrib_desc,
          .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN,
          .color_blend_attachement_state = &color_blend_attachement_state,
-         .render_contexts_count = render_contexts_count, render_contexts
+         .render_contexts_count = render_contexts_count, render_contexts,
       };
 
       frame.texture.width = width;
@@ -77,10 +77,10 @@ void vulkan_frame_update(VkDevice device, VkCommandBuffer cmd)
    texture_update(device, cmd, &frame.texture);
 }
 
-void vulkan_frame_render(VkCommandBuffer cmd)
+void vulkan_frame_render(VkCommandBuffer cmd, int screen_id)
 {
    VkDeviceSize offset = 0;
-   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, frame.handle);
+   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, frame.handles[screen_id]);
    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, frame.layout, 0, 1, &frame.desc, 0, NULL);
 // vkCmdPushConstants(device.cmd, device.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(uniforms_t), mapped_uniforms);
 

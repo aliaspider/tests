@@ -257,6 +257,26 @@ void video_init()
    }
 
    {
+      VkPushConstantRange ranges[] =
+      {
+         {
+            .stageFlags = VK_SHADER_STAGE_ALL,
+            .offset = 0,
+            .size = 8
+         },
+      };
+
+      const VkPipelineLayoutCreateInfo info =
+      {
+         VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+         .setLayoutCount = 1, &vk.descriptor_set_layout,
+         .pushConstantRangeCount = countof(ranges), ranges
+      };
+
+      vkCreatePipelineLayout(vk.device, &info, NULL, &vk.pipeline_layout);
+   }
+
+   {
       VkFenceCreateInfo info =
       {
          VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
@@ -478,6 +498,9 @@ void video_frame_update()
       else
          vulkan_font_update_assets(vk.device, vk_render[i].cmd);
 
+      float push_constants[2] = {video.screens[i].width, video.screens[i].height};
+      vkCmdPushConstants(vk_render[i].cmd, vk.pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(push_constants), push_constants);
+
       /* renderpass */
       {
          {
@@ -497,9 +520,9 @@ void video_frame_update()
          }
 
 //         if(i == 0)
-//            vulkan_frame_render(vk_render[i].cmd);
+            vulkan_frame_render(vk_render[i].cmd, i);
 //         else
-            vulkan_font_render(vk_render[i].cmd);
+            vulkan_font_render(vk_render[i].cmd, i);
 
          vkCmdEndRenderPass(vk_render[i].cmd);
       }

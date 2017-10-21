@@ -12,7 +12,7 @@
 
 typedef struct
 {
-   VkDeviceMemory handle;
+   VkDeviceMemory handles;
    VkMemoryPropertyFlags flags;
    VkDeviceSize size;
    VkDeviceSize alignment;
@@ -168,6 +168,7 @@ typedef struct
       VkDescriptorPool desc;
    } pools;
    VkDescriptorSetLayout descriptor_set_layout;
+   VkPipelineLayout pipeline_layout;
    struct
    {
       VkSampler nearest;
@@ -197,7 +198,8 @@ typedef struct
    vk_buffer_t ubo;
    vk_buffer_t ssbo;
    VkDescriptorSet desc;
-   VkPipeline handle;
+   int count;
+   VkPipeline handles[MAX_SCREENS];
    VkPipelineLayout layout;
 }vk_pipeline_t;
 
@@ -247,7 +249,7 @@ typedef union
    };
 } vec2;
 
-typedef union
+typedef union vec4
 {
    struct
    {
@@ -274,4 +276,4 @@ typedef union
          };
       };
    };
-} vec4;
+} vec4 __attribute__((aligned((sizeof(union vec4)))));
