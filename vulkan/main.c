@@ -298,14 +298,14 @@ void video_init()
          .dpy = vk_render[i].screen->display,
          .window = vk_render[i].screen->window
       };
-      vkCreateXlibSurfaceKHR(vk.instance, &info, NULL, &vk.surface);
+      vkCreateXlibSurfaceKHR(vk.instance, &info, NULL, &vk_render[i].surface);
 #elif defined(VK_USE_PLATFORM_WIN32_KHR)
 
 #else
 #error platform not supported
 #endif
 
-      vk_get_surface_props(vk.gpu, vk.queue_family_index, vk.surface);
+      vk_get_surface_props(vk.gpu, vk.queue_family_index, vk_render[i].surface);
 
       {
          VkSwapchainCounterCreateInfoEXT swapchainCounterCreateInfo =
@@ -318,7 +318,7 @@ void video_init()
          {
             VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
             .pNext = &swapchainCounterCreateInfo,
-            .surface = vk.surface,
+            .surface = vk_render[i].surface,
             .minImageCount = 2,
             .imageFormat = VK_FORMAT_B8G8R8A8_UNORM,
             .imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
@@ -583,9 +583,10 @@ void video_destroy()
 
    vkDestroyDescriptorPool(vk.device, vk.pools.desc, NULL);
 
-   vkDestroyDescriptorSetLayout(vk.device, vk.descriptor_set_layout, NULL);
    vkDestroySampler(vk.device, vk.samplers.nearest, NULL);
    vkDestroySampler(vk.device, vk.samplers.linear, NULL);
+   vkDestroyDescriptorSetLayout(vk.device, vk.descriptor_set_layout, NULL);
+   vkDestroyPipelineLayout(vk.device, vk.pipeline_layout, NULL);
 
    for (i = 0; i < video.screen_count; i++)
    {
@@ -598,9 +599,9 @@ void video_destroy()
 
       vkDestroySwapchainKHR(vk.device, vk_render[i].swapchain, NULL);
       vkDestroyRenderPass(vk.device, vk_render[i].renderpass, NULL);
+      vkDestroySurfaceKHR(vk.instance, vk_render[i].surface, NULL);
    }
 
-   vkDestroySurfaceKHR(vk.instance, vk.surface, NULL);
    vkDestroyCommandPool(vk.device, vk.pools.cmd, NULL);
    vkDestroyDevice(vk.device, NULL);
    vkDestroyDebugReportCallbackEXT(vk.instance, vk.debug_cb, NULL);

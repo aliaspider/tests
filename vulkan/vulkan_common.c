@@ -655,7 +655,6 @@ void vk_pipeline_init(vk_context_t *vk, const vk_pipeline_init_info_t *init_info
 
 void vk_pipeline_destroy(VkDevice device, vk_pipeline_t *render)
 {
-   vkDestroyPipelineLayout(device, render->layout, NULL);
    int i;
    for(i = 0; i < render->count; i++)
       vkDestroyPipeline(device, render->handles[i], NULL);

@@ -161,7 +161,6 @@ typedef struct
    uint32_t queue_family_index;
    VkQueue queue;
    VkFence queue_fence;
-   VkSurfaceKHR surface;
    struct
    {
       VkCommandPool cmd;
@@ -178,6 +177,7 @@ typedef struct
 
 typedef struct
 {
+   VkSurfaceKHR surface;
    screen_t* screen;
    VkDisplayKHR display;
    VkSwapchainKHR swapchain;
