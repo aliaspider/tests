@@ -31,13 +31,22 @@ endif
 OBJS += vulkan/font.o
 OBJS += vulkan/frame.o
 OBJS += vulkan/main.o
+OBJS += vulkan/slider.o
 OBJS += vulkan/vulkan_common.o
 
 OBJS := $(addprefix $(BUILD_DIR)/,$(OBJS))
 
 
+
+
 $(BUILD_DIR)/vulkan/frame.o: vulkan/frame.vert.inc vulkan/frame.frag.inc
+SPIRV_OBJS += vulkan/frame.vert.inc vulkan/frame.frag.inc
+
 $(BUILD_DIR)/vulkan/font.o:  vulkan/font.vert.inc vulkan/font.frag.inc vulkan/font.geom.inc
+SPIRV_OBJS += vulkan/font.vert.inc vulkan/font.frag.inc vulkan/font.geom.inc
+
+$(BUILD_DIR)/vulkan/slider.o:  vulkan/slider.vert.inc vulkan/slider.frag.inc vulkan/slider.geom.inc
+SPIRV_OBJS += vulkan/slider.vert.inc vulkan/slider.frag.inc vulkan/slider.geom.inc
 
 ifeq ($(DEBUG),1)
    CFLAGS += -g -O0
@@ -97,7 +106,7 @@ $(BUILD_DIR)/%.o: %.c
 clean:
 #	rm -rf objs
 	rm -f $(OBJS) $(OBJS:.o=.depend)
-	rm -f $(BUILD_DIR)/$(TARGET) $(TARGET) vulkan/main.vert.inc vulkan/main.frag.inc vulkan/font.vert.inc vulkan/font.frag.inc vulkan/font.geom.inc .lastbuild
+	rm -f $(BUILD_DIR)/$(TARGET) $(TARGET) $(SPIRV_OBJS) .lastbuild
 
 
 -include $(OBJS:.o=.depend)

@@ -4,11 +4,10 @@
 #include <stdarg.h>
 #include <string.h>
 
-#define CON_BUFFER_SIZE    (1 << 12)
+#define CON_BUFFER_SIZE    (1 << 13)
 #define CON_BUFFER_MASK    (CON_BUFFER_SIZE - 1)
 
 static char con_buffer[CON_BUFFER_SIZE];
-static const char* con_r = con_buffer;
 static char* con_w = con_buffer;
 
 void console_log(const char* fmt, ...)
@@ -19,25 +18,20 @@ void console_log(const char* fmt, ...)
    int len = vasprintf(&str, fmt, va);
    va_end(va);
 
-   int available = (CON_BUFFER_SIZE - (con_w - con_buffer));
-   if(len > CON_BUFFER_SIZE)
-      len = CON_BUFFER_SIZE - 1;
+   int available = (CON_BUFFER_SIZE - 1 - (con_w - con_buffer));
+   if(len > (CON_BUFFER_SIZE >> 1))
+      len = (CON_BUFFER_SIZE >> 1) - 1;
 
-   if(len < available)
+   if(available < len)
    {
-      memcpy(con_w, str, len);
-      if(con_r > con_w && con_r < con_w + len)
-         con_r = con_w + len + 1;
-      con_w += len;
+      const char* src = con_buffer + (CON_BUFFER_SIZE >> 1);
+      while(*src && *src != '\n')
+         src++;
+      memcpy(con_buffer, src, (con_w - con_buffer) - (src - con_buffer) + 1);
+      con_w -= (src - con_buffer) - 1;
    }
-   else
-   {
-      memcpy(con_w, str, available);
-      memcpy(con_buffer, str + available, len - available);
-      con_w = con_buffer + len - available;
-      if(con_r < con_w)
-         con_r = con_w + 1;
-   }
+   memcpy(con_w, str, len);
+   con_w += len;
    *con_w = '\0';
 
    printf(str);
@@ -46,5 +40,11 @@ void console_log(const char* fmt, ...)
 
 const char* console_get(void)
 {
-   return con_r;
+   return con_buffer;
 }
+
+int console_get_len(void)
+{
+   return (con_w - con_buffer) < (CON_BUFFER_SIZE >> 1) ? (con_w - con_buffer) : (CON_BUFFER_SIZE >> 1);
+}
+

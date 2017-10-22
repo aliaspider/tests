@@ -7,6 +7,7 @@
 #include "vulkan_common.h"
 #include "frame.h"
 #include "font.h"
+#include "slider.h"
 
 static vk_context_t vk;
 static vk_render_target_t render_targets[MAX_SCREENS];
@@ -20,6 +21,7 @@ void video_init()
    vk_render_targets_init(&vk, video.screen_count, video.screens, render_targets);
 
    vulkan_font_init(&vk);
+   vulkan_slider_init(&vk);
 }
 
 void video_frame_init(int width, int height, screen_format_t format)
@@ -50,8 +52,13 @@ void video_frame_update()
    VkCommandBuffer cmds[MAX_SCREENS];
    VkSwapchainKHR swapchains[MAX_SCREENS];
 
+
    vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, UINT64_MAX);
    vkResetFences(vk.device, 1, &vk.queue_fence);
+
+//   vulkan_slider_add(400,100, 40, 300, 0.3);
+//   vulkan_slider_add(video.screens[1].width - 20, 0, 20, video.screens[1].height, 0.1, 0.2);
+//   vulkan_slider_add(video.screens[1].width - 240, 0, 10, 200, 0.3);
 
    int i;
 
@@ -78,6 +85,7 @@ void video_frame_update()
       if (i == 0)
       {
          vulkan_frame_update(vk.device, render_targets[i].cmd);
+         vulkan_slider_update(vk.device, render_targets[i].cmd);
          vulkan_font_update_assets(vk.device, render_targets[i].cmd);
       }
 
@@ -111,7 +119,10 @@ void video_frame_update()
          if(i == 0)
             vulkan_frame_render(render_targets[i].cmd);
          if(i == 1)
+         {
             vulkan_font_render(render_targets[i].cmd);
+            vulkan_slider_render(render_targets[i].cmd);
+         }
 
 
          vkCmdEndRenderPass(render_targets[i].cmd);
@@ -160,6 +171,7 @@ void video_destroy()
       vkWaitForFences(vk.device, 1, &render_targets[i].chain_fence, VK_TRUE, UINT64_MAX);
 
    vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, UINT64_MAX);
+   vulkan_slider_destroy(vk.device);
    vulkan_font_destroy(vk.device);
    vulkan_frame_destroy(vk.device);
    vk_render_targets_destroy(&vk, video.screen_count, render_targets);

@@ -129,6 +129,7 @@ typedef struct
 
 void vk_buffer_init(VkDevice device, const VkMemoryType *memory_types, const void *data, vk_buffer_t *dst);
 void buffer_flush(VkDevice device, vk_buffer_t *buffer);
+void buffer_invalidate(VkDevice device, vk_buffer_t *buffer);
 void buffer_free(VkDevice device, vk_buffer_t *buffer);
 
 typedef struct
@@ -214,3 +215,5 @@ typedef union vec4
       };
    };
 } vec4 __attribute__((aligned((sizeof(union vec4)))));
+
+#define DEBUG_VEC4(v) do{debug_log("%-40s : (%f,%f,%f,%f)\n", #v, v.x, v.y, v.z, v.w); fflush(stdout);}while(0)

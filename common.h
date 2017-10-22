@@ -15,3 +15,4 @@
 #define DEBUG_FTSHORT(x) do{debug_log("%-40s : %6hi  (%4hi)\n", #x, x >> 6, x); fflush(stdout);}while(0)
 
 const char* console_get(void);
+int console_get_len(void);

@@ -215,6 +215,7 @@ static void vk_get_gpu_props(VkPhysicalDevice gpu)
 #endif
 
 
+   fflush(stdout);
 }
 
 static void vk_get_surface_props(VkPhysicalDevice gpu, uint32_t queue_family_index, VkSurfaceKHR surface)
@@ -243,6 +244,8 @@ static void vk_get_surface_props(VkPhysicalDevice gpu, uint32_t queue_family_ind
 
       for (i = 0; i < presentModeCount; i++)
          debug_log("supports present mode %i\n", presentModes[i]);
+
+      fflush(stdout);
    }
 }
 
@@ -438,15 +441,15 @@ void vk_context_init(vk_context_t *vk)
    {
       const VkDescriptorPoolSize sizes[] =
       {
-         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2},
-         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4},
-         {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2}
+         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 32},
+         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 32},
+         {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 32}
       };
 
       const VkDescriptorPoolCreateInfo info =
       {
          VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-         .maxSets = 2,
+         .maxSets = 32,
          .poolSizeCount = countof(sizes), sizes
       };
       vkCreateDescriptorPool(vk->device, &info, NULL, &vk->pools.desc);
@@ -630,7 +633,7 @@ void vk_render_targets_init(vk_context_t *vk, int count, screen_t *screens, vk_r
             .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
             .preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
             .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-//         .presentMode = VK_PRESENT_MODE_FIFO_KHR,
+         .presentMode = VK_PRESENT_MODE_FIFO_KHR,
 //         .presentMode = VK_PRESENT_MODE_FIFO_RELAXED_KHR,
 //         .presentMode = VK_PRESENT_MODE_MAILBOX_KHR,
 //         .presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR,
@@ -998,6 +1001,23 @@ void device_memory_flush(VkDevice device, const device_memory_t *memory)
    }
 }
 
+void device_memory_invalidate(VkDevice device, const device_memory_t *memory)
+{
+   if (memory->flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+      return;
+
+   {
+      VkMappedMemoryRange range =
+      {
+         VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+         .memory = memory->handle,
+         .offset = 0,
+         .size = memory->size
+      };
+      vkInvalidateMappedMemoryRanges(device, 1, &range);
+   }
+}
+
 void vk_buffer_init(VkDevice device, const VkMemoryType *memory_types, const void *data, vk_buffer_t *dst)
 {
    {
@@ -1036,6 +1056,12 @@ void buffer_free(VkDevice device, vk_buffer_t *buffer)
 void buffer_flush(VkDevice device, vk_buffer_t *buffer)
 {
    device_memory_flush(device, &buffer->mem);
+   buffer->dirty = false;
+}
+
+void buffer_invalidate(VkDevice device, vk_buffer_t *buffer)
+{
+   device_memory_invalidate(device, &buffer->mem);
    buffer->dirty = false;
 }
 
