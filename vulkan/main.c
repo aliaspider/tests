@@ -108,10 +108,11 @@ void video_frame_update()
          vkCmdSetViewport(render_targets[i].cmd, 0, 1, &render_targets[i].viewport);
          vkCmdSetScissor(render_targets[i].cmd, 0, 1, &render_targets[i].scissor);
 
-//         if(i == 0)
-         vulkan_frame_render(render_targets[i].cmd);
-//         else
-         vulkan_font_render(render_targets[i].cmd);
+         if(i == 0)
+            vulkan_frame_render(render_targets[i].cmd);
+         if(i == 1)
+            vulkan_font_render(render_targets[i].cmd);
+
 
          vkCmdEndRenderPass(render_targets[i].cmd);
       }
@@ -146,7 +147,7 @@ void video_frame_update()
       uint64_t vblank_counter = 0;
       VK_CHECK(vkGetSwapchainCounterEXT(vk.device, chain.handle, VK_SURFACE_COUNTER_VBLANK_EXT,
             &vblank_counter));
-      printf("vblank_counter : %" PRId64 "\n", vblank_counter);
+      debug_log("vblank_counter : %" PRId64 "\n", vblank_counter);
    }
 #endif
 }

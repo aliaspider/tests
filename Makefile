@@ -18,6 +18,7 @@ all: $(TARGET)
 OBJS :=
 
 OBJS += main.o
+OBJS += console.o
 ifeq ($(platform),linux)
    OBJS += linux/platform.o
    OBJS += linux/audio_alsa.o

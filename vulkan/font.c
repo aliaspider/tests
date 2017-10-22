@@ -301,6 +301,11 @@ void vulkan_font_draw_text(const char *text, int x, int y, int max_width)
          vertex.position.y += font.line_height;
          continue;
       }
+      if (charcode == '\t')
+      {
+         vertex.position.x += 4 * font.max_advance;
+         continue;
+      }
 
       if (charcode == ' ')
          last_space = out;
@@ -373,6 +378,7 @@ void vulkan_font_update_assets(VkDevice device, VkCommandBuffer cmd)
             input.pointer.touch2 ? '#' : ' ', input.pointer.touch3 ? '#' : ' ', input.pointer.x, input.pointer.y);
    vulkan_font_draw_text(buffer, 0, 20, video.screens[0].width);
 
+   vulkan_font_draw_text(console_get(), 0, 100, video.screens[0].width);
 //   static int text_pos_y = 100;
 
 //   vulkan_font_draw_text("Backward compatibility: Backwards compatibility with ASCII and the enormous "
@@ -439,5 +445,5 @@ void vulkan_font_render(VkCommandBuffer cmd)
 //      extern vk_context_t vk;
 //      vkInvalidateMappedMemoryRanges(vk.device, 1, &range);
 //   }
-//   printf("(float*)atlas_ssbo.mem.ptr : %i\n", *(int*)atlas_ssbo.mem.ptr);
+//   debug_log("(float*)atlas_ssbo.mem.ptr : %i\n", *(int*)atlas_ssbo.mem.ptr);
 }

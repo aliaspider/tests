@@ -97,7 +97,7 @@ int main(int argc, char **argv)
       {
 
 //         snprintf(video.fps, sizeof(video.fps), "fps: %f", frames / diff);
-////         printf("\r%s", video.fps);
+////         debug_log("\r%s", video.fps);
          frames = 0;
          start_time = end_time;
 //         fflush(stdout);
@@ -106,7 +106,7 @@ int main(int argc, char **argv)
 
    }
 
-   printf("\n");
+   debug_log("\n");
 
    module_destroy();
    input.destroy();

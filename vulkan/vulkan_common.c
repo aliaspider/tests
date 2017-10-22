@@ -145,12 +145,12 @@ static void vk_get_instance_props(void)
       vkEnumerateInstanceExtensionProperties(lprops[l].layerName, &iexprop_count, NULL);
       VkExtensionProperties iexprops[iexprop_count];
       vkEnumerateInstanceExtensionProperties(lprops[l].layerName, &iexprop_count, iexprops);
-      printf("%s (%i)\n", lprops[l].layerName, iexprop_count);
+      debug_log("%s (%i)\n", lprops[l].layerName, iexprop_count);
 
       int e;
 
       for (e = 0; e < iexprop_count; e++)
-         printf("\t%s\n", iexprops[e].extensionName);
+         debug_log("\t%s\n", iexprops[e].extensionName);
    }
 
    fflush(stdout);
@@ -171,7 +171,7 @@ static void vk_get_gpu_props(VkPhysicalDevice gpu)
    int e;
 
    for (e = 0; e < deviceExtensionPropertiesCount; e++)
-      printf("\t%s\n", pDeviceExtensionProperties[e].extensionName);
+      debug_log("\t%s\n", pDeviceExtensionProperties[e].extensionName);
 
 #if 0
    {
@@ -183,7 +183,7 @@ static void vk_get_gpu_props(VkPhysicalDevice gpu)
       int i;
 
       for (i = 0; i < displayProperties_count; i++)
-         printf("0x%08" PRIXPTR " : %s\n", (uintptr_t)displayProperties[i].display,
+         debug_log("0x%08" PRIXPTR " : %s\n", (uintptr_t)displayProperties[i].display,
             displayProperties[i].displayName);
 
    }
@@ -192,7 +192,7 @@ static void vk_get_gpu_props(VkPhysicalDevice gpu)
    vkGetPhysicalDeviceDisplayPlanePropertiesKHR(vk->gpu, &displayProperties_count, displayPlaneProperties);
 
    for (i = 0; i < displayProperties_count; i++)
-      printf("0x%08" PRIXPTR " : %i\n", (uintptr_t)displayPlaneProperties[i].currentDisplay,
+      debug_log("0x%08" PRIXPTR " : %i\n", (uintptr_t)displayPlaneProperties[i].currentDisplay,
          displayPlaneProperties[i].currentStackIndex);
 
 //   uint32_t displayCount = 4;
@@ -209,9 +209,9 @@ static void vk_get_gpu_props(VkPhysicalDevice gpu)
    VK_CHECK(vkGetDisplayModePropertiesKHR(vk->gpu, dst->display, &displayModeCount, NULL));
    VkDisplayModePropertiesKHR displayModeProperties[displayModeCount];
    VK_CHECK(vkGetDisplayModePropertiesKHR(vk->gpu, dst->display, &displayModeCount, displayModeProperties));
-   printf("displayModeProperties.parameters.refreshRate : %u\n", displayModeProperties[0].parameters.refreshRate);
-   printf("displayModeProperties.visibleRegion.width : %u\n", displayModeProperties[0].parameters.visibleRegion.width);
-   printf("displayModeProperties.visibleRegion.height : %u\n", displayModeProperties[0].parameters.visibleRegion.height);
+   debug_log("displayModeProperties.parameters.refreshRate : %u\n", displayModeProperties[0].parameters.refreshRate);
+   debug_log("displayModeProperties.visibleRegion.width : %u\n", displayModeProperties[0].parameters.visibleRegion.width);
+   debug_log("displayModeProperties.visibleRegion.height : %u\n", displayModeProperties[0].parameters.visibleRegion.height);
 #endif
 
 
@@ -225,7 +225,7 @@ static void vk_get_surface_props(VkPhysicalDevice gpu, uint32_t queue_family_ind
 #if 0
       VkSurfaceCapabilities2EXT surfaceCapabilities2 = {VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_EXT};
       vkGetPhysicalDeviceSurfaceCapabilities2EXT(gpu, surface, &surfaceCapabilities2);
-      printf("surfaceCapabilities2.supportedSurfaceCounters : %i\n", surfaceCapabilities2.supportedSurfaceCounters);
+      debug_log("surfaceCapabilities2.supportedSurfaceCounters : %i\n", surfaceCapabilities2.supportedSurfaceCounters);
 #endif
       VkBool32 physicalDeviceSurfaceSupport;
       vkGetPhysicalDeviceSurfaceSupportKHR(gpu, queue_family_index, surface, &physicalDeviceSurfaceSupport);
@@ -242,7 +242,7 @@ static void vk_get_surface_props(VkPhysicalDevice gpu, uint32_t queue_family_ind
       int i;
 
       for (i = 0; i < presentModeCount; i++)
-         printf("supports present mode %i\n", presentModes[i]);
+         debug_log("supports present mode %i\n", presentModes[i]);
    }
 }
 
@@ -278,7 +278,7 @@ static VkBool32 vulkan_debug_report_callback(VkDebugReportFlagsEXT flags,
       if (flags & (1 << i))
          break;
 
-   printf("[%-14s - %-11s] %s\n", pLayerPrefix, debugFlags_str[i], pMessage);
+   debug_log("[%-14s - %-11s] %s\n", pLayerPrefix, debugFlags_str[i], pMessage);
 
 #ifdef HAVE_X11
    XAutoRepeatOn(video.screens[0].display);

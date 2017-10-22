@@ -3,13 +3,16 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
-#define debug_log printf
+void console_log(const char* fmt, ...);
+#define printf       console_log
+#define debug_log    console_log
 
 typedef struct
 {

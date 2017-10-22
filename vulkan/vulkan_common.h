@@ -10,7 +10,7 @@
 #define MAX_SWAPCHAIN_IMAGES 8
 #define countof(a) (sizeof(a)/ sizeof(*a))
 
-#define VK_CHECK(vk_call) do{VkResult res = vk_call; if (res != VK_SUCCESS) {printf("%s:%i:%s:%s --> %s(%i)\n", __FILE__, __LINE__, __FUNCTION__, #vk_call, VkResult_to_str(res), res);fflush(stdout);}}while(0)
+#define VK_CHECK(vk_call) do{VkResult res = vk_call; if (res != VK_SUCCESS) {debug_log("%s:%i:%s:%s --> %s(%i)\n", __FILE__, __LINE__, __FUNCTION__, #vk_call, VkResult_to_str(res), res);fflush(stdout);}}while(0)
 const char *VkResult_to_str(VkResult res);
 
 typedef struct
