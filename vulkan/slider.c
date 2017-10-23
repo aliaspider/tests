@@ -124,12 +124,23 @@ void vulkan_slider_update(VkDevice device, VkCommandBuffer cmd)
    if(input.pointer.touch1 && !old_pointer.touch1)
    {
       if ((input.pointer.x > video.screens[1].width - 20)
-          && (input.pointer.x < video.screens[1].width)
-          && (input.pointer.y > video.screens[1].height * (pos * (1.0 - size)))
-          && (input.pointer.y < video.screens[1].height * (pos * (1.0 - size) + size)))
+          && (input.pointer.x < video.screens[1].width))
       {
+         if(!grab)
+         {
+            if (input.pointer.y < video.screens[1].height * (pos * (1.0 - size)))
+            {
+               pos = input.pointer.y / ((float)video.screens[1].height * (1.0 - size)) - (size / 2) / (1.0 - size);
+               pos = pos > 0.0 ? pos < 1.0 ? pos : 1.0 : 0.0;
+            }
+            else if (input.pointer.y > video.screens[1].height * (pos * (1.0 - size) + size))
+            {
+               pos = input.pointer.y / ((float)video.screens[1].height * (1.0 - size)) - (size / 2) / (1.0 - size);
+               pos = pos > 0.0 ? pos < 1.0 ? pos : 1.0 : 0.0;
+            }
+         }
          grab = true;
-      }
+      }      
    }
    else if(!input.pointer.touch1)
    {
