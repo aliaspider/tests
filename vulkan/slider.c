@@ -110,7 +110,7 @@ void vulkan_slider_update(VkDevice device, VkCommandBuffer cmd)
       printf("click %f\n", pos);
 
 //   int console_len = console_get_len();
-   const char** lines = vulkan_font_get_lines(console_get(), 0, 100, video.screens[0].width);
+   const char** lines = vulkan_font_get_lines(console_get(), 0, 100, video.screens[0].width - 20);
    int line_count = 0;
    while(lines[line_count])
       line_count++;
@@ -156,8 +156,8 @@ void vulkan_slider_update(VkDevice device, VkCommandBuffer cmd)
    snprintf(buffer, sizeof(buffer), "[%c]", grab ? '#' : ' ');
    vulkan_font_draw_text(buffer, 0, 40, video.screens[0].width);
 
-   vulkan_font_draw_text(lines[(int)(line_count * real_pos)], 0, 100, video.screens[0].width);
-//   vulkan_font_draw_text(lines[(int)(line_count * real_pos)], 0, 100 - ((line_count * real_pos) - (int)(line_count * real_pos)) * 20 , video.screens[0].width);
+   vulkan_font_draw_text(lines[(int)(line_count * real_pos)], 0, 100, video.screens[0].width - 20);
+//   vulkan_font_draw_text(lines[(int)(line_count * real_pos)], 0, 100 - ((line_count * real_pos) - (int)(line_count * real_pos)) * 20 , video.screens[0].width - 20);
 
    free(lines);
    vertex_t* out = (vertex_t*)(slider.vbo.mem.u8);

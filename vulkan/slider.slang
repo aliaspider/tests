@@ -85,7 +85,8 @@ layout(set = 0, binding = 1, location = 0) uniform highp sampler2D uTex;
 
 void main()
 {
-   if(fract((vTexCoord.y - fract(vTexCoord.y)) / 2.0) == 0.5)
+//   if(fract((vTexCoord.y - fract(vTexCoord.y)) / 2.0) == 0.5)
+   if(fract((vTexCoord.y) / 2.0) >= 0.5)
       FragColor = vec4(0.0, 0.50, 1.0, 1.0);
    else
       FragColor = vec4(0.0, 0.0, 0.0, 1.0);
