@@ -1,5 +1,6 @@
 
 #include <string.h>
+#include <math.h>
 
 #include "vulkan_common.h"
 #include "common.h"
@@ -100,14 +101,12 @@ void vulkan_slider_add(int x, int y, int w, int h, float pos, float size)
 void vulkan_slider_update(VkDevice device, VkCommandBuffer cmd)
 {
    static float pos = 1.0;
-   static float real_pos = 1.0;
-
    static bool grab = false;
    static pointer_t old_pointer;
 //   static int count = 0;
 //   printf("more %i\n", count++);
    if(input.pointer.x < video.screens[1].width - 20&& !input.pointer.touch1 && old_pointer.touch1)
-      printf("click %f\n", pos);
+      printf("click\n");
 
 //   int console_len = console_get_len();
    const char** lines = vulkan_font_get_lines(console_get(), 0, 100, video.screens[0].width - 20);
@@ -116,24 +115,18 @@ void vulkan_slider_update(VkDevice device, VkCommandBuffer cmd)
       line_count++;
 
    int visible_lines = 33;
-   static float old_size = 1.0;
    float size;
    if(visible_lines < line_count)
       size = (float)visible_lines / line_count;
    else
       size = 1.0;
 
-   pos = pos *(1.0 - size) / (1.0 - old_size);
-   real_pos = real_pos *(1.0 - size) / (1.0 - old_size);
-
-
-   old_size = size;
    if(input.pointer.touch1 && !old_pointer.touch1)
    {
       if ((input.pointer.x > video.screens[1].width - 20)
           && (input.pointer.x < video.screens[1].width)
-          && (input.pointer.y > video.screens[1].height * real_pos)
-          && (input.pointer.y < video.screens[1].height * (real_pos + size)))
+          && (input.pointer.y > video.screens[1].height * (pos * (1.0 - size)))
+          && (input.pointer.y < video.screens[1].height * (pos * (1.0 - size) + size)))
       {
          grab = true;
       }
@@ -141,14 +134,14 @@ void vulkan_slider_update(VkDevice device, VkCommandBuffer cmd)
    else if(!input.pointer.touch1)
    {
       grab = false;
-      pos = real_pos;
+      pos = pos > 0.0 ? pos < 1.0 ? pos : 1.0 : 0.0;
    }
 
    if(grab)
    {
-      pos += (input.pointer.y - old_pointer.y) / (float)video.screens[1].height;
+      pos += (input.pointer.y - old_pointer.y) / ((float)video.screens[1].height * (1.0 - size));
    }
-   real_pos = pos > 0.0 ? pos < (1.0 - size) ? pos : 1.0 - size : 0.0;
+   float real_pos = pos > 0.0 ? pos < 1.0 ? pos * (1.0 - size) : 1.0 - size : 0.0;
 
    old_pointer = input.pointer;
 
@@ -156,8 +149,7 @@ void vulkan_slider_update(VkDevice device, VkCommandBuffer cmd)
    snprintf(buffer, sizeof(buffer), "[%c]", grab ? '#' : ' ');
    vulkan_font_draw_text(buffer, 0, 40, video.screens[0].width);
 
-   vulkan_font_draw_text(lines[(int)(line_count * real_pos)], 0, 100, video.screens[0].width - 20);
-//   vulkan_font_draw_text(lines[(int)(line_count * real_pos)], 0, 100 - ((line_count * real_pos) - (int)(line_count * real_pos)) * 20 , video.screens[0].width - 20);
+   vulkan_font_draw_text(lines[(int)(0.5 + line_count * real_pos)], 0, 100, video.screens[0].width - 20);
 
    free(lines);
    vertex_t* out = (vertex_t*)(slider.vbo.mem.u8);
