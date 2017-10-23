@@ -106,6 +106,8 @@ void vulkan_slider_update(VkDevice device, VkCommandBuffer cmd)
    static pointer_t old_pointer;
 //   static int count = 0;
 //   printf("more %i\n", count++);
+   if(input.pointer.x < video.screens[1].width - 20&& !input.pointer.touch1 && old_pointer.touch1)
+      printf("click %f\n", pos);
 
 //   int console_len = console_get_len();
    const char** lines = vulkan_font_get_lines(console_get(), 0, 100, video.screens[0].width);
@@ -114,9 +116,18 @@ void vulkan_slider_update(VkDevice device, VkCommandBuffer cmd)
       line_count++;
 
    int visible_lines = 33;
-   float size = 1.0;
+   static float old_size = 1.0;
+   float size;
    if(visible_lines < line_count)
       size = (float)visible_lines / line_count;
+   else
+      size = 1.0;
+
+   pos = pos *(1.0 - size) / (1.0 - old_size);
+   real_pos = real_pos *(1.0 - size) / (1.0 - old_size);
+
+
+   old_size = size;
    if(input.pointer.touch1 && !old_pointer.touch1)
    {
       if ((input.pointer.x > video.screens[1].width - 20)
@@ -138,6 +149,7 @@ void vulkan_slider_update(VkDevice device, VkCommandBuffer cmd)
       pos += (input.pointer.y - old_pointer.y) / (float)video.screens[1].height;
    }
    real_pos = pos > 0.0 ? pos < (1.0 - size) ? pos : 1.0 - size : 0.0;
+
    old_pointer = input.pointer;
 
    char buffer[512];
@@ -145,6 +157,7 @@ void vulkan_slider_update(VkDevice device, VkCommandBuffer cmd)
    vulkan_font_draw_text(buffer, 0, 40, video.screens[0].width);
 
    vulkan_font_draw_text(lines[(int)(line_count * real_pos)], 0, 100, video.screens[0].width);
+//   vulkan_font_draw_text(lines[(int)(line_count * real_pos)], 0, 100 - ((line_count * real_pos) - (int)(line_count * real_pos)) * 20 , video.screens[0].width);
 
    free(lines);
    vertex_t* out = (vertex_t*)(slider.vbo.mem.u8);
