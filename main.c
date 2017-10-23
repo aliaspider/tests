@@ -115,6 +115,7 @@ int main(int argc, char **argv)
    platform_destroy();
 
    debug_log("main exit\n");
+
    return 0;
 }
 
