@@ -278,31 +278,48 @@ static int vulkan_font_get_slot_id(uint32_t charcode)
    return slot_id;
 }
 
-const char** vulkan_font_get_lines(const char *text, int x, int y, int max_width)
+void vulkan_font_draw_text(const char *text, const font_render_options_t *options)
 {
    const unsigned char *in = (const unsigned char *)text;
    const unsigned char *last_space = NULL;
-   int old_x = 0;
-   const char** lines = malloc(4096 * sizeof(char*));
-   const char** line = lines;
-   *(line++) = text;
+   int last_space_vertex = 0;
+   int last_space_x = 0;
+   int pos = 0;
+
+   if (options->lines)
+      string_list_push(options->lines, text);
+
+   font_vertex_t *out = NULL;
+
+   if (!options->dry_run)
+      out = (font_vertex_t *)(font.p.vbo.mem.u8 + font.p.vbo.info.range);
 
    font_vertex_t vertex;
-   vertex.position.x = x;
-   vertex.position.y = y + font.ascender;
+   vertex.color = *(typeof(vertex.color)*)&options->color;
+   vertex.position.x = options->x;
+   vertex.position.y = options->y + font.ascender;
 
-   while (*in)
+   while (*in && (!out || ((uint8_t *)out - font.p.vbo.mem.u8 < font.p.vbo.mem.size - sizeof(*out))))
    {
+      if (vertex.position.y > options->max_height)
+         out = NULL;
+
+      if (!options->lines && !out)
+         break;
+
       uint32_t charcode = *(in++);
 
       if (charcode == '\n')
       {
          vertex.position.x = 0;
          vertex.position.y += font.line_height;
-         if(*in)
-            *(line++) = (const char*)in;
+
+         if (*in && options->lines)
+            string_list_push(options->lines, (const char *)in);
+
          continue;
       }
+
       if (charcode == '\t')
       {
          vertex.position.x += 4 * font.max_advance;
@@ -312,7 +329,8 @@ const char** vulkan_font_get_lines(const char *text, int x, int y, int max_width
       if (charcode == ' ')
       {
          last_space = in;
-         old_x = vertex.position.x;
+         last_space_vertex = pos;
+         last_space_x = vertex.position.x;
       }
 
       if ((charcode & 0xC0) == 0xC0)
@@ -331,139 +349,67 @@ const char** vulkan_font_get_lines(const char *text, int x, int y, int max_width
 
       int slot_id = vulkan_font_get_slot_id(charcode);
 
-      if ((vertex.position.x + ((font_uniforms_t *)font.p.ubo.mem.ptr)->advance[slot_id]) > max_width)
+      if ((vertex.position.x + ((font_uniforms_t *)font.p.ubo.mem.ptr)->advance[slot_id]) > options->max_width)
 //      if ((vertex.position.x + font.max_advance) > video.screen.width)
       {
          vertex.position.y += font.line_height;
 
          if (last_space && (last_space + 1 < in) &&
-            (last_space + (max_width / (2 * font.max_advance))) > in)
+            (last_space + (options->max_width / (2 * font.max_advance))) > in)
          {
-            vertex.position.x -= old_x;
-            *(line++) = (const char*)last_space;
+            vertex.position.x -= last_space_x;
+            if (options->lines)
+               string_list_push(options->lines, (const char *)last_space);
+
+            if(out)
+            {
+               font_vertex_t *ptr = out + last_space_vertex + 1;
+               while (ptr < out + pos)
+               {
+                  ptr->position.x -= last_space_x;
+                  ptr->position.y = vertex.position.y;
+                  ptr++;
+               }
+            }
             last_space = NULL;
          }
          else
          {
-            *(line++) = (const char*)in;
+            if (*in && options->lines)
+               string_list_push(options->lines, (const char *)in);
+
             vertex.position.x = 0;
 
             if (last_space == in)
                continue;
          }
       }
-
+      if(out)
+      {
+         out[pos] = vertex;
+         out[pos++].slot_id = slot_id;
+      }
       vertex.position.x += ((font_uniforms_t *)font.p.ubo.mem.ptr)->advance[slot_id];
    }
 
-   *line = NULL;
-   return lines;
-}
-
-void vulkan_font_draw_text(const char *text, int x, int y, int max_width)
-{
-   const unsigned char *in = (const unsigned char *)text;
-   font_vertex_t *last_space = NULL;
-
-   font_vertex_t *out = (font_vertex_t *)(font.p.vbo.mem.u8 + font.p.vbo.info.range);
-   font_vertex_t vertex;
-   vertex.color.r = 0;
-   vertex.color.g = 0;
-   vertex.color.b = 0;
-   vertex.position.x = x;
-   vertex.position.y = y + font.ascender;
-
-   while (*in && (out - (font_vertex_t*)font.p.vbo.mem.ptr < 4096))
-   {
-      if(vertex.position.y > video.screens[1].height)
-      {
-//         DEBUG_INT(in - (const unsigned char *)text);
-         break;
-      }
-
-      uint32_t charcode = *(in++);
-
-      if (charcode == '\n')
-      {
-         vertex.position.x = 0;
-         vertex.position.y += font.line_height;
-         continue;
-      }
-      if (charcode == '\t')
-      {
-         vertex.position.x += 4 * font.max_advance;
-         continue;
-      }
-
-      if (charcode == ' ')
-         last_space = out;
-
-      if ((charcode & 0xC0) == 0xC0)
-      {
-         int marker = charcode & 0xE0;
-         charcode = ((charcode & ~0xE0) << 6) | (*(in++) & ~0xC0);
-
-         if (marker == 0xE0)
-         {
-            charcode = (charcode << 6) | (*(in++) & ~0xC0);
-
-            if (charcode & 0x10000)
-               charcode = (charcode & 0xFFFF << 6) | (*(in++) & ~0xC0);
-         }
-      }
-
-      int slot_id = vulkan_font_get_slot_id(charcode);
-
-      if ((vertex.position.x + ((font_uniforms_t *)font.p.ubo.mem.ptr)->advance[slot_id]) > max_width)
-//      if ((vertex.position.x + font.max_advance) > video.screen.width)
-      {
-         vertex.position.y += font.line_height;
-
-         if (last_space && (last_space + 1 < out) &&
-            (last_space + (max_width / (2 * font.max_advance))) > out)
-         {
-            font_vertex_t *ptr = last_space + 1;
-            int old_x = ptr->position.x;
-
-            vertex.position.x -= old_x;
-
-            while (ptr < out)
-            {
-               ptr->position.x -= old_x;
-               ptr->position.y = vertex.position.y;
-               ptr++;
-            }
-
-            last_space = NULL;
-         }
-         else
-         {
-            vertex.position.x = 0;
-
-            if (last_space == out)
-               continue;
-         }
-      }
-
-      *out = vertex;
-      vertex.position.x += ((font_uniforms_t *)font.p.ubo.mem.ptr)->advance[slot_id];
-
-      (out++)->slot_id = slot_id;
-   }
-
-   font.p.vbo.info.range = (uint8_t *)out - font.p.vbo.mem.u8;
-
-
+   font.p.vbo.info.range += pos * sizeof(font_vertex_t);
 }
 
 void vulkan_font_update_assets(VkDevice device, VkCommandBuffer cmd)
 {
+   font_render_options_t options =
+   {
+      .max_width = video.screens[0].width,
+      .max_height = video.screens[0].height,
+   };
+
    char buffer[512];
-   vulkan_font_draw_text(video.fps, 0, 0, video.screens[0].width);
+   vulkan_font_draw_text(video.fps, &options);
 
    snprintf(buffer, sizeof(buffer), "[%c,%c,%c] %i, %i", input.pointer.touch1 ? '#' : ' ',
-            input.pointer.touch2 ? '#' : ' ', input.pointer.touch3 ? '#' : ' ', input.pointer.x, input.pointer.y);
-   vulkan_font_draw_text(buffer, 0, 20, video.screens[0].width);
+      input.pointer.touch2 ? '#' : ' ', input.pointer.touch3 ? '#' : ' ', input.pointer.x, input.pointer.y);
+   options.y = 20;
+   vulkan_font_draw_text(buffer, &options);
 
 //   vulkan_font_draw_text(console_get(), 0, 100, video.screens[0].width);
 //   static int text_pos_y = 100;
