@@ -29,6 +29,19 @@ void video_init()
    vulkan_font_init(&vk);
    vulkan_slider_init(&vk);
 
+   render_element_t* el;
+
+   el = render_targets[0].render_elements;
+   el->update = (void*)vulkan_frame_update;
+   el->render = (void*)vulkan_frame_render;
+
+   el = render_targets[1].render_elements;
+   el->update = (void*)vulkan_font_update_assets;
+   el->render = (void*)vulkan_font_render;
+   el++;
+   el->update = (void*)vulkan_slider_update;
+   el->render = (void*)vulkan_slider_render;
+
 }
 
 void video_frame_init(int width, int height, screen_format_t format)
@@ -89,11 +102,13 @@ void video_frame_update()
          vkBeginCommandBuffer(render_targets[i].cmd, &info);
       }
 
-      if (i == 0)
       {
-         vulkan_frame_update(vk.device, render_targets[i].cmd);
-         vulkan_slider_update(vk.device, render_targets[i].cmd);
-         vulkan_font_update_assets(vk.device, render_targets[i].cmd);
+         render_element_t* el = render_targets[i].render_elements;
+         while (el->update)
+         {
+            el->update(vk.device, render_targets[i].cmd, el->data);
+            el++;
+         }
       }
 
       /* renderpass */
@@ -123,14 +138,15 @@ void video_frame_update()
          vkCmdSetViewport(render_targets[i].cmd, 0, 1, &render_targets[i].viewport);
          vkCmdSetScissor(render_targets[i].cmd, 0, 1, &render_targets[i].scissor);
 
-         if(i == 0)
-            vulkan_frame_render(render_targets[i].cmd);
-         if(i == 1)
          {
-            vulkan_font_render(render_targets[i].cmd);
-            vulkan_slider_render(render_targets[i].cmd);
-         }
+            render_element_t* el = render_targets[i].render_elements;
+            while (el->render)
+            {
+               el->render(render_targets[i].cmd, el->data);
+               el++;
+            }
 
+         }
 
          vkCmdEndRenderPass(render_targets[i].cmd);
       }

@@ -4,9 +4,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <vulkan/vulkan.h>
+#include "utils/linked_list.h"
 
 #include "video.h"
 
+#define MAX_RENDER_ELEMENTS 64
 #define MAX_SWAPCHAIN_IMAGES 8
 #define countof(a) (sizeof(a)/ sizeof(*a))
 
@@ -49,6 +51,14 @@ typedef struct
 void vk_context_init(vk_context_t* vk);
 void vk_context_destroy(vk_context_t* vk);
 
+
+typedef struct render_element_t
+{
+   void(*update)(VkDevice device, VkCommandBuffer cmd, void* data);
+   void(*render)(VkCommandBuffer cmd, void* data);
+   void* data;
+}render_element_t;
+
 typedef struct
 {
    VkSurfaceKHR surface;
@@ -62,6 +72,7 @@ typedef struct
    VkFramebuffer framebuffers[MAX_SWAPCHAIN_IMAGES];
    VkCommandBuffer cmd;
    VkFence chain_fence;
+   render_element_t render_elements[MAX_RENDER_ELEMENTS];
 } vk_render_target_t;
 
 void vk_render_targets_init(vk_context_t* vk, int count, screen_t* screens, vk_render_target_t* render_targets);

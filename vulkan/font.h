@@ -28,7 +28,7 @@ typedef enum
    CYAN,
    LIGHT_GRAY,
 
-   COLOR_RESET = 39,
+   CONSOLE_COLOR_RESET = 39,
 
    DARK_GRAY = 90,
    LIGHT_RED,
