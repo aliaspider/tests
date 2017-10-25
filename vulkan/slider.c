@@ -105,6 +105,7 @@ void vulkan_slider_update(VkDevice device, VkCommandBuffer cmd)
    static pointer_t old_pointer;
 //   static int count = 0;
 //   printf("more %i\n", count++);
+   input.update();
    if(input.pointer.x < video.screens[1].width - 20&& !input.pointer.touch1 && old_pointer.touch1)
       printf("click\n");
 
@@ -161,12 +162,13 @@ void vulkan_slider_update(VkDevice device, VkCommandBuffer cmd)
    }
    float real_pos = pos > 0.0 ? pos < 1.0 ? pos * (1.0 - size) : 1.0 - size : 0.0;
 
-   old_pointer = input.pointer;
 
    char buffer[512];
-   snprintf(buffer, sizeof(buffer), "[%c]", grab ? '#' : ' ');
+   snprintf(buffer, sizeof(buffer), "\e[31m[%c] %i", grab ? '#' : ' ', input.pointer.y - old_pointer.y);
    options.y = 40;
    vulkan_font_draw_text(buffer, &options);
+
+   old_pointer = input.pointer;
 
    options.y = 100;
    options.max_width = video.screens[0].width - 20;

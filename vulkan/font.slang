@@ -18,7 +18,7 @@ layout(location = 1) in vec3 color[1];
 layout(location = 2) in vec2 position[1];
 layout(triangle_strip, max_vertices = 4) out;
 layout(location = 0) out vec2 vTexCoord;
-layout(location = 1) out vec4 vColor;
+layout(location = 1) out vec3 vColor;
 layout(push_constant) uniform PC
 {
    vec2 vp_size;
@@ -40,7 +40,7 @@ layout(set = 0, binding = 2, std140) buffer g_buffer
 
 #ifdef FRAGMENT_SHADER
 layout(location = 0) in vec2 vTexCoord;
-layout(location = 1) in vec4 vColor;
+layout(location = 1) in vec3 vColor;
 layout(location = 0) out vec4 FragColor;
 layout(set = 0, binding = 1, location = 0) uniform highp sampler2D uTex;
 #endif
@@ -62,7 +62,7 @@ void main()
    uint row = c >> 4u;
 
    gl_Position.zw = vec2(0.0f, 1.0f);
-   vColor = vec4(color[0], 1.0);
+   vColor = color[0];
    vec2 pos = (2.0 * ((position[0] + glyph_metrics[c].xy) / pc.vp_size)) - vec2(1.0);
    vec2 coords = vec2(float(col) / 16.0, float(row) / 16.0);   
 #if 1
@@ -105,6 +105,6 @@ void main()
 #ifdef FRAGMENT_SHADER
 void main()
 {
-   FragColor = texture(uTex, vTexCoord).r * vColor;
+   FragColor = vec4(vColor, texture(uTex, vTexCoord).r);
 }
 #endif

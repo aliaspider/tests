@@ -1,35 +1,7 @@
 #pragma once
 
 #include "vulkan_common.h"
-
-typedef struct
-{
-   int count;
-   int capacity;
-   const char *data[];
-} string_list_t;
-
-
-static inline string_list_t* string_list_create()
-{
-   string_list_t* dst;
-   int capacity = 256;
-   dst = (string_list_t*)malloc(sizeof(dst) + capacity * sizeof(*dst->data));
-   dst->count = 0;
-   dst->capacity = capacity;
-   return dst;
-}
-
-static inline void string_list_push(string_list_t *dst, const char *string)
-{
-   if (dst->count == dst->capacity)
-   {
-      dst->capacity <<= 1;
-      dst = realloc(dst, sizeof(*dst) + dst->capacity * sizeof(*dst->data));
-   }
-
-   dst->data[dst->count++] = string;
-}
+#include "utils/string_list.h"
 
 typedef struct
 {
@@ -44,6 +16,30 @@ typedef struct
    string_list_t* lines;
    bool dry_run;
 } font_render_options_t;
+
+typedef enum
+{
+   BLACK = 30,
+   RED,
+   GREEN,
+   YELLOW,
+   BLUE,
+   MAGENTA,
+   CYAN,
+   LIGHT_GRAY,
+
+   COLOR_RESET = 39,
+
+   DARK_GRAY = 90,
+   LIGHT_RED,
+   LIGHT_GREEN,
+   LIGHT_YELLOW,
+   LIGHT_BLUE,
+   LIGHT_MAGENTA,
+   LIGHT_CYAN,
+   WHITE,
+   CONSOLE_COLORS_MAX
+} console_colors_t;
 
 void vulkan_font_init(vk_context_t* vk);
 void vulkan_font_destroy(VkDevice device);

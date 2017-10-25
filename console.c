@@ -7,7 +7,6 @@
 static char con_buffer[1 << 13];
 static int con_pos;
 
-
 void console_log(const char *fmt, ...)
 {
    int available = (sizeof(con_buffer) - con_pos);
@@ -29,7 +28,7 @@ void console_log(const char *fmt, ...)
          char *str = malloc(len + 1);
          vsprintf(str, fmt, va2);
          memcpy(con_buffer, str + len - (sizeof(con_buffer) >> 1), (sizeof(con_buffer) >> 1) + 1);
-         printf(str);
+         fputs(str, stdout);
          free(str);
       }
       else
@@ -37,7 +36,7 @@ void console_log(const char *fmt, ...)
          int copy_len = (sizeof(con_buffer) >> 1) - len;
          memcpy(con_buffer, con_buffer + con_pos - copy_len, copy_len);
          vsprintf(con_buffer + copy_len, fmt, va2);
-         printf(con_buffer + copy_len);
+         fputs(con_buffer + copy_len, stdout);
       }
 
       con_pos = (sizeof(con_buffer) >> 1);
@@ -45,7 +44,7 @@ void console_log(const char *fmt, ...)
    }
    else
    {
-      printf(con_buffer + con_pos);
+      fputs(con_buffer + con_pos, stdout);
       con_pos += len;
    }
 }
@@ -60,3 +59,4 @@ int console_get_len(void)
 {
    return con_pos < (sizeof(con_buffer) >> 1) ? con_pos : (sizeof(con_buffer) >> 1);
 }
+

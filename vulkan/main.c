@@ -15,6 +15,12 @@ static vk_render_target_t render_targets[MAX_SCREENS];
 void video_init()
 {
    debug_log("video init\n");
+   debug_log("color test : \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s "
+             "\e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[39m\n",
+             BLACK, "BLACK", RED, "RED", GREEN, "GREEN", YELLOW, "YELLOW",
+             BLUE, "BLUE", MAGENTA, "MAGENTA", CYAN, "CYAN", LIGHT_GRAY, "LIGHT_GRAY",
+             DARK_GRAY, "DARK_GRAY", LIGHT_RED, "LIGHT_RED", LIGHT_GREEN, "LIGHT_GREEN", LIGHT_YELLOW, "LIGHT_YELLOW",
+             LIGHT_BLUE, "LIGHT_BLUE", LIGHT_MAGENTA, "LIGHT_MAGENTA", LIGHT_CYAN, "LIGHT_CYAN", WHITE, "WHITE");
 
    vk_context_init(&vk);
 
@@ -22,6 +28,7 @@ void video_init()
 
    vulkan_font_init(&vk);
    vulkan_slider_init(&vk);
+
 }
 
 void video_frame_init(int width, int height, screen_format_t format)

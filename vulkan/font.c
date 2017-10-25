@@ -204,6 +204,32 @@ static int vulkan_font_get_new_slot(void)
    return oldest;
 }
 
+typedef struct
+{
+   uint8_t r, g, b;
+} colorR8G8B8_t;
+
+
+static colorR8G8B8_t console_colors[CONSOLE_COLORS_MAX] =
+{
+   [BLACK] =          {  0,   0,   0},
+   [RED] =            {128,   0,   0},
+   [GREEN] =          {  0, 128,   0},
+   [YELLOW] =         {128, 128,   0},
+   [BLUE] =           {  0,   0, 128},
+   [MAGENTA] =        {128,   0, 128},
+   [CYAN] =           {  0, 128, 128},
+   [LIGHT_GRAY] =     {192, 192, 192},
+   [DARK_GRAY] =      {128, 128, 128},
+   [LIGHT_RED] =      {255,   0,   0},
+   [LIGHT_GREEN] =    {  0, 255,   0},
+   [LIGHT_YELLOW] =   {255, 255,   0},
+   [LIGHT_BLUE] =     {  0,   0, 255},
+   [LIGHT_MAGENTA] =  {255,   0, 255},
+   [LIGHT_CYAN] =     {  0, 255, 255},
+   [WHITE] =          {255, 255, 255},
+};
+
 static void ft_font_render_glyph(unsigned charcode, int slot_id)
 {
    int row;
@@ -295,7 +321,7 @@ void vulkan_font_draw_text(const char *text, const font_render_options_t *option
       out = (font_vertex_t *)(font.p.vbo.mem.u8 + font.p.vbo.info.range);
 
    font_vertex_t vertex;
-   vertex.color = *(typeof(vertex.color)*)&options->color;
+   vertex.color = *(typeof(vertex.color) *)&options->color;
    vertex.position.x = options->x;
    vertex.position.y = options->y + font.ascender;
 
@@ -308,6 +334,22 @@ void vulkan_font_draw_text(const char *text, const font_render_options_t *option
          break;
 
       uint32_t charcode = *(in++);
+
+      if (charcode == 0x1B && *(in++) == '[')
+      {
+         int color_code = 0;
+
+         while (*in != 'm')
+            color_code = color_code * 10 + *(in++) - '0';
+
+         if (color_code == CONSOLE_COLOR_RESET)
+            vertex.color = *(typeof(vertex.color) *)&options->color;
+         else if (color_code < CONSOLE_COLORS_MAX)
+            vertex.color = *(typeof(vertex.color) *)&console_colors[color_code];
+
+         in++;
+         continue;
+      }
 
       if (charcode == '\n')
       {
@@ -358,12 +400,14 @@ void vulkan_font_draw_text(const char *text, const font_render_options_t *option
             (last_space + (options->max_width / (2 * font.max_advance))) > in)
          {
             vertex.position.x -= last_space_x;
+
             if (options->lines)
                string_list_push(options->lines, (const char *)last_space);
 
-            if(out)
+            if (out)
             {
                font_vertex_t *ptr = out + last_space_vertex + 1;
+
                while (ptr < out + pos)
                {
                   ptr->position.x -= last_space_x;
@@ -371,6 +415,7 @@ void vulkan_font_draw_text(const char *text, const font_render_options_t *option
                   ptr++;
                }
             }
+
             last_space = NULL;
          }
          else
@@ -384,11 +429,13 @@ void vulkan_font_draw_text(const char *text, const font_render_options_t *option
                continue;
          }
       }
-      if(out)
+
+      if (out)
       {
          out[pos] = vertex;
          out[pos++].slot_id = slot_id;
       }
+
       vertex.position.x += ((font_uniforms_t *)font.p.ubo.mem.ptr)->advance[slot_id];
    }
 
@@ -406,7 +453,7 @@ void vulkan_font_update_assets(VkDevice device, VkCommandBuffer cmd)
    char buffer[512];
    vulkan_font_draw_text(video.fps, &options);
 
-   snprintf(buffer, sizeof(buffer), "[%c,%c,%c] %i, %i", input.pointer.touch1 ? '#' : ' ',
+   snprintf(buffer, sizeof(buffer), "[%c,%c,%c] \e[91m%i, \e[32m%i", input.pointer.touch1 ? '#' : ' ',
       input.pointer.touch2 ? '#' : ' ', input.pointer.touch3 ? '#' : ' ', input.pointer.x, input.pointer.y);
    options.y = 20;
    vulkan_font_draw_text(buffer, &options);

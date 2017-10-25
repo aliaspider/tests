@@ -57,7 +57,7 @@ endif
 CFLAGS += -Wall -Werror=implicit-function-declaration -Werror=incompatible-pointer-types
 CFLAGS += -Werror
 CFLAGS += -fms-extensions
-CFLAGS += -I. -Ivulkan
+CFLAGS += -I.
 
 ifeq ($(platform),linux)
    CFLAGS += -DVK_USE_PLATFORM_XLIB_KHR

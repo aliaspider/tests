@@ -18,7 +18,7 @@ module_info_t module;
 
 int main(int argc, char **argv)
 {
-   debug_log("main\n");
+   debug_log("main\n");   
 
    video = video_vulkan;
 #ifdef __WIN32__
