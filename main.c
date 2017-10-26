@@ -68,19 +68,19 @@ int main(int argc, char **argv)
       if(input.pad.meta.exit)
          break;
 
-      module_run_info_t info = {};
-      uint32_t sound_buffer[40000 + 2064];
-      do
-      {
-         info.screen.ptr = video.frame.data;
-         info.pitch = video.frame.pitch;
-         info.max_samples = 40000;
-         info.sound_buffer.u32 = sound_buffer;
-         info.pad = &input.pad;
-         module_run(&info);
-         //         debug_log("info.max_samples : %i", info.max_samples);
-      }
-      while (!info.frame_completed);
+//      module_run_info_t info = {};
+//      uint32_t sound_buffer[40000 + 2064];
+//      do
+//      {
+//         info.screen.ptr = video.frame.data;
+//         info.pitch = video.frame.pitch;
+//         info.max_samples = 40000;
+//         info.sound_buffer.u32 = sound_buffer;
+//         info.pad = &input.pad;
+//         module_run(&info);
+//         //         debug_log("info.max_samples : %i", info.max_samples);
+//      }
+//      while (!info.frame_completed);
 
 //      audio.play(info.sound_buffer.ptr, info.max_samples);
 

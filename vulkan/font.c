@@ -146,6 +146,8 @@ void vulkan_font_init(vk_context_t *vk)
       font.p.vertex_stride = sizeof(font_vertex_t);
 
       vk_renderer_init(vk, &info, &font.p);
+
+      font.p.vbo.info.range = 0;
    }
 
    {
@@ -159,8 +161,6 @@ void vulkan_font_init(vk_context_t *vk)
    uniforms->tex_size.width = font.p.texture.width;
    uniforms->tex_size.height = font.p.texture.height;
    font.p.ubo.dirty = true;
-
-   font.p.vbo.info.range = 0;
 }
 
 void vulkan_font_destroy(VkDevice device)
@@ -451,14 +451,6 @@ void vulkan_font_update_assets(VkDevice device, VkCommandBuffer cmd)
       vk_texture_upload(device, cmd, &font.p.texture);
 }
 
-void vulkan_font_start(void)
-{
-   font.p.vbo.info.offset = 0;
-   font.p.vbo.info.range = 0;
-   font.p.texture.flushed = false;
-   font.p.texture.uploaded = false;
-}
-
 void vulkan_font_finish(VkDevice device)
 {
    if (font.p.texture.dirty && !font.p.texture.flushed)
@@ -472,6 +464,11 @@ void vulkan_font_finish(VkDevice device)
 
    if (font.p.ssbo.dirty)
       vk_buffer_flush(device, &font.p.ssbo);
+
+   font.p.vbo.info.offset = 0;
+   font.p.vbo.info.range = 0;
+   font.p.texture.flushed = false;
+   font.p.texture.uploaded = false;
 }
 
 

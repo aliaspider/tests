@@ -95,19 +95,15 @@ void vulkan_slider_add(int x, int y, int w, int h, float pos, float size)
    assert(slider_renderer.vbo.info.range <= slider_renderer.vbo.mem.size);
 }
 
-void vulkan_slider_start(void)
-{
-   slider_renderer.vbo.info.offset = 0;
-   slider_renderer.vbo.info.range = 0;
-//   slider_renderer.texture.flushed = false;
-//   slider_renderer.texture.uploaded = false;
-}
-
 void vulkan_slider_finish(VkDevice device)
 {
    if(slider_renderer.vbo.dirty)
       vk_buffer_flush(device, &slider_renderer.vbo);
 
+   slider_renderer.vbo.info.offset = 0;
+   slider_renderer.vbo.info.range = 0;
+//   slider_renderer.texture.flushed = false;
+//   slider_renderer.texture.uploaded = false;
 }
 
 void vulkan_slider_update(VkDevice device, VkCommandBuffer cmd)

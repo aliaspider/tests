@@ -77,10 +77,6 @@ void video_frame_update()
    vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, UINT64_MAX);
    vkResetFences(vk.device, 1, &vk.queue_fence);
 
-   vulkan_frame_start();
-   vulkan_font_start();
-   vulkan_slider_start();
-
    int i;
 
    for (i = 0; i < video.screen_count; i++)
@@ -142,6 +138,16 @@ void video_frame_update()
 
          vkCmdSetViewport(render_targets[i].cmd, 0, 1, &render_targets[i].viewport);
          vkCmdSetScissor(render_targets[i].cmd, 0, 1, &render_targets[i].scissor);
+
+         char buffer[512];
+         snprintf(buffer, sizeof(buffer), "SCREEN: %i", i);
+         font_render_options_t options =
+         {
+            .x = video.screens[0].width - 20 - strlen(buffer) * 12,
+            .max_width = video.screens[0].width,
+            .max_height = video.screens[0].height,
+         };
+         vulkan_font_draw_text(buffer, &options);
 
          if (i == 0)
             vulkan_frame_add(0, 0, render_targets[i].viewport.width, render_targets[i].viewport.height);

@@ -67,6 +67,8 @@ void vulkan_frame_init(vk_context_t *vk, int width, int height, VkFormat format)
       frame_renderer.vertex_stride = sizeof(vertex_t);
 
       vk_renderer_init(vk, &info, &frame_renderer);
+      frame_renderer.vbo.info.range = 0;
+      frame_renderer.texture.dirty = true;
    }
 
    memset(frame_renderer.texture.staging.mem.u8 + frame_renderer.texture.staging.mem.layout.offset, 0xFF,
@@ -94,16 +96,6 @@ void vulkan_frame_add(int x, int y, int width, int height)
    assert(frame_renderer.vbo.info.range <= frame_renderer.vbo.mem.size);
 }
 
-void vulkan_frame_start(void)
-{
-   frame_renderer.vbo.info.offset = 0;
-   frame_renderer.vbo.info.range = 0;
-   frame_renderer.texture.dirty = true;
-   frame_renderer.texture.flushed = false;
-   frame_renderer.texture.uploaded = false;
-
-
-}
 void vulkan_frame_finish(VkDevice device)
 {
    if (frame_renderer.texture.dirty && !frame_renderer.texture.flushed)
@@ -111,6 +103,12 @@ void vulkan_frame_finish(VkDevice device)
 
    if(frame_renderer.vbo.dirty)
       vk_buffer_flush(device, &frame_renderer.vbo);
+
+   frame_renderer.vbo.info.offset = 0;
+   frame_renderer.vbo.info.range = 0;
+   frame_renderer.texture.dirty = true;
+   frame_renderer.texture.flushed = false;
+   frame_renderer.texture.uploaded = false;
 }
 
 void vulkan_frame_update(VkDevice device, VkCommandBuffer cmd)
