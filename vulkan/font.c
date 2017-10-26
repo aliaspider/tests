@@ -148,13 +148,11 @@ void vk_font_init(vk_context_t *vk)
       font_renderer.vertex_stride = sizeof(font_vertex_t);
 
       vk_renderer_init(vk, &info, &font_renderer);
-
-      font_renderer.vbo.info.range = 0;
    }
 
    {
       device_memory_t *mem = &font_renderer.texture.staging.mem;
-      memset(mem->u8 + mem->layout.offset, 0x0, mem->layout.size - mem->layout.offset);
+      memset(mem->u8 + mem->layout.offset, 0x00, mem->layout.size - mem->layout.offset);
    }
 
    font_renderer.texture.dirty = true;
@@ -169,6 +167,8 @@ void vk_font_destroy(VkDevice device)
 {
    FT_Done_Face(font.ftface);
    FT_Done_FreeType(font.ftlib);
+   memset(&font, 0, sizeof(font));
+
    vk_renderer_destroy(device, &font_renderer);
 }
 

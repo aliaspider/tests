@@ -29,10 +29,9 @@ layout(push_constant) uniform PC
 //layout(set = 0, binding = 0, std140) uniform UBO
 //{
 //};
-layout(set = 0, binding = 2, std140) buffer g_buffer
-{
-   vec4 v[4];
-};
+//layout(set = 0, binding = 2, std140) buffer g_buffer
+//{
+//};
 
 void main()
 {

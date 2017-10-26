@@ -1116,6 +1116,7 @@ void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info
    dst->vbo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
    dst->vbo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
    vk_buffer_init(vk->device, vk->memoryTypes, NULL, &dst->vbo);
+   dst->vbo.info.range = 0;
 
    {
       const VkDescriptorSetAllocateInfo info =
@@ -1337,7 +1338,7 @@ void vk_renderer_finish(VkDevice device, vk_renderer_t* renderer)
    renderer->texture.uploaded = false;
 }
 
-void vk_renderer_draw(VkCommandBuffer cmd, vk_renderer_t *renderer)
+void vk_renderer_emit(VkCommandBuffer cmd, vk_renderer_t *renderer)
 {
    if (renderer->vbo.info.range - renderer->vbo.info.offset == 0)
       return;

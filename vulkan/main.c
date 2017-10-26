@@ -138,7 +138,7 @@ void video_frame_update()
             };
             vk_font_draw_text(video.fps, &options);
 
-            char buffer[512];
+            char buffer[16];
             snprintf(buffer, sizeof(buffer), "SCREEN: %i", i);
             options.x = video.screens[0].width - 20 - strlen(buffer) * 12;
             vk_font_draw_text(buffer, &options);
@@ -158,7 +158,7 @@ void video_frame_update()
             vk_renderer_t **renderer = renderers;
 
             while (*renderer)
-               vk_renderer_draw(render_targets[i].cmd, *renderer++);
+               vk_renderer_emit(render_targets[i].cmd, *renderer++);
          }
 
          vkCmdEndRenderPass(render_targets[i].cmd);

@@ -62,12 +62,13 @@ void vk_frame_init(vk_context_t *vk, int width, int height, VkFormat format)
       frame_renderer.vertex_stride = sizeof(vertex_t);
 
       vk_renderer_init(vk, &info, &frame_renderer);
-      frame_renderer.vbo.info.range = 0;
-      frame_renderer.texture.dirty = true;
    }
 
-   memset(frame_renderer.texture.staging.mem.u8 + frame_renderer.texture.staging.mem.layout.offset, 0xFF,
-      frame_renderer.texture.staging.mem.layout.size - frame_renderer.texture.staging.mem.layout.offset);
+   {
+      device_memory_t *mem = &frame_renderer.texture.staging.mem;
+      memset(mem->u8 + mem->layout.offset, 0xFF, mem->layout.size - mem->layout.offset);
+   }
+
    frame_renderer.texture.dirty = true;
 
    video.frame.width = width;
@@ -78,15 +79,11 @@ void vk_frame_init(vk_context_t *vk, int width, int height, VkFormat format)
 
 void vk_frame_add(int x, int y, int width, int height)
 {
-   vertex_t* v = (vertex_t*)(frame_renderer.vbo.mem.u8 + frame_renderer.vbo.info.range);
+   vertex_t *v = (vertex_t *)vk_get_vbo_memory(&frame_renderer.vbo, sizeof(vertex_t));
    v->position.x = x;
    v->position.y = y;
    v->size.width = width;
    v->size.height = height;
-
-   frame_renderer.vbo.info.range += sizeof(vertex_t);
-   frame_renderer.vbo.dirty = true;
-   assert(frame_renderer.vbo.info.range <= frame_renderer.vbo.mem.size);
 }
 
 void vk_frame_destroy(VkDevice device)

@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 #include <vulkan/vulkan.h>
 #include "utils/linked_list.h"
 
@@ -173,8 +174,17 @@ typedef struct
 void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info, vk_renderer_t *dst);
 void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer);
 void vk_renderer_update(VkDevice device, VkCommandBuffer cmd, vk_renderer_t* renderer);
-void vk_renderer_draw(VkCommandBuffer cmd, vk_renderer_t *renderer);
+void vk_renderer_emit(VkCommandBuffer cmd, vk_renderer_t *renderer);
 void vk_renderer_finish(VkDevice device, vk_renderer_t* renderer);
+
+static inline void* vk_get_vbo_memory(vk_buffer_t* vbo, VkDeviceSize size)
+{
+   void* ptr = vbo->mem.u8 + vbo->info.range;
+   vbo->info.range += size;
+   vbo->dirty = true;
+   assert(vbo->info.range <= vbo->mem.size);
+   return ptr;
+}
 
 typedef union
 {
