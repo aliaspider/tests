@@ -34,8 +34,8 @@ int main(int argc, char **argv)
    video.screen_count = 2;
    video.screens[0].width = 640;
    video.screens[0].height = 480;
-   video.screens[1].width = 640;
-   video.screens[1].height = 800;
+   video.screens[1].width = 800;
+   video.screens[1].height = 500;
    video.screens[2].width = 256;
    video.screens[2].height = 224;
 

@@ -37,17 +37,13 @@ OBJS += vulkan/vulkan_common.o
 
 OBJS := $(addprefix $(BUILD_DIR)/,$(OBJS))
 
+HAS_SHADERS += vulkan/font.o
+HAS_SHADERS += vulkan/frame.o
+HAS_SHADERS += vulkan/slider.o
 
-
-
-$(BUILD_DIR)/vulkan/frame.o: vulkan/frame.vert.inc vulkan/frame.frag.inc vulkan/frame.geom.inc
-SPIRV_OBJS += vulkan/frame.vert.inc vulkan/frame.frag.inc
-
-$(BUILD_DIR)/vulkan/font.o:  vulkan/font.vert.inc vulkan/font.frag.inc vulkan/font.geom.inc
-SPIRV_OBJS += vulkan/font.vert.inc vulkan/font.frag.inc vulkan/font.geom.inc
-
-$(BUILD_DIR)/vulkan/slider.o:  vulkan/slider.vert.inc vulkan/slider.frag.inc vulkan/slider.geom.inc
-SPIRV_OBJS += vulkan/slider.vert.inc vulkan/slider.frag.inc vulkan/slider.geom.inc
+HAS_SHADERS := $(basename $(HAS_SHADERS))
+$(foreach obj,$(HAS_SHADERS),$(eval $(BUILD_DIR)/$(obj).o: $(obj).vert.inc $(obj).frag.inc $(obj).geom.inc))
+$(foreach obj,$(HAS_SHADERS),$(eval SPIRV_OBJS += $(obj).vert.inc $(obj).frag.inc $(obj).geom.inc))
 
 ifeq ($(DEBUG),1)
    CFLAGS += -g -O0

@@ -7,7 +7,7 @@
 #include "video.h"
 #include "font.h"
 
-typedef struct
+typedef struct vertex_t
 {
    vec2 position;
    vec2 size;
@@ -79,7 +79,7 @@ void vk_frame_init(vk_context_t *vk, int width, int height, VkFormat format)
 
 void vk_frame_add(int x, int y, int width, int height)
 {
-   vertex_t *v = (vertex_t *)vk_get_vbo_memory(&frame_renderer.vbo, sizeof(vertex_t));
+   vertex_t *v = vk_get_vbo_memory(&frame_renderer.vbo, sizeof(vertex_t));
    v->position.x = x;
    v->position.y = y;
    v->size.width = width;

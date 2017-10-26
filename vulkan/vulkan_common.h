@@ -9,7 +9,6 @@
 
 #include "video.h"
 
-#define MAX_RENDER_ELEMENTS 64
 #define MAX_SWAPCHAIN_IMAGES 8
 #define countof(a) (sizeof(a)/ sizeof(*a))
 
@@ -52,6 +51,15 @@ typedef struct
 void vk_context_init(vk_context_t* vk);
 void vk_context_destroy(vk_context_t* vk);
 
+
+typedef void(*vk_draw_command_t)(screen_t* screen);
+
+typedef struct vk_draw_command_list_t
+{
+   vk_draw_command_t draw;
+   struct vk_draw_command_list_t* next;
+}vk_draw_command_list_t;
+
 typedef struct
 {
    VkSurfaceKHR surface;
@@ -65,10 +73,43 @@ typedef struct
    VkFramebuffer framebuffers[MAX_SWAPCHAIN_IMAGES];
    VkCommandBuffer cmd;
    VkFence chain_fence;
+   vk_draw_command_list_t* draw_list;
 } vk_render_target_t;
 
 void vk_render_targets_init(vk_context_t* vk, int count, screen_t* screens, vk_render_target_t* render_targets);
 void vk_render_targets_destroy(vk_context_t* vk, int count, vk_render_target_t* render_targets);
+
+static inline void vk_register_draw_command(vk_draw_command_list_t** list, vk_draw_command_t fn)
+{
+   while(*list)
+      list = &(*list)->next;
+
+   *list = malloc(sizeof(*fn));
+
+   (*list)->draw = fn;
+   (*list)->next = NULL;
+}
+
+static inline void vk_remove_draw_command(vk_draw_command_list_t** list, vk_draw_command_t fn)
+{
+   vk_draw_command_list_t** prev = NULL;
+   while(*list)
+   {
+      if((*list)->draw == fn)
+      {
+         vk_draw_command_list_t* tmp = (*list)->next;
+         free(*list);
+         if(prev)
+            (*prev)->next = tmp;
+
+         *list = tmp;
+
+         return;
+      }
+      prev = list;
+      list = &(*list)->next;
+   }
+}
 
 typedef struct
 {

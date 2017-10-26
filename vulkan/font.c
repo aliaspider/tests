@@ -443,5 +443,4 @@ void vk_font_draw_text(const char *text, const font_render_options_t *options)
    font_renderer.vbo.info.range += pos * sizeof(font_vertex_t);
    font_renderer.vbo.dirty = true;
    assert(font_renderer.vbo.info.range <= font_renderer.vbo.mem.size);
-
 }

@@ -5,7 +5,7 @@
 #include "slider.h"
 #include "font.h"
 
-void console_draw(void)
+void console_draw(screen_t* screen)
 {
    {
       char buffer[512];
@@ -15,8 +15,8 @@ void console_draw(void)
       font_render_options_t options =
       {
          .y = 20,
-         .max_width = video.screens[1].width,
-         .max_height = video.screens[1].height,
+         .max_width = screen->width,
+         .max_height = screen->height,
       };
       vk_font_draw_text(buffer, &options);
    }
@@ -41,19 +41,19 @@ void console_draw(void)
 //               "processors to simply ignore or pass-through the multi-byte sequences, without decoding them. "
 //               "For example, ASCII whitespace may be used to tokenize a UTF-8 stream into words; "
 //               "ASCII line-feeds may be used to split a UTF-8 stream into lines; and ASCII NUL ", 0, text_pos_y,
-//               video.screens[0].width);
+//               screen->width);
 
 //            vulkan_font_draw_text("北海道の有名なかん光地、知床半島で、黒いキツネがさつえいされました。"
 //               "地元斜里町の町立知床博物館が、タヌキをかんさつするためにおいていた自動さつえいカメラがき重なすがたをとらえました＝"
 //               "写真・同館ていきょう。同館の学芸員も「はじめて見た」とおどろいています。"
 //               "黒い毛皮のために昔、ゆ入したキツネの子そんとも言われてますが、はっきりしません。"
 //               "北海道の先住みん族、アイヌのみん話にも黒いキツネが登場し、神せいな生き物とされているそうです。",
-//               0, text_pos_y, video.screens[0].width);
+//               0, text_pos_y, screen->width);
 
 //            vulkan_font_draw_text("gl_Position.xy = pos + 2.0 * vec2(0.0, glyph_metrics[c].w) / vp_size;", 0, 32,
-//               video.screens[0].width);
+//               screens[0].width);
 
-//            vulkan_font_draw_text("ettf", 40, 220, video.screens[0].width);
+//            vulkan_font_draw_text("ettf", 40, 220, screen->width);
 
 
 
@@ -64,7 +64,7 @@ void console_draw(void)
 //   printf("more %i\n", count++);
    input.update();
 
-   if (input.pointer.x < video.screens[1].width - 20 && !input.pointer.touch1 && old_pointer.touch1)
+   if (input.pointer.x < screen->width - 20 && !input.pointer.touch1 && old_pointer.touch1)
       printf("click\n");
 
    string_list_t *lines = string_list_create();
@@ -72,15 +72,15 @@ void console_draw(void)
       font_render_options_t options =
       {
          .y = 100,
-         .max_width = video.screens[1].width - 20,
-         .max_height = video.screens[1].height,
+         .max_width = screen->width - 20,
+         .max_height = screen->height,
          .lines = lines,
          .dry_run = true
       };
       vk_font_draw_text(console_get(), &options);
    }
 
-   int visible_lines = 33;
+   int visible_lines = (screen->height - 100) / 22;
 
    if (visible_lines < lines->count)
    {
@@ -89,19 +89,19 @@ void console_draw(void)
 
       if (input.pointer.touch1 && !old_pointer.touch1)
       {
-         if ((input.pointer.x > video.screens[1].width - 20)
-            && (input.pointer.x < video.screens[1].width))
+         if ((input.pointer.x > screen->width - 20)
+            && (input.pointer.x < screen->width))
          {
             if (!grab)
             {
-               if (input.pointer.y < video.screens[1].height * (pos * (1.0 - size)))
+               if (input.pointer.y < screen->height * (pos * (1.0 - size)))
                {
-                  pos = input.pointer.y / ((float)video.screens[1].height * (1.0 - size)) - (size / 2) / (1.0 - size);
+                  pos = input.pointer.y / ((float)screen->height * (1.0 - size)) - (size / 2) / (1.0 - size);
                   pos = pos > 0.0 ? pos < 1.0 ? pos : 1.0 : 0.0;
                }
-               else if (input.pointer.y > video.screens[1].height * (pos * (1.0 - size) + size))
+               else if (input.pointer.y > screen->height * (pos * (1.0 - size) + size))
                {
-                  pos = input.pointer.y / ((float)video.screens[1].height * (1.0 - size)) - (size / 2) / (1.0 - size);
+                  pos = input.pointer.y / ((float)screen->height * (1.0 - size)) - (size / 2) / (1.0 - size);
                   pos = pos > 0.0 ? pos < 1.0 ? pos : 1.0 : 0.0;
                }
             }
@@ -116,10 +116,10 @@ void console_draw(void)
       }
 
       if (grab)
-         pos += (input.pointer.y - old_pointer.y) / ((float)video.screens[1].height * (1.0 - size));
+         pos += (input.pointer.y - old_pointer.y) / ((float)screen->height * (1.0 - size));
 
       float real_pos = pos > 0.0 ? pos < 1.0 ? pos * (1.0 - size) : 1.0 - size : 0.0;
-      vk_slider_add(video.screens[1].width - 20, 0, 20, video.screens[1].height, real_pos, size);
+      vk_slider_add(screen->width - 20, 0, 20, screen->height, real_pos, size);
 
       {
          char buffer[512];
@@ -128,8 +128,8 @@ void console_draw(void)
          font_render_options_t options =
          {
             .y = 40,
-            .max_width = video.screens[1].width - 20,
-            .max_height = video.screens[1].height,
+            .max_width = screen->width - 20,
+            .max_height = screen->height,
          };
          vk_font_draw_text(buffer, &options);
       }
@@ -137,8 +137,8 @@ void console_draw(void)
          font_render_options_t options =
          {
             .y = 100,
-            .max_width = video.screens[1].width - 20,
-            .max_height = video.screens[1].height,
+            .max_width = screen->width - 20,
+            .max_height = screen->height,
          };
          vk_font_draw_text(lines->data[(int)(0.5 + lines->count * real_pos)], &options);
       }
@@ -148,8 +148,8 @@ void console_draw(void)
       font_render_options_t options =
       {
          .y = 100,
-         .max_width = video.screens[1].width,
-         .max_height = video.screens[1].height,
+         .max_width = screen->width,
+         .max_height = screen->height,
       };
       vk_font_draw_text(lines->data[0], &options);
    }

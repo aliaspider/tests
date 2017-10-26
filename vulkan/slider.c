@@ -45,6 +45,7 @@ void vk_slider_init(vk_context_t *vk)
       .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
       VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
    };
+
    const vk_renderer_init_info_t info =
    {
       .shaders.vs.code = vs_code,

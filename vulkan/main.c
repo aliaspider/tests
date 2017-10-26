@@ -21,7 +21,41 @@ static vk_renderer_t *renderers[] =
    NULL
 };
 
-void console_draw(void);
+void console_draw(screen_t* screen);
+void fps_draw(screen_t* screen)
+{
+   font_render_options_t options =
+   {
+      .max_width = screen->width,
+      .max_height = screen->height,
+   };
+   vk_font_draw_text(video.fps, &options);
+}
+
+void screen_id_draw(screen_t* screen)
+{
+   char buffer[16];
+   snprintf(buffer, sizeof(buffer), "SCREEN: \e[%im%i", RED,(int)(screen - video.screens));
+
+   font_render_options_t options =
+   {
+      .x = screen->width - 20 - 9 * 12,
+      .y = screen->width < 400 ? screen->height - 22: 0,
+      .max_width = screen->width,
+      .max_height = screen->height,
+   };
+   vk_font_draw_text(buffer, &options);
+}
+
+void frame_draw(screen_t* screen)
+{
+   vk_frame_add(0, 0, screen->width, screen->height);
+}
+
+void frame_draw_small(screen_t* screen)
+{
+   vk_frame_add(screen->width - 256 - 20, 22, 256, 224);
+}
 
 void video_init()
 {
@@ -39,6 +73,19 @@ void video_init()
 
    vk_font_init(&vk);
    vk_slider_init(&vk);
+
+   vk_register_draw_command(&render_targets[0].draw_list, frame_draw);
+   vk_register_draw_command(&render_targets[0].draw_list, fps_draw);
+   vk_register_draw_command(&render_targets[0].draw_list, screen_id_draw);
+
+   vk_register_draw_command(&render_targets[1].draw_list, frame_draw_small);
+   vk_register_draw_command(&render_targets[1].draw_list, fps_draw);
+   vk_register_draw_command(&render_targets[1].draw_list, screen_id_draw);
+   vk_register_draw_command(&render_targets[1].draw_list, console_draw);
+
+   vk_register_draw_command(&render_targets[2].draw_list, frame_draw);
+   vk_register_draw_command(&render_targets[2].draw_list, fps_draw);
+   vk_register_draw_command(&render_targets[2].draw_list, screen_id_draw);
 }
 
 void video_frame_init(int width, int height, screen_format_t format)
@@ -131,28 +178,14 @@ void video_frame_update()
          vkCmdSetScissor(render_targets[i].cmd, 0, 1, &render_targets[i].scissor);
 
          {
-            font_render_options_t options =
+            vk_draw_command_list_t* draw_command = render_targets[i].draw_list;
+            while(draw_command)
             {
-               .max_width = video.screens[0].width,
-               .max_height = video.screens[0].height,
-            };
-            vk_font_draw_text(video.fps, &options);
-
-            char buffer[16];
-            snprintf(buffer, sizeof(buffer), "SCREEN: %i", i);
-            options.x = video.screens[0].width - 20 - strlen(buffer) * 12;
-            vk_font_draw_text(buffer, &options);
+               draw_command->draw(render_targets[i].screen);
+               draw_command = draw_command->next;
+            }
          }
 
-         if (i == 0)
-         {
-            vk_frame_add(0, 0, render_targets[i].viewport.width, render_targets[i].viewport.height);
-         }
-         else if (i == 1)
-         {
-            vk_frame_add(render_targets[i].viewport.width - 256 - 20, 20, 256, 224);
-            console_draw();
-         }
 
          {
             vk_renderer_t **renderer = renderers;
