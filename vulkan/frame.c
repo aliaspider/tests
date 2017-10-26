@@ -9,18 +9,8 @@
 
 typedef struct
 {
-   struct
-   {
-      float x, y, z, w;
-   } position;
-   struct
-   {
-      float u, v;
-   } texcoord;
-   struct
-   {
-      float r, g, b, a;
-   } color;
+   vec2 position;
+   vec2 size;
 } vertex_t;
 
 vk_renderer_t frame_renderer;
@@ -35,11 +25,14 @@ void vk_frame_init(vk_context_t *vk, int width, int height, VkFormat format)
 #include "frame.frag.inc"
          ;
 
+      const uint32_t gs_code [] =
+#include "frame.geom.inc"
+         ;
+
       const VkVertexInputAttributeDescription attrib_desc[] =
       {
-         {0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(vertex_t, position)},
-         {1, 0, VK_FORMAT_R32G32_SFLOAT,       offsetof(vertex_t, texcoord)},
-         {2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(vertex_t, color)}
+         {0, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(vertex_t, position)},
+         {1, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(vertex_t, size)},
       };
 
       const VkPipelineColorBlendAttachmentState color_blend_attachement_state =
@@ -54,16 +47,18 @@ void vk_frame_init(vk_context_t *vk, int width, int height, VkFormat format)
          .shaders.vs.code_size = sizeof(vs_code),
          .shaders.ps.code = ps_code,
          .shaders.ps.code_size = sizeof(ps_code),
+         .shaders.gs.code = gs_code,
+         .shaders.gs.code_size = sizeof(gs_code),
          .attrib_count = countof(attrib_desc),
          .attrib_desc = attrib_desc,
-         .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN,
+         .topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
          .color_blend_attachement_state = &color_blend_attachement_state,
       };
 
       frame_renderer.texture.width = width;
       frame_renderer.texture.height = height;
       frame_renderer.texture.format = format;
-      frame_renderer.vbo.info.range = sizeof(vertex_t) * 4 * 8;
+      frame_renderer.vbo.info.range = sizeof(vertex_t) * 8;
       frame_renderer.vertex_stride = sizeof(vertex_t);
 
       vk_renderer_init(vk, &info, &frame_renderer);
@@ -83,15 +78,13 @@ void vk_frame_init(vk_context_t *vk, int width, int height, VkFormat format)
 
 void vk_frame_add(int x, int y, int width, int height)
 {
-   const vertex_t vertices[] =
-   {
-      {{ -1.0f, -1.0f, 0.0f, 1.0f}, {0.0f, 0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}},
-      {{ 1.0f, -1.0f, 0.0f, 1.0f}, {1.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}},
-      {{ 1.0f,  1.0f, 0.0f, 1.0f}, {1.0f, 1.0f}, {0.0f, 0.0f, 1.0f, 1.0f}},
-      {{ -1.0f,  1.0f, 0.0f, 1.0f}, {0.0f, 1.0f}, {1.0f, 0.0f, 0.0f, 1.0f}}
-   };
-   memcpy(frame_renderer.vbo.mem.u8 + frame_renderer.vbo.info.range, vertices, sizeof(vertices));
-   frame_renderer.vbo.info.range += sizeof(vertices);
+   vertex_t* v = (vertex_t*)(frame_renderer.vbo.mem.u8 + frame_renderer.vbo.info.range);
+   v->position.x = x;
+   v->position.y = y;
+   v->size.width = width;
+   v->size.height = height;
+
+   frame_renderer.vbo.info.range += sizeof(vertex_t);
    frame_renderer.vbo.dirty = true;
    assert(frame_renderer.vbo.info.range <= frame_renderer.vbo.mem.size);
 }

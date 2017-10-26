@@ -14,12 +14,10 @@ void console_draw(void)
 
       font_render_options_t options =
       {
+         .y = 20,
          .max_width = video.screens[1].width,
          .max_height = video.screens[1].height,
       };
-      vk_font_draw_text(video.fps, &options);
-
-      options.y = 20;
       vk_font_draw_text(buffer, &options);
    }
 

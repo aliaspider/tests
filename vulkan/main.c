@@ -130,21 +130,29 @@ void video_frame_update()
          vkCmdSetViewport(render_targets[i].cmd, 0, 1, &render_targets[i].viewport);
          vkCmdSetScissor(render_targets[i].cmd, 0, 1, &render_targets[i].scissor);
 
-         char buffer[512];
-         snprintf(buffer, sizeof(buffer), "SCREEN: %i", i);
-         font_render_options_t options =
          {
-            .max_width = video.screens[0].width,
-            .max_height = video.screens[0].height,
-         };
-         vk_font_draw_text(video.fps, &options);
-         options.x = video.screens[0].width - 20 - strlen(buffer) * 12,
-                 vk_font_draw_text(buffer, &options);
+            font_render_options_t options =
+            {
+               .max_width = video.screens[0].width,
+               .max_height = video.screens[0].height,
+            };
+            vk_font_draw_text(video.fps, &options);
+
+            char buffer[512];
+            snprintf(buffer, sizeof(buffer), "SCREEN: %i", i);
+            options.x = video.screens[0].width - 20 - strlen(buffer) * 12;
+            vk_font_draw_text(buffer, &options);
+         }
 
          if (i == 0)
+         {
             vk_frame_add(0, 0, render_targets[i].viewport.width, render_targets[i].viewport.height);
+         }
          else if (i == 1)
+         {
+            vk_frame_add(render_targets[i].viewport.width - 256 - 20, 20, 256, 224);
             console_draw();
+         }
 
          {
             vk_renderer_t **renderer = renderers;

@@ -40,7 +40,7 @@ OBJS := $(addprefix $(BUILD_DIR)/,$(OBJS))
 
 
 
-$(BUILD_DIR)/vulkan/frame.o: vulkan/frame.vert.inc vulkan/frame.frag.inc
+$(BUILD_DIR)/vulkan/frame.o: vulkan/frame.vert.inc vulkan/frame.frag.inc vulkan/frame.geom.inc
 SPIRV_OBJS += vulkan/frame.vert.inc vulkan/frame.frag.inc
 
 $(BUILD_DIR)/vulkan/font.o:  vulkan/font.vert.inc vulkan/font.frag.inc vulkan/font.geom.inc
