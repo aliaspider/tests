@@ -51,14 +51,6 @@ typedef struct
 void vk_context_init(vk_context_t* vk);
 void vk_context_destroy(vk_context_t* vk);
 
-
-typedef struct render_element_t
-{
-   void(*update)(VkDevice device, VkCommandBuffer cmd, void* data);
-   void(*render)(VkCommandBuffer cmd, void* data);
-   void* data;
-}render_element_t;
-
 typedef struct
 {
    VkSurfaceKHR surface;
@@ -72,7 +64,6 @@ typedef struct
    VkFramebuffer framebuffers[MAX_SWAPCHAIN_IMAGES];
    VkCommandBuffer cmd;
    VkFence chain_fence;
-   render_element_t render_elements[MAX_RENDER_ELEMENTS];
 } vk_render_target_t;
 
 void vk_render_targets_init(vk_context_t* vk, int count, screen_t* screens, vk_render_target_t* render_targets);
@@ -181,7 +172,9 @@ typedef struct
 
 void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info, vk_renderer_t *dst);
 void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer);
+void vk_renderer_update(VkDevice device, VkCommandBuffer cmd, vk_renderer_t* renderer);
 void vk_renderer_draw(VkCommandBuffer cmd, vk_renderer_t *renderer);
+void vk_renderer_finish(VkDevice device, vk_renderer_t* renderer);
 
 typedef union
 {

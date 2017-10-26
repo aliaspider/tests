@@ -23,9 +23,9 @@ typedef struct
    vec4 v[4];
 }ssbo_t;
 
-static vk_renderer_t slider_renderer;
+vk_renderer_t slider_renderer;
 
-void vulkan_slider_init(vk_context_t *vk)
+void vk_slider_init(vk_context_t *vk)
 {
    {
       const uint32_t vs_code [] =
@@ -80,7 +80,7 @@ void vulkan_slider_init(vk_context_t *vk)
 }
 
 
-void vulkan_slider_add(int x, int y, int w, int h, float pos, float size)
+void vk_slider_add(int x, int y, int w, int h, float pos, float size)
 {
    vertex_t* out = (vertex_t*)(slider_renderer.vbo.mem.u8 + slider_renderer.vbo.info.range);
    out->x = x;
@@ -95,30 +95,7 @@ void vulkan_slider_add(int x, int y, int w, int h, float pos, float size)
    assert(slider_renderer.vbo.info.range <= slider_renderer.vbo.mem.size);
 }
 
-void vulkan_slider_finish(VkDevice device)
-{
-   if(slider_renderer.vbo.dirty)
-      vk_buffer_flush(device, &slider_renderer.vbo);
-
-   slider_renderer.vbo.info.offset = 0;
-   slider_renderer.vbo.info.range = 0;
-//   slider_renderer.texture.flushed = false;
-//   slider_renderer.texture.uploaded = false;
-}
-
-void vulkan_slider_update(VkDevice device, VkCommandBuffer cmd)
-{
-//   if (slider_renderer.texture.dirty && !slider_renderer.texture.uploaded)
-//      vk_texture_upload(device, cmd, &slider_renderer.texture);
-}
-
-
-void vulkan_slider_render(VkCommandBuffer cmd)
-{
-   vk_renderer_draw(cmd, &slider_renderer);
-}
-
-void vulkan_slider_destroy(VkDevice device)
+void vk_slider_destroy(VkDevice device)
 {
    vk_renderer_destroy(device, &slider_renderer);
 }

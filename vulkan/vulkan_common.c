@@ -1309,6 +1309,33 @@ void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer)
    memset(renderer, 0, sizeof(*renderer));
 }
 
+
+void vk_renderer_update(VkDevice device, VkCommandBuffer cmd, vk_renderer_t* renderer)
+{
+   if (renderer->texture.dirty && !renderer->texture.uploaded)
+      vk_texture_upload(device, cmd, &renderer->texture);
+}
+
+void vk_renderer_finish(VkDevice device, vk_renderer_t* renderer)
+{
+   if (renderer->texture.dirty && !renderer->texture.flushed)
+      vk_texture_flush(device, &renderer->texture);
+
+   if (renderer->vbo.dirty)
+      vk_buffer_flush(device, &renderer->vbo);
+
+   if (renderer->ubo.dirty)
+      vk_buffer_flush(device, &renderer->ubo);
+
+   if (renderer->ssbo.dirty)
+      vk_buffer_flush(device, &renderer->ssbo);
+
+   renderer->vbo.info.offset = 0;
+   renderer->vbo.info.range = 0;
+   renderer->texture.flushed = false;
+   renderer->texture.uploaded = false;
+}
+
 void vk_renderer_draw(VkCommandBuffer cmd, vk_renderer_t *renderer)
 {
    if (renderer->vbo.info.range - renderer->vbo.info.offset == 0)

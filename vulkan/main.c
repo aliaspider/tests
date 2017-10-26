@@ -13,6 +13,13 @@
 static vk_context_t vk;
 static vk_render_target_t render_targets[MAX_SCREENS];
 
+static vk_renderer_t* renderers[] =
+{
+   &frame_renderer,
+   &font_renderer,
+   &slider_renderer,
+   NULL
+};
 void video_init()
 {
    debug_log("video init\n");
@@ -27,22 +34,8 @@ void video_init()
 
    vk_render_targets_init(&vk, video.screen_count, video.screens, render_targets);
 
-   vulkan_font_init(&vk);
-   vulkan_slider_init(&vk);
-
-   render_element_t *el;
-
-   el = render_targets[0].render_elements;
-   el->update = (void *)vulkan_frame_update;
-   el->render = (void *)vulkan_frame_render;
-
-   el = render_targets[1].render_elements;
-   el->update = (void *)vulkan_font_update_assets;
-   el->render = (void *)vulkan_font_render;
-   el++;
-   el->update = (void *)vulkan_slider_update;
-   el->render = (void *)vulkan_slider_render;
-
+   vk_font_init(&vk);
+   vk_slider_init(&vk);
 }
 
 void video_frame_init(int width, int height, screen_format_t format)
@@ -64,7 +57,7 @@ void video_frame_init(int width, int height, screen_format_t format)
       break;
    }
 
-   vulkan_frame_init(&vk, width, height, vkformat);
+   vk_frame_init(&vk, width, height, vkformat);
 }
 
 void video_frame_update()
@@ -73,6 +66,7 @@ void video_frame_update()
    VkCommandBuffer cmds[MAX_SCREENS];
    VkSwapchainKHR swapchains[MAX_SCREENS];
 
+   frame_renderer.texture.dirty = true;
 
    vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, UINT64_MAX);
    vkResetFences(vk.device, 1, &vk.queue_fence);
@@ -99,18 +93,11 @@ void video_frame_update()
          vkBeginCommandBuffer(render_targets[i].cmd, &info);
       }
 
-      vulkan_frame_update(vk.device, render_targets[i].cmd);
-      vulkan_font_update_assets(vk.device, render_targets[i].cmd);
-      vulkan_slider_update(vk.device, render_targets[i].cmd);
-
-//      {
-//         render_element_t* el = render_targets[i].render_elements;
-//         while (el->update)
-//         {
-//            el->update(vk.device, render_targets[i].cmd, el->data);
-//            el++;
-//         }
-//      }
+      {
+         vk_renderer_t** renderer = renderers;
+         while(*renderer)
+            vk_renderer_update(vk.device, render_targets[i].cmd, *renderer++);
+      }
 
       /* renderpass */
       {
@@ -147,10 +134,10 @@ void video_frame_update()
             .max_width = video.screens[0].width,
             .max_height = video.screens[0].height,
          };
-         vulkan_font_draw_text(buffer, &options);
+         vk_font_draw_text(buffer, &options);
 
          if (i == 0)
-            vulkan_frame_add(0, 0, render_targets[i].viewport.width, render_targets[i].viewport.height);
+            vk_frame_add(0, 0, render_targets[i].viewport.width, render_targets[i].viewport.height);
          else if (i == 1)
          {
             void console_draw(void);
@@ -163,12 +150,12 @@ void video_frame_update()
             };
 
             char buffer[512];
-            vulkan_font_draw_text(video.fps, &options);
+            vk_font_draw_text(video.fps, &options);
 
             snprintf(buffer, sizeof(buffer), "[%c,%c,%c] \e[91m%i, \e[32m%i", input.pointer.touch1 ? '#' : ' ',
                input.pointer.touch2 ? '#' : ' ', input.pointer.touch3 ? '#' : ' ', input.pointer.x, input.pointer.y);
             options.y = 20;
-            vulkan_font_draw_text(buffer, &options);
+            vk_font_draw_text(buffer, &options);
 
 //            static int text_pos_y = 100;
 
@@ -206,9 +193,11 @@ void video_frame_update()
 
          }
 
-         vulkan_frame_render(render_targets[i].cmd);
-         vulkan_font_render(render_targets[i].cmd);
-         vulkan_slider_render(render_targets[i].cmd);
+         {
+            vk_renderer_t** renderer = renderers;
+            while(*renderer)
+               vk_renderer_draw(render_targets[i].cmd, *renderer++);
+         }
 //         {
 //            render_element_t* el = render_targets[i].render_elements;
 //            while (el->render)
@@ -227,9 +216,11 @@ void video_frame_update()
       swapchains[i] = render_targets[i].swapchain;
    }
 
-   vulkan_frame_finish(vk.device);
-   vulkan_font_finish(vk.device);
-   vulkan_slider_finish(vk.device);
+   {
+      vk_renderer_t** renderer = renderers;
+      while(*renderer)
+         vk_renderer_finish(vk.device, *renderer++);
+   }
 
    {
       const VkSubmitInfo info =
@@ -269,9 +260,9 @@ void video_destroy()
       vkWaitForFences(vk.device, 1, &render_targets[i].chain_fence, VK_TRUE, UINT64_MAX);
 
    vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, UINT64_MAX);
-   vulkan_slider_destroy(vk.device);
-   vulkan_font_destroy(vk.device);
-   vulkan_frame_destroy(vk.device);
+   vk_slider_destroy(vk.device);
+   vk_font_destroy(vk.device);
+   vk_frame_destroy(vk.device);
    vk_render_targets_destroy(&vk, video.screen_count, render_targets);
    vk_context_destroy(&vk);
 

@@ -23,9 +23,9 @@ typedef struct
    } color;
 } vertex_t;
 
-static vk_renderer_t frame_renderer;
+vk_renderer_t frame_renderer;
 
-void vulkan_frame_init(vk_context_t *vk, int width, int height, VkFormat format)
+void vk_frame_init(vk_context_t *vk, int width, int height, VkFormat format)
 {
    {
       const uint32_t vs_code [] =
@@ -81,7 +81,7 @@ void vulkan_frame_init(vk_context_t *vk, int width, int height, VkFormat format)
    video.frame.data = frame_renderer.texture.staging.mem.u8 + frame_renderer.texture.staging.mem.layout.offset;
 }
 
-void vulkan_frame_add(int x, int y, int width, int height)
+void vk_frame_add(int x, int y, int width, int height)
 {
    const vertex_t vertices[] =
    {
@@ -96,34 +96,7 @@ void vulkan_frame_add(int x, int y, int width, int height)
    assert(frame_renderer.vbo.info.range <= frame_renderer.vbo.mem.size);
 }
 
-void vulkan_frame_finish(VkDevice device)
-{
-   if (frame_renderer.texture.dirty && !frame_renderer.texture.flushed)
-      vk_texture_flush(device, &frame_renderer.texture);
-
-   if(frame_renderer.vbo.dirty)
-      vk_buffer_flush(device, &frame_renderer.vbo);
-
-   frame_renderer.vbo.info.offset = 0;
-   frame_renderer.vbo.info.range = 0;
-   frame_renderer.texture.dirty = true;
-   frame_renderer.texture.flushed = false;
-   frame_renderer.texture.uploaded = false;
-}
-
-void vulkan_frame_update(VkDevice device, VkCommandBuffer cmd)
-{
-   if (frame_renderer.texture.dirty && !frame_renderer.texture.uploaded)
-      vk_texture_upload(device, cmd, &frame_renderer.texture);
-
-}
-
-void vulkan_frame_render(VkCommandBuffer cmd)
-{
-   vk_renderer_draw(cmd, &frame_renderer);
-}
-
-void vulkan_frame_destroy(VkDevice device)
+void vk_frame_destroy(VkDevice device)
 {
    vk_renderer_destroy(device, &frame_renderer);
 }

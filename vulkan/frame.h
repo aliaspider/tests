@@ -2,9 +2,8 @@
 
 #include "vulkan_common.h"
 
-void vulkan_frame_init(vk_context_t *vk, int width, int height, VkFormat format);
-void vulkan_frame_add(int x, int y, int width, int height);
-void vulkan_frame_update(VkDevice device, VkCommandBuffer cmd);
-void vulkan_frame_finish(VkDevice device);
-void vulkan_frame_render(VkCommandBuffer cmd);
-void vulkan_frame_destroy(VkDevice device);
+extern vk_renderer_t frame_renderer;
+
+void vk_frame_init(vk_context_t *vk, int width, int height, VkFormat format);
+void vk_frame_add(int x, int y, int width, int height);
+void vk_frame_destroy(VkDevice device);

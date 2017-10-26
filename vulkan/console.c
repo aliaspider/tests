@@ -25,7 +25,7 @@ void console_draw(void)
       .lines = lines,
       .dry_run = true
    };
-   vulkan_font_draw_text(console_get(), &options);
+   vk_font_draw_text(console_get(), &options);
    options.lines = NULL;
    options.dry_run = false;
 
@@ -73,15 +73,15 @@ void console_draw(void)
    char buffer[512];
    snprintf(buffer, sizeof(buffer), "\e[31m[%c] %i", grab ? '#' : ' ', input.pointer.y - old_pointer.y);
    options.y = 40;
-   vulkan_font_draw_text(buffer, &options);
+   vk_font_draw_text(buffer, &options);
 
    old_pointer = input.pointer;
 
    options.y = 100;
    options.max_width = video.screens[0].width - 20;
-   vulkan_font_draw_text(lines->data[(int)(0.5 + lines->count * real_pos)], &options);
+   vk_font_draw_text(lines->data[(int)(0.5 + lines->count * real_pos)], &options);
 
    free(lines);
-   vulkan_slider_add(video.screens[1].width - 20,0,20,video.screens[1].height,real_pos,size);
+   vk_slider_add(video.screens[1].width - 20,0,20,video.screens[1].height,real_pos,size);
 
 }
