@@ -13,13 +13,16 @@
 static vk_context_t vk;
 static vk_render_target_t render_targets[MAX_SCREENS];
 
-static vk_renderer_t* renderers[] =
+static vk_renderer_t *renderers[] =
 {
    &frame_renderer,
    &font_renderer,
    &slider_renderer,
    NULL
 };
+
+void console_draw(void);
+
 void video_init()
 {
    debug_log("video init\n");
@@ -94,8 +97,9 @@ void video_frame_update()
       }
 
       {
-         vk_renderer_t** renderer = renderers;
-         while(*renderer)
+         vk_renderer_t **renderer = renderers;
+
+         while (*renderer)
             vk_renderer_update(vk.device, render_targets[i].cmd, *renderer++);
       }
 
@@ -135,31 +139,19 @@ void video_frame_update()
          };
          vk_font_draw_text(video.fps, &options);
          options.x = video.screens[0].width - 20 - strlen(buffer) * 12,
-         vk_font_draw_text(buffer, &options);
+                 vk_font_draw_text(buffer, &options);
 
          if (i == 0)
             vk_frame_add(0, 0, render_targets[i].viewport.width, render_targets[i].viewport.height);
          else if (i == 1)
-         {
-            void console_draw(void);
             console_draw();
 
-         }
-
          {
-            vk_renderer_t** renderer = renderers;
-            while(*renderer)
+            vk_renderer_t **renderer = renderers;
+
+            while (*renderer)
                vk_renderer_draw(render_targets[i].cmd, *renderer++);
          }
-//         {
-//            render_element_t* el = render_targets[i].render_elements;
-//            while (el->render)
-//            {
-//               el->render(render_targets[i].cmd, el->data);
-//               el++;
-//            }
-
-//         }
 
          vkCmdEndRenderPass(render_targets[i].cmd);
       }
@@ -170,8 +162,9 @@ void video_frame_update()
    }
 
    {
-      vk_renderer_t** renderer = renderers;
-      while(*renderer)
+      vk_renderer_t **renderer = renderers;
+
+      while (*renderer)
          vk_renderer_finish(vk.device, *renderer++);
    }
 

@@ -925,6 +925,7 @@ void vk_texture_upload(VkDevice device, VkCommandBuffer cmd, vk_texture_t *textu
    texture->info.imageLayout = barrier.newLayout;
    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, NULL, 0, NULL, 1,
       &barrier);
+
    texture->uploaded = true;
 
    if (texture->flushed && texture->uploaded)
