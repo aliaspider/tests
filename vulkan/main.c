@@ -130,10 +130,11 @@ void video_frame_update()
          snprintf(buffer, sizeof(buffer), "SCREEN: %i", i);
          font_render_options_t options =
          {
-            .x = video.screens[0].width - 20 - strlen(buffer) * 12,
             .max_width = video.screens[0].width,
             .max_height = video.screens[0].height,
          };
+         vk_font_draw_text(video.fps, &options);
+         options.x = video.screens[0].width - 20 - strlen(buffer) * 12,
          vk_font_draw_text(buffer, &options);
 
          if (i == 0)
@@ -142,54 +143,6 @@ void video_frame_update()
          {
             void console_draw(void);
             console_draw();
-
-            font_render_options_t options =
-            {
-               .max_width = video.screens[0].width,
-               .max_height = video.screens[0].height,
-            };
-
-            char buffer[512];
-            vk_font_draw_text(video.fps, &options);
-
-            snprintf(buffer, sizeof(buffer), "[%c,%c,%c] \e[91m%i, \e[32m%i", input.pointer.touch1 ? '#' : ' ',
-               input.pointer.touch2 ? '#' : ' ', input.pointer.touch3 ? '#' : ' ', input.pointer.x, input.pointer.y);
-            options.y = 20;
-            vk_font_draw_text(buffer, &options);
-
-//            static int text_pos_y = 100;
-
-//            vulkan_font_draw_text("Backward compatibility: Backwards compatibility with ASCII and the enormous "
-//               "amount of software designed to process ASCII-encoded text was the main driving "
-//               "force behind the design of UTF-8. In UTF-8, single bytes with values in the range "
-//               "of 0 to 127 map directly to Unicode code points in the ASCII range. Single bytes "
-//               "in this range represent characters, as they do in ASCII.\n\nMoreover, 7-bit bytes "
-//               "(bytes where the most significant bit is 0) never appear in a multi-byte sequence, "
-//               "and no valid multi-byte sequence decodes to an ASCII code-point. A sequence of 7-bit "
-//               "bytes is both valid ASCII and valid UTF-8, and under either interpretation represents "
-//               "the same sequence of characters.\n\nTherefore, the 7-bit bytes in a UTF-8 stream represent "
-//               "all and only the ASCII characters in the stream. Thus, many text processors, parsers, "
-//               "protocols, file formats, text display programs etc., which use ASCII characters for "
-//               "formatting and control purposes will continue to work as intended by treating the UTF-8 "
-//               "byte stream as a sequence of single-byte characters, without decoding the multi-byte sequences. "
-//               "ASCII characters on which the processing turns, such as punctuation, whitespace, and control "
-//               "characters will never be encoded as multi-byte sequences. It is therefore safe for such "
-//               "processors to simply ignore or pass-through the multi-byte sequences, without decoding them. "
-//               "For example, ASCII whitespace may be used to tokenize a UTF-8 stream into words; "
-//               "ASCII line-feeds may be used to split a UTF-8 stream into lines; and ASCII NUL ", 0, text_pos_y,
-//               video.screens[0].width);
-
-//            vulkan_font_draw_text("北海道の有名なかん光地、知床半島で、黒いキツネがさつえいされました。"
-//               "地元斜里町の町立知床博物館が、タヌキをかんさつするためにおいていた自動さつえいカメラがき重なすがたをとらえました＝"
-//               "写真・同館ていきょう。同館の学芸員も「はじめて見た」とおどろいています。"
-//               "黒い毛皮のために昔、ゆ入したキツネの子そんとも言われてますが、はっきりしません。"
-//               "北海道の先住みん族、アイヌのみん話にも黒いキツネが登場し、神せいな生き物とされているそうです。",
-//               0, text_pos_y, video.screens[0].width);
-
-//            vulkan_font_draw_text("gl_Position.xy = pos + 2.0 * vec2(0.0, glyph_metrics[c].w) / vp_size;", 0, 32,
-//               video.screens[0].width);
-
-//            vulkan_font_draw_text("ettf", 40, 220, video.screens[0].width);
 
          }
 
