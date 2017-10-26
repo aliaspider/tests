@@ -54,7 +54,7 @@ static struct
    float line_height;
    int ascender;
    int max_advance;
-   vk_pipeline_t p;
+   vk_renderer_t p;
    bool monochrome;
    struct
    {
@@ -122,15 +122,14 @@ void vulkan_font_init(vk_context_t *vk)
          VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
       };
 
-      const vk_pipeline_init_info_t info =
+      const vk_renderer_init_info_t info =
       {
          .shaders.vs.code = vs_code,
          .shaders.vs.code_size = sizeof(vs_code),
          .shaders.ps.code = ps_code,
          .shaders.ps.code_size = sizeof(ps_code),
          .shaders.gs.code = gs_code,
-         .shaders.gs.code_size = sizeof(gs_code),
-         .vertex_stride = sizeof(font_vertex_t),
+         .shaders.gs.code_size = sizeof(gs_code),         
          .attrib_count = countof(attrib_desc),
          .attrib_desc = attrib_desc,
          .topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
@@ -144,8 +143,9 @@ void vulkan_font_init(vk_context_t *vk)
       font.p.ssbo.info.range = sizeof(font_shader_storage_t);
       font.p.ubo.info.range = sizeof(font_uniforms_t);
       font.p.vbo.info.range = 4096 * sizeof(font_vertex_t);
+      font.p.vertex_stride = sizeof(font_vertex_t);
 
-      vk_pipeline_init(vk, &info, &font.p);
+      vk_renderer_init(vk, &info, &font.p);
    }
 
    {
@@ -167,7 +167,7 @@ void vulkan_font_destroy(VkDevice device)
 {
    FT_Done_Face(font.ftface);
    FT_Done_FreeType(font.ftlib);
-   vk_pipeline_destroy(device, &font.p);
+   vk_renderer_destroy(device, &font.p);
 }
 
 
@@ -440,92 +440,42 @@ void vulkan_font_draw_text(const char *text, const font_render_options_t *option
    }
 
    font.p.vbo.info.range += pos * sizeof(font_vertex_t);
+   font.p.vbo.dirty = true;
+   assert(font.p.vbo.info.range <= font.p.vbo.mem.size);
+
 }
 
 void vulkan_font_update_assets(VkDevice device, VkCommandBuffer cmd)
 {
-   font_render_options_t options =
-   {
-      .max_width = video.screens[0].width,
-      .max_height = video.screens[0].height,
-   };
+   if (font.p.texture.dirty && !font.p.texture.uploaded)
+      vk_texture_upload(device, cmd, &font.p.texture);
+}
 
-   char buffer[512];
-   vulkan_font_draw_text(video.fps, &options);
+void vulkan_font_start(void)
+{
+   font.p.vbo.info.offset = 0;
+   font.p.vbo.info.range = 0;
+   font.p.texture.flushed = false;
+   font.p.texture.uploaded = false;
+}
 
-   snprintf(buffer, sizeof(buffer), "[%c,%c,%c] \e[91m%i, \e[32m%i", input.pointer.touch1 ? '#' : ' ',
-      input.pointer.touch2 ? '#' : ' ', input.pointer.touch3 ? '#' : ' ', input.pointer.x, input.pointer.y);
-   options.y = 20;
-   vulkan_font_draw_text(buffer, &options);
-
-//   vulkan_font_draw_text(console_get(), 0, 100, video.screens[0].width);
-//   static int text_pos_y = 100;
-
-//   vulkan_font_draw_text("Backward compatibility: Backwards compatibility with ASCII and the enormous "
-//      "amount of software designed to process ASCII-encoded text was the main driving "
-//      "force behind the design of UTF-8. In UTF-8, single bytes with values in the range "
-//      "of 0 to 127 map directly to Unicode code points in the ASCII range. Single bytes "
-//      "in this range represent characters, as they do in ASCII.\n\nMoreover, 7-bit bytes "
-//      "(bytes where the most significant bit is 0) never appear in a multi-byte sequence, "
-//      "and no valid multi-byte sequence decodes to an ASCII code-point. A sequence of 7-bit "
-//      "bytes is both valid ASCII and valid UTF-8, and under either interpretation represents "
-//      "the same sequence of characters.\n\nTherefore, the 7-bit bytes in a UTF-8 stream represent "
-//      "all and only the ASCII characters in the stream. Thus, many text processors, parsers, "
-//      "protocols, file formats, text display programs etc., which use ASCII characters for "
-//      "formatting and control purposes will continue to work as intended by treating the UTF-8 "
-//      "byte stream as a sequence of single-byte characters, without decoding the multi-byte sequences. "
-//      "ASCII characters on which the processing turns, such as punctuation, whitespace, and control "
-//      "characters will never be encoded as multi-byte sequences. It is therefore safe for such "
-//      "processors to simply ignore or pass-through the multi-byte sequences, without decoding them. "
-//      "For example, ASCII whitespace may be used to tokenize a UTF-8 stream into words; "
-//      "ASCII line-feeds may be used to split a UTF-8 stream into lines; and ASCII NUL ", 0, text_pos_y, video.screens[0].width);
-
-//   vulkan_font_draw_text("北海道の有名なかん光地、知床半島で、黒いキツネがさつえいされました。"
-//      "地元斜里町の町立知床博物館が、タヌキをかんさつするためにおいていた自動さつえいカメラがき重なすがたをとらえました＝"
-//      "写真・同館ていきょう。同館の学芸員も「はじめて見た」とおどろいています。"
-//      "黒い毛皮のために昔、ゆ入したキツネの子そんとも言われてますが、はっきりしません。"
-//      "北海道の先住みん族、アイヌのみん話にも黒いキツネが登場し、神せいな生き物とされているそうです。",
-//      0, text_pos_y, video.screens[0].width);
-
-//   vulkan_font_draw_text("gl_Position.xy = pos + 2.0 * vec2(0.0, glyph_metrics[c].w) / vp_size;", 0, 32, video.screens[0].width);
-
-//   vulkan_font_draw_text("ettf", 40, 220, video.screens[0].width);
-
-   if (font.p.texture.dirty)
-      texture_update(device, cmd, &font.p.texture);
+void vulkan_font_finish(VkDevice device)
+{
+   if (font.p.texture.dirty && !font.p.texture.flushed)
+      vk_texture_flush(device, &font.p.texture);
 
    if (font.p.vbo.dirty)
-      buffer_flush(device, &font.p.vbo);
+      vk_buffer_flush(device, &font.p.vbo);
 
    if (font.p.ubo.dirty)
-      buffer_flush(device, &font.p.ubo);
+      vk_buffer_flush(device, &font.p.ubo);
 
-//   if (font.p.ssbo.dirty)
-//      buffer_flush(device, &font.p.ssbo);
+   if (font.p.ssbo.dirty)
+      vk_buffer_flush(device, &font.p.ssbo);
 }
+
 
 void vulkan_font_render(VkCommandBuffer cmd)
 {
-   if ((font.p.vbo.info.range - font.p.vbo.info.offset) == 0)
-      return;
-
-   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, font.p.handle);
-   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, font.p.layout, 0, 1, &font.p.desc, 0, NULL);
-
-   vkCmdBindVertexBuffers(cmd, 0, 1, &font.p.vbo.info.buffer, &font.p.vbo.info.offset);
-   vkCmdDraw(cmd, (font.p.vbo.info.range - font.p.vbo.info.offset) / sizeof(font_vertex_t), 1, 0, 0);
-   font.p.vbo.info.range = 0;
-
-//   {
-//      VkMappedMemoryRange range =
-//      {
-//         VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
-//         .memory = atlas_ssbo.mem.handle,
-//         .offset = 0,
-//         .size = sizeof(font_shader_storage_t)
-//      };
-//      extern vk_context_t vk;
-//      vkInvalidateMappedMemoryRanges(vk.device, 1, &range);
-//   }
-//   debug_log("(float*)atlas_ssbo.mem.ptr : %i\n", *(int*)atlas_ssbo.mem.ptr);
+   vk_renderer_draw(cmd, &font.p);
 }

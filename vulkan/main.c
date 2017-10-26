@@ -2,8 +2,9 @@
 #include <string.h>
 #include <assert.h>
 
-#include "video.h"
 #include "common.h"
+#include "video.h"
+#include "input.h"
 #include "vulkan_common.h"
 #include "frame.h"
 #include "font.h"
@@ -16,11 +17,11 @@ void video_init()
 {
    debug_log("video init\n");
    debug_log("color test : \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s "
-             "\e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[39m\n",
-             BLACK, "BLACK", RED, "RED", GREEN, "GREEN", YELLOW, "YELLOW",
-             BLUE, "BLUE", MAGENTA, "MAGENTA", CYAN, "CYAN", LIGHT_GRAY, "LIGHT_GRAY",
-             DARK_GRAY, "DARK_GRAY", LIGHT_RED, "LIGHT_RED", LIGHT_GREEN, "LIGHT_GREEN", LIGHT_YELLOW, "LIGHT_YELLOW",
-             LIGHT_BLUE, "LIGHT_BLUE", LIGHT_MAGENTA, "LIGHT_MAGENTA", LIGHT_CYAN, "LIGHT_CYAN", WHITE, "WHITE");
+      "\e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[39m\n",
+      BLACK, "BLACK", RED, "RED", GREEN, "GREEN", YELLOW, "YELLOW",
+      BLUE, "BLUE", MAGENTA, "MAGENTA", CYAN, "CYAN", LIGHT_GRAY, "LIGHT_GRAY",
+      DARK_GRAY, "DARK_GRAY", LIGHT_RED, "LIGHT_RED", LIGHT_GREEN, "LIGHT_GREEN", LIGHT_YELLOW, "LIGHT_YELLOW",
+      LIGHT_BLUE, "LIGHT_BLUE", LIGHT_MAGENTA, "LIGHT_MAGENTA", LIGHT_CYAN, "LIGHT_CYAN", WHITE, "WHITE");
 
    vk_context_init(&vk);
 
@@ -29,18 +30,18 @@ void video_init()
    vulkan_font_init(&vk);
    vulkan_slider_init(&vk);
 
-   render_element_t* el;
+   render_element_t *el;
 
    el = render_targets[0].render_elements;
-   el->update = (void*)vulkan_frame_update;
-   el->render = (void*)vulkan_frame_render;
+   el->update = (void *)vulkan_frame_update;
+   el->render = (void *)vulkan_frame_render;
 
    el = render_targets[1].render_elements;
-   el->update = (void*)vulkan_font_update_assets;
-   el->render = (void*)vulkan_font_render;
+   el->update = (void *)vulkan_font_update_assets;
+   el->render = (void *)vulkan_font_render;
    el++;
-   el->update = (void*)vulkan_slider_update;
-   el->render = (void*)vulkan_slider_render;
+   el->update = (void *)vulkan_slider_update;
+   el->render = (void *)vulkan_slider_render;
 
 }
 
@@ -76,9 +77,9 @@ void video_frame_update()
    vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, UINT64_MAX);
    vkResetFences(vk.device, 1, &vk.queue_fence);
 
-//   vulkan_slider_add(400,100, 40, 300, 0.3);
-//   vulkan_slider_add(video.screens[1].width - 20, 0, 20, video.screens[1].height, 0.1, 0.2);
-//   vulkan_slider_add(video.screens[1].width - 240, 0, 10, 200, 0.3);
+   vulkan_frame_start();
+   vulkan_font_start();
+   vulkan_slider_start();
 
    int i;
 
@@ -102,14 +103,18 @@ void video_frame_update()
          vkBeginCommandBuffer(render_targets[i].cmd, &info);
       }
 
-      {
-         render_element_t* el = render_targets[i].render_elements;
-         while (el->update)
-         {
-            el->update(vk.device, render_targets[i].cmd, el->data);
-            el++;
-         }
-      }
+      vulkan_frame_update(vk.device, render_targets[i].cmd);
+      vulkan_font_update_assets(vk.device, render_targets[i].cmd);
+      vulkan_slider_update(vk.device, render_targets[i].cmd);
+
+//      {
+//         render_element_t* el = render_targets[i].render_elements;
+//         while (el->update)
+//         {
+//            el->update(vk.device, render_targets[i].cmd, el->data);
+//            el++;
+//         }
+//      }
 
       /* renderpass */
       {
@@ -138,15 +143,75 @@ void video_frame_update()
          vkCmdSetViewport(render_targets[i].cmd, 0, 1, &render_targets[i].viewport);
          vkCmdSetScissor(render_targets[i].cmd, 0, 1, &render_targets[i].scissor);
 
+         if (i == 0)
+            vulkan_frame_add(0, 0, render_targets[i].viewport.width, render_targets[i].viewport.height);
+         else if (i == 1)
          {
-            render_element_t* el = render_targets[i].render_elements;
-            while (el->render)
+            void console_draw(void);
+            console_draw();
+
+            font_render_options_t options =
             {
-               el->render(render_targets[i].cmd, el->data);
-               el++;
-            }
+               .max_width = video.screens[0].width,
+               .max_height = video.screens[0].height,
+            };
+
+            char buffer[512];
+            vulkan_font_draw_text(video.fps, &options);
+
+            snprintf(buffer, sizeof(buffer), "[%c,%c,%c] \e[91m%i, \e[32m%i", input.pointer.touch1 ? '#' : ' ',
+               input.pointer.touch2 ? '#' : ' ', input.pointer.touch3 ? '#' : ' ', input.pointer.x, input.pointer.y);
+            options.y = 20;
+            vulkan_font_draw_text(buffer, &options);
+
+//            static int text_pos_y = 100;
+
+//            vulkan_font_draw_text("Backward compatibility: Backwards compatibility with ASCII and the enormous "
+//               "amount of software designed to process ASCII-encoded text was the main driving "
+//               "force behind the design of UTF-8. In UTF-8, single bytes with values in the range "
+//               "of 0 to 127 map directly to Unicode code points in the ASCII range. Single bytes "
+//               "in this range represent characters, as they do in ASCII.\n\nMoreover, 7-bit bytes "
+//               "(bytes where the most significant bit is 0) never appear in a multi-byte sequence, "
+//               "and no valid multi-byte sequence decodes to an ASCII code-point. A sequence of 7-bit "
+//               "bytes is both valid ASCII and valid UTF-8, and under either interpretation represents "
+//               "the same sequence of characters.\n\nTherefore, the 7-bit bytes in a UTF-8 stream represent "
+//               "all and only the ASCII characters in the stream. Thus, many text processors, parsers, "
+//               "protocols, file formats, text display programs etc., which use ASCII characters for "
+//               "formatting and control purposes will continue to work as intended by treating the UTF-8 "
+//               "byte stream as a sequence of single-byte characters, without decoding the multi-byte sequences. "
+//               "ASCII characters on which the processing turns, such as punctuation, whitespace, and control "
+//               "characters will never be encoded as multi-byte sequences. It is therefore safe for such "
+//               "processors to simply ignore or pass-through the multi-byte sequences, without decoding them. "
+//               "For example, ASCII whitespace may be used to tokenize a UTF-8 stream into words; "
+//               "ASCII line-feeds may be used to split a UTF-8 stream into lines; and ASCII NUL ", 0, text_pos_y,
+//               video.screens[0].width);
+
+//            vulkan_font_draw_text("北海道の有名なかん光地、知床半島で、黒いキツネがさつえいされました。"
+//               "地元斜里町の町立知床博物館が、タヌキをかんさつするためにおいていた自動さつえいカメラがき重なすがたをとらえました＝"
+//               "写真・同館ていきょう。同館の学芸員も「はじめて見た」とおどろいています。"
+//               "黒い毛皮のために昔、ゆ入したキツネの子そんとも言われてますが、はっきりしません。"
+//               "北海道の先住みん族、アイヌのみん話にも黒いキツネが登場し、神せいな生き物とされているそうです。",
+//               0, text_pos_y, video.screens[0].width);
+
+//            vulkan_font_draw_text("gl_Position.xy = pos + 2.0 * vec2(0.0, glyph_metrics[c].w) / vp_size;", 0, 32,
+//               video.screens[0].width);
+
+//            vulkan_font_draw_text("ettf", 40, 220, video.screens[0].width);
 
          }
+
+         vulkan_frame_render(render_targets[i].cmd);
+         vulkan_font_render(render_targets[i].cmd);
+         vulkan_slider_render(render_targets[i].cmd);
+//         {
+//            render_element_t* el = render_targets[i].render_elements;
+//            while (el->render)
+//            {
+//               el->render(render_targets[i].cmd, el->data);
+//               el++;
+//            }
+
+//         }
 
          vkCmdEndRenderPass(render_targets[i].cmd);
       }
@@ -155,6 +220,10 @@ void video_frame_update()
       cmds[i] = render_targets[i].cmd;
       swapchains[i] = render_targets[i].swapchain;
    }
+
+   vulkan_frame_finish(vk.device);
+   vulkan_font_finish(vk.device);
+   vulkan_slider_finish(vk.device);
 
    {
       const VkSubmitInfo info =

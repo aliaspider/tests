@@ -45,31 +45,32 @@ static void vk_init_device_pfn(VkDevice device)
 
 VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(
    VkInstance instance, const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
-      const VkAllocationCallbacks *pAllocator, VkDebugReportCallbackEXT *pCallback)
+   const VkAllocationCallbacks *pAllocator, VkDebugReportCallbackEXT *pCallback)
 {
    return vkCreateDebugReportCallbackEXTp(instance, pCreateInfo, pAllocator, pCallback);
 }
 
-VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback,const VkAllocationCallbacks *pAllocator)
+VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback,
+   const VkAllocationCallbacks *pAllocator)
 {
    return vkDestroyDebugReportCallbackEXTp(instance, callback, pAllocator);
 }
 
 
 VKAPI_ATTR VkResult VKAPI_CALL vkRegisterDisplayEventEXT(
-    VkDevice                                    device,
-    VkDisplayKHR                                display,
-    const VkDisplayEventInfoEXT*                pDisplayEventInfo,
-    const VkAllocationCallbacks*                pAllocator,
-    VkFence*                                    pFence)
+   VkDevice                                    device,
+   VkDisplayKHR                                display,
+   const VkDisplayEventInfoEXT                *pDisplayEventInfo,
+   const VkAllocationCallbacks                *pAllocator,
+   VkFence                                    *pFence)
 {
    return vkRegisterDisplayEventEXTp(device, display, pDisplayEventInfo, pAllocator, pFence);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceCapabilities2EXT(
-    VkPhysicalDevice                            physicalDevice,
-    VkSurfaceKHR                                surface,
-    VkSurfaceCapabilities2EXT*                  pSurfaceCapabilities)
+   VkPhysicalDevice                            physicalDevice,
+   VkSurfaceKHR                                surface,
+   VkSurfaceCapabilities2EXT                  *pSurfaceCapabilities)
 {
    return vkGetPhysicalDeviceSurfaceCapabilities2EXTp(physicalDevice, surface, pSurfaceCapabilities);
 }
@@ -77,25 +78,25 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceCapabilities2EXT(
 #ifdef VK_USE_PLATFORM_XLIB_XRANDR_EXT
 
 VKAPI_ATTR VkResult VKAPI_CALL vkReleaseDisplayEXT(
-    VkPhysicalDevice                            physicalDevice,
-    VkDisplayKHR                                display)
+   VkPhysicalDevice                            physicalDevice,
+   VkDisplayKHR                                display)
 {
    return vkReleaseDisplayEXTp(physicalDevice, display);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL vkAcquireXlibDisplayEXT(
-    VkPhysicalDevice                            physicalDevice,
-    Display*                                    dpy,
-    VkDisplayKHR                                display)
+   VkPhysicalDevice                            physicalDevice,
+   Display                                    *dpy,
+   VkDisplayKHR                                display)
 {
    return vkAcquireXlibDisplayEXTp(physicalDevice, dpy, display);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL vkGetRandROutputDisplayEXT(
-    VkPhysicalDevice                            physicalDevice,
-    Display*                                    dpy,
-    RROutput                                    rrOutput,
-    VkDisplayKHR*                               pDisplay)
+   VkPhysicalDevice                            physicalDevice,
+   Display                                    *dpy,
+   RROutput                                    rrOutput,
+   VkDisplayKHR                               *pDisplay)
 {
    return vkGetRandROutputDisplayEXTp(physicalDevice, dpy, rrOutput, pDisplay);
 }
@@ -103,27 +104,27 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetRandROutputDisplayEXT(
 #endif
 
 VKAPI_ATTR VkResult VKAPI_CALL vkGetRefreshCycleDurationGOOGLE(
-    VkDevice                                    device,
-    VkSwapchainKHR                              swapchain,
-    VkRefreshCycleDurationGOOGLE*               pDisplayTimingProperties)
+   VkDevice                                    device,
+   VkSwapchainKHR                              swapchain,
+   VkRefreshCycleDurationGOOGLE               *pDisplayTimingProperties)
 {
    return vkGetRefreshCycleDurationGOOGLEp(device, swapchain, pDisplayTimingProperties);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL vkGetPastPresentationTimingGOOGLE(
-    VkDevice                                    device,
-    VkSwapchainKHR                              swapchain,
-    uint32_t*                                   pPresentationTimingCount,
-    VkPastPresentationTimingGOOGLE*             pPresentationTimings)
+   VkDevice                                    device,
+   VkSwapchainKHR                              swapchain,
+   uint32_t                                   *pPresentationTimingCount,
+   VkPastPresentationTimingGOOGLE             *pPresentationTimings)
 {
    return vkGetPastPresentationTimingGOOGLEp(device, swapchain, pPresentationTimingCount, pPresentationTimings);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainCounterEXT(
-    VkDevice                                    device,
-    VkSwapchainKHR                              swapchain,
-    VkSurfaceCounterFlagBitsEXT                 counter,
-    uint64_t*                                   pCounterValue)
+   VkDevice                                    device,
+   VkSwapchainKHR                              swapchain,
+   VkSurfaceCounterFlagBitsEXT                 counter,
+   uint64_t                                   *pCounterValue)
 {
    return vkGetSwapchainCounterEXTp(device, swapchain, counter, pCounterValue);
 
@@ -211,7 +212,8 @@ static void vk_get_gpu_props(VkPhysicalDevice gpu)
    VK_CHECK(vkGetDisplayModePropertiesKHR(vk->gpu, dst->display, &displayModeCount, displayModeProperties));
    debug_log("displayModeProperties.parameters.refreshRate : %u\n", displayModeProperties[0].parameters.refreshRate);
    debug_log("displayModeProperties.visibleRegion.width : %u\n", displayModeProperties[0].parameters.visibleRegion.width);
-   debug_log("displayModeProperties.visibleRegion.height : %u\n", displayModeProperties[0].parameters.visibleRegion.height);
+   debug_log("displayModeProperties.visibleRegion.height : %u\n",
+      displayModeProperties[0].parameters.visibleRegion.height);
 #endif
 
 
@@ -633,7 +635,7 @@ void vk_render_targets_init(vk_context_t *vk, int count, screen_t *screens, vk_r
             .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
             .preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
             .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-         .presentMode = VK_PRESENT_MODE_FIFO_KHR,
+//            .presentMode = VK_PRESENT_MODE_FIFO_KHR,
 //         .presentMode = VK_PRESENT_MODE_FIFO_RELAXED_KHR,
 //         .presentMode = VK_PRESENT_MODE_MAILBOX_KHR,
 //         .presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR,
@@ -812,7 +814,7 @@ void vk_texture_init(VkDevice device, const VkMemoryType *memory_types, uint32_t
          .req_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
          .image = dst->image
       };
-      device_memory_init(device, memory_types, &info, &dst->mem);
+      vk_device_memory_init(device, memory_types, &info, &dst->mem);
    }
    {
       memory_init_info_t info =
@@ -820,7 +822,7 @@ void vk_texture_init(VkDevice device, const VkMemoryType *memory_types, uint32_t
          .req_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
          .image = dst->staging.image
       };
-      device_memory_init(device, memory_types, &info, &dst->staging.mem);
+      vk_device_memory_init(device, memory_types, &info, &dst->staging.mem);
    }
 
    {
@@ -838,21 +840,28 @@ void vk_texture_init(VkDevice device, const VkMemoryType *memory_types, uint32_t
    }
 }
 
-void texture_free(VkDevice device, vk_texture_t *texture)
+void vk_texture_free(VkDevice device, vk_texture_t *texture)
 {
    vkDestroyImageView(device, texture->info.imageView, NULL);
    vkDestroyImage(device, texture->image, NULL);
    vkDestroyImage(device, texture->staging.image, NULL);
-   device_memory_free(device, &texture->mem);
-   device_memory_free(device, &texture->staging.mem);
+   vk_device_memory_free(device, &texture->mem);
+   vk_device_memory_free(device, &texture->staging.mem);
    texture->info.imageView = VK_NULL_HANDLE;
    texture->image = VK_NULL_HANDLE;
 }
 
-void texture_update(VkDevice device, VkCommandBuffer cmd, vk_texture_t *texture)
+void vk_texture_flush(VkDevice device, vk_texture_t *texture)
 {
-   device_memory_flush(device, &texture->staging.mem);
+   vk_device_memory_flush(device, &texture->staging.mem);
+   texture->flushed = true;
 
+   if (texture->flushed && texture->uploaded)
+      texture->dirty = false;
+}
+
+void vk_texture_upload(VkDevice device, VkCommandBuffer cmd, vk_texture_t *texture)
+{
    VkImageMemoryBarrier barrier =
    {
       VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -916,12 +925,14 @@ void texture_update(VkDevice device, VkCommandBuffer cmd, vk_texture_t *texture)
    texture->info.imageLayout = barrier.newLayout;
    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, NULL, 0, NULL, 1,
       &barrier);
+   texture->uploaded = true;
 
-   texture->dirty = false;
+   if (texture->flushed && texture->uploaded)
+      texture->dirty = false;
 }
 
 
-void device_memory_init(VkDevice device, const VkMemoryType *memory_types, const memory_init_info_t *init_info,
+void vk_device_memory_init(VkDevice device, const VkMemoryType *memory_types, const memory_init_info_t *init_info,
    device_memory_t *dst)
 {
 
@@ -972,7 +983,7 @@ void device_memory_init(VkDevice device, const VkMemoryType *memory_types, const
       vkBindImageMemory(device, init_info->image, dst->handle, 0);
 }
 
-void device_memory_free(VkDevice device, device_memory_t *memory)
+void vk_device_memory_free(VkDevice device, device_memory_t *memory)
 {
    if (memory->ptr)
       vkUnmapMemory(device, memory->handle);
@@ -984,7 +995,7 @@ void device_memory_free(VkDevice device, device_memory_t *memory)
    memory->handle = VK_NULL_HANDLE;
 }
 
-void device_memory_flush(VkDevice device, const device_memory_t *memory)
+void vk_device_memory_flush(VkDevice device, const device_memory_t *memory)
 {
    if (memory->flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
       return;
@@ -1036,30 +1047,30 @@ void vk_buffer_init(VkDevice device, const VkMemoryType *memory_types, const voi
          .req_flags = dst->mem.flags,
          .buffer = dst->info.buffer
       };
-      device_memory_init(device, memory_types, &info, &dst->mem);
+      vk_device_memory_init(device, memory_types, &info, &dst->mem);
    }
 
    if (data && dst->mem.ptr)
    {
       memcpy(dst->mem.ptr, data, dst->info.range);
-      device_memory_flush(device, &dst->mem);
+      vk_device_memory_flush(device, &dst->mem);
    }
 }
 
-void buffer_free(VkDevice device, vk_buffer_t *buffer)
+void vk_buffer_free(VkDevice device, vk_buffer_t *buffer)
 {
-   device_memory_free(device, &buffer->mem);
+   vk_device_memory_free(device, &buffer->mem);
    vkDestroyBuffer(device, buffer->info.buffer, NULL);
    buffer->info.buffer = VK_NULL_HANDLE;
 }
 
-void buffer_flush(VkDevice device, vk_buffer_t *buffer)
+void vk_buffer_flush(VkDevice device, vk_buffer_t *buffer)
 {
-   device_memory_flush(device, &buffer->mem);
+   vk_device_memory_flush(device, &buffer->mem);
    buffer->dirty = false;
 }
 
-void buffer_invalidate(VkDevice device, vk_buffer_t *buffer)
+void vk_buffer_invalidate(VkDevice device, vk_buffer_t *buffer)
 {
    device_memory_invalidate(device, &buffer->mem);
    buffer->dirty = false;
@@ -1080,7 +1091,7 @@ static inline VkShaderModule vk_shader_code_init(VkDevice device, const vk_shade
    return shader;
 }
 
-void vk_pipeline_init(vk_context_t *vk, const vk_pipeline_init_info_t *init_info, vk_pipeline_t *dst)
+void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info, vk_renderer_t *dst)
 {
    if (dst->texture.image)
       dst->texture.is_reference = true;
@@ -1209,7 +1220,7 @@ void vk_pipeline_init(vk_context_t *vk, const vk_pipeline_init_info_t *init_info
 
       const VkVertexInputBindingDescription vertex_description =
       {
-         0, init_info->vertex_stride, VK_VERTEX_INPUT_RATE_VERTEX
+         0, dst->vertex_stride, VK_VERTEX_INPUT_RATE_VERTEX
       };
 
       const VkPipelineVertexInputStateCreateInfo vertex_input_state =
@@ -1287,18 +1298,32 @@ void vk_pipeline_init(vk_context_t *vk, const vk_pipeline_init_info_t *init_info
 
 }
 
-void vk_pipeline_destroy(VkDevice device, vk_pipeline_t *render)
+void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer)
 {
-   vkDestroyPipeline(device, render->handle, NULL);
-   buffer_free(device, &render->vbo);
-   buffer_free(device, &render->ubo);
-   buffer_free(device, &render->ssbo);
-   texture_free(device, &render->texture);
+   vkDestroyPipeline(device, renderer->handle, NULL);
+   vk_buffer_free(device, &renderer->vbo);
+   vk_buffer_free(device, &renderer->ubo);
+   vk_buffer_free(device, &renderer->ssbo);
+   vk_texture_free(device, &renderer->texture);
 
-   memset(render, 0, sizeof(*render));
+   memset(renderer, 0, sizeof(*renderer));
 }
 
-const char *VkResult_to_str(VkResult res)
+void vk_renderer_draw(VkCommandBuffer cmd, vk_renderer_t *renderer)
+{
+   if (renderer->vbo.info.range - renderer->vbo.info.offset == 0)
+      return;
+
+   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->handle);
+   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, 1, &renderer->desc, 0, NULL);
+   vkCmdBindVertexBuffers(cmd, 0, 1, &renderer->vbo.info.buffer, &renderer->vbo.info.offset);
+
+   vkCmdDraw(cmd, (renderer->vbo.info.range - renderer->vbo.info.offset) / renderer->vertex_stride, 1, 0, 0);
+
+   renderer->vbo.info.offset = renderer->vbo.info.range;
+}
+
+const char *vk_result_to_str(VkResult res)
 {
    switch (res)
    {

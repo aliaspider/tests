@@ -28,6 +28,7 @@ else ifeq ($(platform),win)
    OBJS += win/audio.o
    OBJS += win/input.o
 endif
+OBJS += vulkan/console.o
 OBJS += vulkan/font.o
 OBJS += vulkan/frame.o
 OBJS += vulkan/main.o

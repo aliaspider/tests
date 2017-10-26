@@ -12,8 +12,8 @@
 #define MAX_SWAPCHAIN_IMAGES 8
 #define countof(a) (sizeof(a)/ sizeof(*a))
 
-#define VK_CHECK(vk_call) do{VkResult res = vk_call; if (res != VK_SUCCESS) {debug_log("%s:%i:%s:%s --> %s(%i)\n", __FILE__, __LINE__, __FUNCTION__, #vk_call, VkResult_to_str(res), res);fflush(stdout);}}while(0)
-const char *VkResult_to_str(VkResult res);
+#define VK_CHECK(vk_call) do{VkResult res = vk_call; if (res != VK_SUCCESS) {debug_log("%s:%i:%s:%s --> %s(%i)\n", __FILE__, __LINE__, __FUNCTION__, #vk_call, vk_result_to_str(res), res);fflush(stdout);}}while(0)
+const char *vk_result_to_str(VkResult res);
 
 typedef struct
 {
@@ -98,10 +98,10 @@ typedef struct
    VkBuffer buffer;
    VkImage image;
 } memory_init_info_t;
-void device_memory_init(VkDevice device, const VkMemoryType *memory_types, const memory_init_info_t *init_info,
+void vk_device_memory_init(VkDevice device, const VkMemoryType *memory_types, const memory_init_info_t *init_info,
    device_memory_t *dst);
-void device_memory_free(VkDevice device, device_memory_t *memory);
-void device_memory_flush(VkDevice device, const device_memory_t *memory);
+void vk_device_memory_free(VkDevice device, device_memory_t *memory);
+void vk_device_memory_flush(VkDevice device, const device_memory_t *memory);
 
 typedef struct
 {
@@ -118,13 +118,16 @@ typedef struct
    VkDescriptorImageInfo info;
    int width;
    int height;
-   bool dirty;
+   bool dirty;   
    bool is_reference;
+   bool flushed;
+   bool uploaded;
 } vk_texture_t;
 
 void vk_texture_init(VkDevice device, const VkMemoryType *memory_types, uint32_t queue_family_index, vk_texture_t *dst);
-void texture_free(VkDevice device, vk_texture_t *texture);
-void texture_update(VkDevice device, VkCommandBuffer cmd, vk_texture_t *texture);
+void vk_texture_free(VkDevice device, vk_texture_t *texture);
+void vk_texture_upload(VkDevice device, VkCommandBuffer cmd, vk_texture_t *texture);
+void vk_texture_flush(VkDevice device, vk_texture_t *texture);
 
 typedef struct
 {
@@ -139,9 +142,9 @@ typedef struct
 } vk_buffer_t;
 
 void vk_buffer_init(VkDevice device, const VkMemoryType *memory_types, const void *data, vk_buffer_t *dst);
-void buffer_flush(VkDevice device, vk_buffer_t *buffer);
-void buffer_invalidate(VkDevice device, vk_buffer_t *buffer);
-void buffer_free(VkDevice device, vk_buffer_t *buffer);
+void vk_buffer_flush(VkDevice device, vk_buffer_t *buffer);
+void vk_buffer_invalidate(VkDevice device, vk_buffer_t *buffer);
+void vk_buffer_free(VkDevice device, vk_buffer_t *buffer);
 
 typedef struct
 {
@@ -152,7 +155,8 @@ typedef struct
    VkDescriptorSet desc;
    VkPipeline handle;
    VkPipelineLayout layout;
-}vk_pipeline_t;
+   uint32_t vertex_stride;
+}vk_renderer_t;
 
 typedef struct
 {
@@ -169,15 +173,15 @@ typedef struct
       vk_shader_code_t gs;
    }shaders;
 
-   uint32_t vertex_stride;
    uint32_t attrib_count;
    const VkVertexInputAttributeDescription* attrib_desc;
    VkPrimitiveTopology topology;
    const VkPipelineColorBlendAttachmentState* color_blend_attachement_state;
-}vk_pipeline_init_info_t;
+}vk_renderer_init_info_t;
 
-void vk_pipeline_init(vk_context_t *vk, const vk_pipeline_init_info_t *init_info, vk_pipeline_t *dst);
-void vk_pipeline_destroy(VkDevice device, vk_pipeline_t *render);
+void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info, vk_renderer_t *dst);
+void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer);
+void vk_renderer_draw(VkCommandBuffer cmd, vk_renderer_t *renderer);
 
 typedef union
 {

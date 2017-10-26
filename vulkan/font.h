@@ -43,6 +43,8 @@ typedef enum
 
 void vulkan_font_init(vk_context_t* vk);
 void vulkan_font_destroy(VkDevice device);
+void vulkan_font_start(void);
 void vulkan_font_update_assets(VkDevice device, VkCommandBuffer cmd);
+void vulkan_font_finish(VkDevice device);
 void vulkan_font_render(VkCommandBuffer cmd);
 void vulkan_font_draw_text(const char *text, const font_render_options_t *options);
