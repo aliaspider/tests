@@ -75,9 +75,17 @@ vk_texture_t test_image;
 
 void sprite_test(screen_t* screen)
 {
+   static int calls = 0;
+   test_image.staging.mem.u8[calls++] = 0xFF;
+   if(calls > test_image.staging.mem.size / 2)
+      calls = 0;
+   test_image.flushed = false;
+   test_image.uploaded = false;
+   test_image.dirty = true;
+
    sprite_t sprite =
    {
-      .pos = {{330.0,100.0,256.0,256.0}},
+      .pos = {{330.0,100.0,(calls >> 3) & 0xFF,256.0}},
       .coords = {{0.0,0.0,256.0,256.0}},
       .tex_size = {{test_image.width, test_image.height}},
    };
