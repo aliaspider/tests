@@ -873,15 +873,7 @@ void vk_texture_init(vk_context_t *vk, vk_texture_t *dst)
       VK_CHECK(vkCreateImageView(vk->device, &info, NULL, &dst->info.imageView));
    }
 
-   {
-      VkSamplerCreateInfo info =
-      {
-         VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-         .magFilter = dst->filter,
-         .minFilter = dst->filter,
-      };
-      VK_CHECK(vkCreateSampler(vk->device, &info, NULL, &dst->info.sampler));
-   }
+   dst->info.sampler = dst->filter == VK_FILTER_LINEAR? vk->samplers.linear : vk->samplers.nearest;
 
    {
       const VkDescriptorSetAllocateInfo info =
@@ -921,7 +913,6 @@ void vk_texture_init(vk_context_t *vk, vk_texture_t *dst)
 
 void vk_texture_free(VkDevice device, vk_texture_t *texture)
 {
-   vkDestroySampler(device, texture->info.sampler, NULL);
    vkDestroyImageView(device, texture->info.imageView, NULL);
    vkDestroyImage(device, texture->image, NULL);
    vkDestroyImage(device, texture->staging.image, NULL);

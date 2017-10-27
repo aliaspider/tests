@@ -328,11 +328,20 @@ void video_toggle_vsync(void)
    vk.vsync = !vk.vsync;
 }
 
+void video_toggle_filter(void)
+{
+   frame_renderer.texture.filter = !frame_renderer.texture.filter;
+   frame_renderer.texture.info.sampler = frame_renderer.texture.filter? vk.samplers.linear : vk.samplers.nearest;
+   vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, UINT64_MAX);
+   vk_update_descriptor_sets(&vk, &frame_renderer);
+}
+
 const video_t video_vulkan =
 {
    .init         = video_init,
    .frame_init   = video_frame_init,
    .frame_update = video_frame_update,
    .destroy      = video_destroy,
-   .toggle_vsync = video_toggle_vsync
+   .toggle_vsync = video_toggle_vsync,
+   .toggle_filter = video_toggle_filter,
 };

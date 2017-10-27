@@ -226,7 +226,7 @@ struct vk_renderer_t
 
 #define vk_renderer_data_start texture
 
-
+void vk_update_descriptor_sets(vk_context_t* vk, vk_renderer_t * dst);
 void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info, vk_renderer_t *dst);
 void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer);
 void vk_renderer_update(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *renderer);

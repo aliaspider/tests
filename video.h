@@ -32,6 +32,7 @@ typedef struct video_t
    void (*frame_update)();
    void (*destroy)();
    void (*toggle_vsync)();
+   void (*toggle_filter)();
    int screen_count;
    screen_t screens[MAX_SCREENS];
    frame_t frame;

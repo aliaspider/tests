@@ -66,6 +66,8 @@ int main(int argc, char **argv)
       if(input.pad_pressed.meta.vsync)
          video.toggle_vsync();
 
+      if(input.pad_pressed.meta.filter)
+         video.toggle_filter();
 
       if(input.pad.meta.exit)
          break;

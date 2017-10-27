@@ -78,6 +78,9 @@ void input_x11_update()
          if (e.xkey.keycode == XKeysymToKeycode(video.screens[0].display, XK_F5))
             input.pad.meta.vsync = (e.type == KeyPress);
 
+         if (e.xkey.keycode == XKeysymToKeycode(video.screens[0].display, XK_F6))
+            input.pad.meta.filter = (e.type == KeyPress);
+
          break;
 
       case ButtonPress:
@@ -124,7 +127,7 @@ void input_x11_update()
       case ClientMessage:
          if (e.xclient.data.l[0] == wmDeleteMessage)
          {
-            if(e.xclient.window == video.screens[0].window)
+            if (e.xclient.window == video.screens[0].window)
                input.pad.meta.exit = true;
          }
 
@@ -132,6 +135,7 @@ void input_x11_update()
       }
 
    }
+
    input.pad_pressed.mask = (input.pad.mask ^ old_mask) & input.pad.mask;
    input.pad_released.mask = (input.pad.mask ^ old_mask) & ~input.pad.mask;
 }

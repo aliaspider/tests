@@ -1,5 +1,8 @@
-#version 450
+#version 310 es
+//#define highp
+#ifndef highp
 precision highp float;
+#endif
 
 #ifdef VERTEX_SHADER
 layout(location = 0) in vec2 pos;
@@ -66,11 +69,11 @@ layout(location = 0) in vec2 vTexCoord;
 
 layout(location = 0) out vec4 FragColor;
 
-layout(set = 0, binding = 1) uniform highp sampler2D uTex[2];
+layout(set = 0, binding = 3) uniform highp sampler2D uTex;
 
 void main()
 {
-   FragColor = texture(uTex[vTexCoord.x < 0.5 ? 0:1], vTexCoord);
+   FragColor = texture(uTex, vTexCoord);
 //   FragColor = texture(uTex[1], vTexCoord);
 }
 #endif

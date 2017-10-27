@@ -71,6 +71,7 @@ typedef union
       int exit :1;
       int menu :1;
       int vsync :1;
+      int filter :1;
    };
    uint32_t mask;
 }meta_buttons_t;

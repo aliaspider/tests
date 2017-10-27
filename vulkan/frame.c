@@ -56,6 +56,7 @@ void vk_frame_init(vk_context_t *vk, int width, int height, VkFormat format)
       frame_renderer.texture.width = width;
       frame_renderer.texture.height = height;
       frame_renderer.texture.format = format;
+      frame_renderer.texture.filter = VK_FILTER_LINEAR;
       frame_renderer.vbo.info.range = sizeof(vertex_t) * 8;
       frame_renderer.vertex_stride = sizeof(vertex_t);
 
