@@ -73,36 +73,38 @@ void frame_draw_small(screen_t *screen)
 
 vk_texture_t test_image;
 
-void sprite_test(screen_t* screen)
+void sprite_test(screen_t *screen)
 {
    static int calls = 0;
    test_image.staging.mem.u8[calls++] = 0xFF;
-   if(calls > test_image.staging.mem.size / 2)
+
+   if (calls > test_image.staging.mem.size / 2)
       calls = 0;
+
    test_image.flushed = false;
    test_image.uploaded = false;
    test_image.dirty = true;
 
    sprite_t sprite =
    {
-      .pos = {{330.0,100.0,(calls >> 3) & 0xFF,256.0}},
-      .coords = {{0.0,0.0,256.0,256.0}},
+      .pos = {{330.0, 100.0, (calls >> 3) & 0xFF, 256.0}},
+      .coords = {{0.0, 0.0, 256.0, 256.0}},
       .tex_size = {{test_image.width, test_image.height}},
    };
    vk_sprite_add(&sprite, &test_image);
 
    sprite_t sprite2 =
    {
-      .pos = {{10.0,40.0,320.0,64.0}},
-      .coords = {{20.0,120.0,132.0,32.0}},
+      .pos = {{10.0, 40.0, 320.0, 64.0}},
+      .coords = {{20.0, 120.0, 132.0, 32.0}},
       .tex_size = {{frame_renderer.texture.width, frame_renderer.texture.height}},
    };
    vk_sprite_add(&sprite2, &frame_renderer.texture);
 
    sprite_t sprite3 =
    {
-      .pos = {{10.0,190.0,300.0,300.0}},
-      .coords = {{0.0,0.0,font_renderer.texture.width,font_renderer.texture.height}},
+      .pos = {{10.0, 190.0, 300.0, 300.0}},
+      .coords = {{0.0, 0.0, font_renderer.texture.width, font_renderer.texture.height}},
       .tex_size = {{font_renderer.texture.width, font_renderer.texture.height}},
    };
    vk_sprite_add(&sprite3, &font_renderer.texture);
@@ -122,9 +124,8 @@ void video_init()
 
    vk_render_targets_init(&vk, video.screen_count, video.screens, render_targets);
 
-   font_renderer.init(&vk);
-   slider_renderer.init(&vk);
-   sprite_renderer.init(&vk);
+   for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
+      if ((*renderer)->init)(*renderer)->init(&vk);
 
    vk_register_draw_command(&render_targets[0].draw_list, frame_draw);
 //   vk_register_draw_command(&render_targets[0].draw_list, sprite_test);
@@ -145,7 +146,8 @@ void video_init()
    test_image.height = 256;
    test_image.format = VK_FORMAT_R8G8B8A8_UNORM;
    vk_texture_init(&vk, &test_image);
-   memset(test_image.staging.mem.u8 + test_image.staging.mem.layout.offset, 0x80, test_image.staging.mem.size - test_image.staging.mem.layout.offset);
+   memset(test_image.staging.mem.u8 + test_image.staging.mem.layout.offset, 0x80,
+      test_image.staging.mem.size - test_image.staging.mem.layout.offset);
 }
 
 void video_frame_init(int width, int height, screen_format_t format)
@@ -232,7 +234,7 @@ void video_frame_update()
          (*renderer)->update(vk.device, render_targets[i].cmd, *renderer);
 
       /* renderpass */
-      {         
+      {
          {
 //         const VkClearValue clearValue = {{{0.0f, 0.1f, 1.0f, 0.0f}}};
             VkClearValue clearValue = {.color.float32 = {0.0f, 0.1f, 1.0f, 0.0f}};
