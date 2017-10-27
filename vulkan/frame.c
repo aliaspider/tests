@@ -13,6 +13,12 @@ typedef struct vertex_t
    vec2 size;
 } vertex_t;
 
+typedef struct uniform_t
+{
+   vec2 tex_size;
+} uniform_t;
+
+
 void vk_frame_init(vk_context_t *vk, int width, int height, VkFormat format)
 {
    {
@@ -59,6 +65,7 @@ void vk_frame_init(vk_context_t *vk, int width, int height, VkFormat format)
       frame_renderer.texture.filter = VK_FILTER_LINEAR;
       frame_renderer.vbo.info.range = sizeof(vertex_t) * 8;
       frame_renderer.vertex_stride = sizeof(vertex_t);
+      frame_renderer.ubo.info.range = sizeof(uniform_t);
 
       vk_renderer_init(vk, &info, &frame_renderer);
    }
@@ -69,6 +76,10 @@ void vk_frame_init(vk_context_t *vk, int width, int height, VkFormat format)
    }
 
    frame_renderer.texture.dirty = true;
+
+   ((uniform_t*)frame_renderer.ubo.mem.ptr)->tex_size.width = frame_renderer.texture.width;
+   ((uniform_t*)frame_renderer.ubo.mem.ptr)->tex_size.height = frame_renderer.texture.height;
+   frame_renderer.ubo.dirty = true;
 
    video.frame.width = width;
    video.frame.height = height;

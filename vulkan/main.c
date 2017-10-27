@@ -89,7 +89,6 @@ void sprite_test(screen_t *screen)
    {
       .pos = {{330.0, 100.0, (calls >> 3) & 0xFF, 256.0}},
       .coords = {{0.0, 0.0, 256.0, 256.0}},
-      .tex_size = {{test_image.width, test_image.height}},
    };
    vk_sprite_add(&sprite, &test_image);
 
@@ -97,7 +96,6 @@ void sprite_test(screen_t *screen)
    {
       .pos = {{10.0, 40.0, 320.0, 64.0}},
       .coords = {{20.0, 120.0, 132.0, 32.0}},
-      .tex_size = {{frame_renderer.texture.width, frame_renderer.texture.height}},
    };
    vk_sprite_add(&sprite2, &frame_renderer.texture);
 
@@ -105,7 +103,6 @@ void sprite_test(screen_t *screen)
    {
       .pos = {{10.0, 190.0, 300.0, 300.0}},
       .coords = {{0.0, 0.0, font_renderer.texture.width, font_renderer.texture.height}},
-      .tex_size = {{font_renderer.texture.width, font_renderer.texture.height}},
    };
    vk_sprite_add(&sprite3, &font_renderer.texture);
 }

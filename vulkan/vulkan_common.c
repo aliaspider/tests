@@ -472,6 +472,9 @@ void vk_context_init(vk_context_t *vk)
          VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
          .magFilter = VK_FILTER_NEAREST,
          .minFilter = VK_FILTER_NEAREST,
+         .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+         .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+         .unnormalizedCoordinates = VK_TRUE
       };
       vkCreateSampler(vk->device, &info, NULL, &vk->samplers.nearest);
 

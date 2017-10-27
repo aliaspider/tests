@@ -5,7 +5,6 @@ precision highp float;
 
 layout(location = 0) in vec4 pos;
 layout(location = 1) in vec4 coords;
-layout(location = 2) in vec2 tex_size;
 layout(location = 0) out vec4 pos_out;
 layout(location = 1) out vec4 coords_out;
 layout(location = 2) out vec2 tex_size_out;
@@ -13,7 +12,6 @@ void main()
 {
    pos_out = pos;
    coords_out = coords;
-   tex_size_out = tex_size;
 }
 #endif
 
@@ -22,7 +20,6 @@ void main()
 layout(points) in;
 layout(location = 0) in vec4 pos[1];
 layout(location = 1) in vec4 coords[1];
-layout(location = 2) in vec2 tex_size[1];
 layout(triangle_strip, max_vertices = 4) out;
 layout(location = 0) out vec2 vTexCoord;
 layout(push_constant) uniform PC
@@ -36,35 +33,35 @@ void main()
 
 #if 1
    gl_Position.xy = - 1.0f + (pos[0].xy + vec2(pos[0].z, 0.0)) * 2.0f / pc.vp_size;
-   vTexCoord = vec2(coords[0].x + coords[0].z, coords[0].y) / tex_size[0];
+   vTexCoord = vec2(coords[0].x + coords[0].z, coords[0].y);
    EmitVertex();
 
    gl_Position.xy = - 1.0f + (pos[0].xy + vec2(0.0, 0.0))* 2.0f / pc.vp_size;
-   vTexCoord = vec2(coords[0].x, coords[0].y) / tex_size[0];
+   vTexCoord = vec2(coords[0].x, coords[0].y);
    EmitVertex();
 
    gl_Position.xy = - 1.0f + (pos[0].xy + vec2(pos[0].z, pos[0].w))* 2.0f / pc.vp_size;
-   vTexCoord = vec2(coords[0].x + coords[0].z, coords[0].y + coords[0].w) / tex_size[0];
+   vTexCoord = vec2(coords[0].x + coords[0].z, coords[0].y + coords[0].w);
    EmitVertex();
 
    gl_Position.xy = - 1.0f + (pos[0].xy + vec2(0.0, pos[0].w))* 2.0f / pc.vp_size;
-   vTexCoord = vec2(coords[0].x, coords[0].y + coords[0].w) / tex_size[0];
+   vTexCoord = vec2(coords[0].x, coords[0].y + coords[0].w);
    EmitVertex();
 #else
    gl_Position.xy = vec2(1.0, -1.0);
-   vTexCoord = vec2(coords[0].z, coords[0].y) / tex_size[0];
+   vTexCoord = vec2(coords[0].z, coords[0].y);
    EmitVertex();
 
    gl_Position.xy = vec2(-1.0, -1.0);
-   vTexCoord = vec2(coords[0].x, coords[0].y) / tex_size[0];
+   vTexCoord = vec2(coords[0].x, coords[0].y);
    EmitVertex();
 
    gl_Position.xy = vec2(1.0, 1.0);
-   vTexCoord = vec2(coords[0].z, coords[0].w) / tex_size[0];
+   vTexCoord = vec2(coords[0].z, coords[0].w);
    EmitVertex();
 
    gl_Position.xy = vec2(-1.0, 1.0);
-   vTexCoord = vec2(coords[0].x, coords[0].w) / tex_size[0];
+   vTexCoord = vec2(coords[0].x, coords[0].w);
    EmitVertex();
 #endif
    EndPrimitive();

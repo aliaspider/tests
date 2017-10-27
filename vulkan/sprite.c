@@ -27,7 +27,6 @@ static void vk_sprite_renderer_init(vk_context_t *vk)
    {
       {0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(sprite_t, pos)},
       {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(sprite_t, coords)},
-      {2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(sprite_t, tex_size)},
    };
 
    const VkPipelineColorBlendAttachmentState color_blend_attachement_state =

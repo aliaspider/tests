@@ -64,22 +64,22 @@ void main()
    gl_Position.zw = vec2(0.0f, 1.0f);
    vColor = color[0];
    vec2 pos = (2.0 * ((position[0] + glyph_metrics[c].xy) / pc.vp_size)) - vec2(1.0);
-   vec2 coords = vec2(float(col) / 16.0, float(row) / 16.0);   
+   vec2 coords = vec2(float(col), float(row)) * tex_size / 16.0;
 #if 1
    gl_Position.xy = pos + 2.0 * vec2(glyph_metrics[c].z, 0.0) / pc.vp_size;
-   vTexCoord      = coords +    vec2(glyph_metrics[c].z, 0.0) / tex_size;
+   vTexCoord      = coords +    vec2(glyph_metrics[c].z, 0.0);
    EmitVertex();
 
    gl_Position.xy = pos + 2.0 * vec2(0.0, 0.0) / pc.vp_size;
-   vTexCoord      = coords +    vec2(0.0, 0.0) / tex_size;
+   vTexCoord      = coords +    vec2(0.0, 0.0);
    EmitVertex();
 
    gl_Position.xy = pos + 2.0 * vec2(glyph_metrics[c].z, glyph_metrics[c].w) / pc.vp_size;
-   vTexCoord      = coords +    vec2(glyph_metrics[c].z, glyph_metrics[c].w) / tex_size;
+   vTexCoord      = coords +    vec2(glyph_metrics[c].z, glyph_metrics[c].w);
    EmitVertex();
 
    gl_Position.xy = pos + 2.0 * vec2(0.0, glyph_metrics[c].w) / pc.vp_size;
-   vTexCoord      = coords +    vec2(0.0, glyph_metrics[c].w) / tex_size;
+   vTexCoord      = coords +    vec2(0.0, glyph_metrics[c].w);
    EmitVertex();
 #else
    gl_Position.xy = vec2(1.0, -1.0) * tex_size / pc.vp_size;

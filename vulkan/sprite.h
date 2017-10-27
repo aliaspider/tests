@@ -5,7 +5,6 @@ typedef struct
 {
    vec4 pos;
    vec4 coords;
-   vec2 tex_size;
 } sprite_t;
 
 extern vk_renderer_t sprite_renderer;
