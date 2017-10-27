@@ -6,10 +6,9 @@
 #include "common.h"
 #include "sprite.h"
 
-static int current_cmd_id;
-static VkCommandBuffer current_main_cmd;
+#define MAX_SPRITES 256
 static VkDevice device;
-static VkRenderPass renderpass;
+static vk_texture_t* textures[MAX_SPRITES];
 
 static void vk_sprite_renderer_init(vk_context_t *vk)
 {
@@ -52,81 +51,56 @@ static void vk_sprite_renderer_init(vk_context_t *vk)
       .color_blend_attachement_state = &color_blend_attachement_state,
    };
 
-   sprite_renderer.vbo.info.range = 256 * sizeof(sprite_t);
+   sprite_renderer.vbo.info.range = MAX_SPRITES * sizeof(sprite_t);
    sprite_renderer.vertex_stride = sizeof(sprite_t);
 
    vk_renderer_init(vk, &info, &sprite_renderer);
    device = vk->device;
-   renderpass = vk->renderpass;
 }
 
-void vk_sprite_update(VkDevice device, VkCommandBuffer main_cmd, vk_renderer_t *renderer)
+void vk_sprite_update(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *renderer)
 {
-   current_main_cmd = main_cmd;
-
-   VkCommandBuffer cmd = renderer->cmd[current_cmd_id];
+   for (int i = 0; i < (sprite_renderer.vbo.info.range - sprite_renderer.vbo.info.offset) / sizeof(sprite_t); i++)
    {
-      const VkCommandBufferInheritanceInfo inheritanceInfo =
-      {
-         VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
-         .renderPass = renderpass,
-//         .framebuffer =,
-      };
+      if (textures[i]->dirty && !textures[i]->flushed)
+         vk_texture_flush(device, textures[i]);
 
-      const VkCommandBufferBeginInfo info =
-      {
-         VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-         .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT|VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
-         .pInheritanceInfo = &inheritanceInfo,
-      };
-      vkBeginCommandBuffer(cmd, &info);
+      if (textures[i]->dirty && !textures[i]->uploaded)
+         vk_texture_upload(device, cmd, textures[i]);
    }
-
-   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipe);
-//   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, sprite_renderer.layout, 0, 1, &sprite_renderer.desc, 0, NULL);
-   vkCmdBindVertexBuffers(cmd, 0, 1, &renderer->vbo.info.buffer, &renderer->vbo.info.offset);
 }
 
 void vk_sprite_add(sprite_t *sprite, vk_texture_t *texture)
 {
+   textures[(sprite_renderer.vbo.info.range - sprite_renderer.vbo.info.offset) / sizeof(sprite_t)] = texture;
    *(sprite_t *)vk_get_vbo_memory(&sprite_renderer.vbo, sizeof(sprite_t)) = *sprite;
-
-   if (texture->dirty && !texture->flushed)
-      vk_texture_flush(device, texture);
-
-   if (texture->dirty && !texture->uploaded)
-      vk_texture_upload(device, current_main_cmd, texture);
-
-   VkCommandBuffer cmd = sprite_renderer.cmd[current_cmd_id];
-
-   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, sprite_renderer.layout, 0, 1, &texture->desc, 0, NULL);
-   vkCmdDraw(cmd, 1, 1, (sprite_renderer.vbo.info.range - sizeof(sprite_t) - sprite_renderer.vbo.info.offset) / sizeof(sprite_t), 0);
 }
 
 void vk_sprite_emit(VkCommandBuffer cmd, vk_renderer_t *renderer)
 {
-   vkEndCommandBuffer(renderer->cmd[current_cmd_id]);
-
    if (renderer->vbo.info.range - renderer->vbo.info.offset == 0)
       return;
 
-   vkCmdExecuteCommands(current_main_cmd, 1, &renderer->cmd[current_cmd_id++]);
+   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipe);
+//   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, sprite_renderer.layout, 0, 1, &sprite_renderer.desc, 0, NULL);
+   vkCmdBindVertexBuffers(cmd, 0, 1, &renderer->vbo.info.buffer, &renderer->vbo.info.offset);
+
+   for (int i = 0; i < (sprite_renderer.vbo.info.range - sprite_renderer.vbo.info.offset) / sizeof(sprite_t); i++)
+   {
+      vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, sprite_renderer.layout, 0, 1, &textures[i]->desc, 0, NULL);
+      vkCmdDraw(cmd, 1, 1, i, 0);
+   }
 
    renderer->vbo.info.offset = renderer->vbo.info.range;
 }
 
 void vk_sprite_finish(VkDevice device, vk_renderer_t *renderer)
 {
-//   if (renderer->texture.dirty && !renderer->texture.flushed)
-//      vk_texture_flush(device, &renderer->texture);
-
    if (renderer->vbo.dirty)
       vk_buffer_flush(device, &renderer->vbo);
 
    renderer->vbo.info.offset = 0;
    renderer->vbo.info.range = 0;
-   current_cmd_id = 0;
-   current_main_cmd = NULL;
 }
 
 vk_renderer_t sprite_renderer =

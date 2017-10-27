@@ -1277,17 +1277,6 @@ void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info
    dst->layout = vk->pipeline_layout;
 
    {
-      const VkCommandBufferAllocateInfo info =
-      {
-         VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-         .commandPool = vk->pools.cmd,
-         .level = VK_COMMAND_BUFFER_LEVEL_SECONDARY,
-         .commandBufferCount = countof(dst->cmd)
-      };
-      vkAllocateCommandBuffers(vk->device, &info, dst->cmd);
-   }
-
-   {
       const VkPipelineShaderStageCreateInfo shaders_info[] =
       {
          {

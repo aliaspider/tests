@@ -222,7 +222,6 @@ struct vk_renderer_t
    VkPipeline pipe;
    VkPipelineLayout layout;
    uint32_t vertex_stride;
-   VkCommandBuffer cmd[MAX_SCREENS];
 };
 
 #define vk_renderer_data_start texture

@@ -77,11 +77,27 @@ void sprite_test(screen_t* screen)
 {
    sprite_t sprite =
    {
-      .pos = {{0.0,0.0,256.0,256.0}},
+      .pos = {{330.0,100.0,256.0,256.0}},
       .coords = {{0.0,0.0,256.0,256.0}},
       .tex_size = {{test_image.width, test_image.height}},
    };
    vk_sprite_add(&sprite, &test_image);
+
+   sprite_t sprite2 =
+   {
+      .pos = {{10.0,40.0,320.0,64.0}},
+      .coords = {{20.0,120.0,132.0,32.0}},
+      .tex_size = {{frame_renderer.texture.width, frame_renderer.texture.height}},
+   };
+   vk_sprite_add(&sprite2, &frame_renderer.texture);
+
+   sprite_t sprite3 =
+   {
+      .pos = {{10.0,190.0,300.0,300.0}},
+      .coords = {{0.0,0.0,font_renderer.texture.width,font_renderer.texture.height}},
+      .tex_size = {{font_renderer.texture.width, font_renderer.texture.height}},
+   };
+   vk_sprite_add(&sprite3, &font_renderer.texture);
 }
 
 void video_init()
@@ -108,6 +124,7 @@ void video_init()
    vk_register_draw_command(&render_targets[0].draw_list, screen_id_draw);
 
    vk_register_draw_command(&render_targets[1].draw_list, frame_draw_small);
+   vk_register_draw_command(&render_targets[1].draw_list, sprite_test);
    vk_register_draw_command(&render_targets[1].draw_list, fps_draw);
    vk_register_draw_command(&render_targets[1].draw_list, screen_id_draw);
    vk_register_draw_command(&render_targets[1].draw_list, console_draw);
@@ -192,8 +209,6 @@ void video_frame_update()
          vkBeginCommandBuffer(render_targets[i].cmd, &info);
       }
 
-      for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
-         (*renderer)->update(vk.device, render_targets[i].cmd, *renderer);
 
       {
          vk_draw_command_list_t *draw_command = render_targets[i].draw_list;
@@ -204,6 +219,9 @@ void video_frame_update()
             draw_command = draw_command->next;
          }
       }
+
+      for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
+         (*renderer)->update(vk.device, render_targets[i].cmd, *renderer);
 
       /* renderpass */
       {         

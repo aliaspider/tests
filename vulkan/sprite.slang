@@ -36,7 +36,7 @@ void main()
 
 #if 1
    gl_Position.xy = - 1.0f + (pos[0].xy + vec2(pos[0].z, 0.0)) * 2.0f / pc.vp_size;
-   vTexCoord = vec2(coords[0].z, coords[0].y) / tex_size[0];
+   vTexCoord = vec2(coords[0].x + coords[0].z, coords[0].y) / tex_size[0];
    EmitVertex();
 
    gl_Position.xy = - 1.0f + (pos[0].xy + vec2(0.0, 0.0))* 2.0f / pc.vp_size;
@@ -44,11 +44,11 @@ void main()
    EmitVertex();
 
    gl_Position.xy = - 1.0f + (pos[0].xy + vec2(pos[0].z, pos[0].w))* 2.0f / pc.vp_size;
-   vTexCoord = vec2(coords[0].z, coords[0].w) / tex_size[0];
+   vTexCoord = vec2(coords[0].x + coords[0].z, coords[0].y + coords[0].w) / tex_size[0];
    EmitVertex();
 
    gl_Position.xy = - 1.0f + (pos[0].xy + vec2(0.0, pos[0].w))* 2.0f / pc.vp_size;
-   vTexCoord = vec2(coords[0].x, coords[0].w) / tex_size[0];
+   vTexCoord = vec2(coords[0].x, coords[0].y + coords[0].w) / tex_size[0];
    EmitVertex();
 #else
    gl_Position.xy = vec2(1.0, -1.0);
@@ -65,7 +65,7 @@ void main()
 
    gl_Position.xy = vec2(-1.0, 1.0);
    vTexCoord = vec2(coords[0].x, coords[0].w) / tex_size[0];
-//   EmitVertex();
+   EmitVertex();
 #endif
    EndPrimitive();
 }
