@@ -43,6 +43,4 @@ typedef enum
 
 extern vk_renderer_t font_renderer;
 
-void vk_font_init(vk_context_t* vk);
-void vk_font_destroy(VkDevice device);
 void vk_font_draw_text(const char *text, const font_render_options_t *options);

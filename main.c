@@ -51,7 +51,7 @@ int main(int argc, char **argv)
    }
 
    video.init();
-   audio.init();
+//   audio.init();
    input.init();
 
    video.frame_init(module.output_width, module.output_height, module.screen_format);
@@ -63,6 +63,8 @@ int main(int argc, char **argv)
    while (true)
    {
       input.update();
+      if(input.pad_pressed.meta.vsync)
+         video.toggle_vsync();
 
 
       if(input.pad.meta.exit)
@@ -110,7 +112,7 @@ int main(int argc, char **argv)
 
    module_destroy();
    input.destroy();
-   audio.destroy();
+//   audio.destroy();
    video.destroy();
    platform_destroy();
 

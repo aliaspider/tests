@@ -1,4 +1,5 @@
 
+#include <unistd.h>
 #include <string.h>
 #include <assert.h>
 
@@ -21,8 +22,9 @@ static vk_renderer_t *renderers[] =
    NULL
 };
 
-void console_draw(screen_t* screen);
-void fps_draw(screen_t* screen)
+
+void console_draw(screen_t *screen);
+void fps_draw(screen_t *screen)
 {
    font_render_options_t options =
    {
@@ -32,27 +34,37 @@ void fps_draw(screen_t* screen)
    vk_font_draw_text(video.fps, &options);
 }
 
-void screen_id_draw(screen_t* screen)
+void screen_id_draw(screen_t *screen)
 {
    char buffer[16];
-   snprintf(buffer, sizeof(buffer), "SCREEN: \e[%im%i", RED,(int)(screen - video.screens));
+   snprintf(buffer, sizeof(buffer), "SCREEN: \e[%im%i", RED, (int)(screen - video.screens));
 
    font_render_options_t options =
    {
       .x = screen->width - 20 - 9 * 12,
-      .y = screen->width < 400 ? screen->height - 22: 0,
+      .y = screen->width < 400 ? screen->height - 22 : 0,
       .max_width = screen->width,
       .max_height = screen->height,
    };
    vk_font_draw_text(buffer, &options);
 }
 
-void frame_draw(screen_t* screen)
+void frame_draw(screen_t *screen)
 {
-   vk_frame_add(0, 0, screen->width, screen->height);
+   static bool is_menu = false;
+
+   if (input.pad_pressed.meta.menu)
+      is_menu = !is_menu;
+
+   if (is_menu)
+   {
+
+   }
+   else
+      vk_frame_add(0, 0, screen->width, screen->height);
 }
 
-void frame_draw_small(screen_t* screen)
+void frame_draw_small(screen_t *screen)
 {
    vk_frame_add(screen->width - 256 - 20, 22, 256, 224);
 }
@@ -71,8 +83,8 @@ void video_init()
 
    vk_render_targets_init(&vk, video.screen_count, video.screens, render_targets);
 
-   vk_font_init(&vk);
-   vk_slider_init(&vk);
+   font_renderer.init(&vk);
+   slider_renderer.init(&vk);
 
    vk_register_draw_command(&render_targets[0].draw_list, frame_draw);
    vk_register_draw_command(&render_targets[0].draw_list, fps_draw);
@@ -118,21 +130,35 @@ void video_frame_update()
 
    frame_renderer.texture.dirty = true;
 
-   vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, UINT64_MAX);
+//   vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, UINT64_MAX);
+   VK_CHECK(vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, 100000000));
    vkResetFences(vk.device, 1, &vk.queue_fence);
 
    int i;
 
    for (i = 0; i < video.screen_count; i++)
    {
+
       vkWaitForFences(vk.device, 1, &render_targets[i].chain_fence, VK_TRUE, UINT64_MAX);
       vkResetFences(vk.device, 1, &render_targets[i].chain_fence);
-      vkAcquireNextImageKHR(vk.device, render_targets[i].swapchain, UINT64_MAX, NULL, render_targets[i].chain_fence,
-         &image_indices[i]);
+
+      if (vk.vsync != render_targets[i].vsync)
+      {
+         vk_swapchain_destroy(&vk, &render_targets[i]);
+         vk_swapchain_init(&vk, &render_targets[i]);
+      }
+
+      while (vkAcquireNextImageKHR(vk.device, render_targets[i].swapchain, UINT64_MAX, NULL,
+            render_targets[i].chain_fence, &image_indices[i]) != VK_SUCCESS)
+      {
+         usleep(100000);
+         vk_swapchain_destroy(&vk, &render_targets[i]);
+         vk_swapchain_init(&vk, &render_targets[i]);
+      }
 
 
-//   vkWaitForFences(vk.device, 1, &display_fence, VK_TRUE, UINT64_MAX);
-//   vkResetFences(vk.device, 1, &display_fence);
+      //   vkWaitForFences(vk.device, 1, &display_fence, VK_TRUE, UINT64_MAX);
+      //   vkResetFences(vk.device, 1, &display_fence);
 
       {
          const VkCommandBufferBeginInfo info =
@@ -143,18 +169,14 @@ void video_frame_update()
          vkBeginCommandBuffer(render_targets[i].cmd, &info);
       }
 
-      {
-         vk_renderer_t **renderer = renderers;
-
-         while (*renderer)
-            vk_renderer_update(vk.device, render_targets[i].cmd, *renderer++);
-      }
+      for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
+         (*renderer)->update(vk.device, render_targets[i].cmd, *renderer);
 
       /* renderpass */
       {
          {
 //         const VkClearValue clearValue = {{{0.0f, 0.1f, 1.0f, 0.0f}}};
-            const VkClearValue clearValue = {.color.float32 = {0.0f, 0.1f, 1.0f, 0.0f}};
+            VkClearValue clearValue = {.color.float32 = {0.0f, 0.1f, 1.0f, 0.0f}};
 
             const VkRenderPassBeginInfo info =
             {
@@ -178,8 +200,9 @@ void video_frame_update()
          vkCmdSetScissor(render_targets[i].cmd, 0, 1, &render_targets[i].scissor);
 
          {
-            vk_draw_command_list_t* draw_command = render_targets[i].draw_list;
-            while(draw_command)
+            vk_draw_command_list_t *draw_command = render_targets[i].draw_list;
+
+            while (draw_command)
             {
                draw_command->draw(render_targets[i].screen);
                draw_command = draw_command->next;
@@ -187,12 +210,8 @@ void video_frame_update()
          }
 
 
-         {
-            vk_renderer_t **renderer = renderers;
-
-            while (*renderer)
-               vk_renderer_emit(render_targets[i].cmd, *renderer++);
-         }
+         for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
+            (*renderer)->exec(render_targets[i].cmd, *renderer);
 
          vkCmdEndRenderPass(render_targets[i].cmd);
       }
@@ -202,12 +221,8 @@ void video_frame_update()
       swapchains[i] = render_targets[i].swapchain;
    }
 
-   {
-      vk_renderer_t **renderer = renderers;
-
-      while (*renderer)
-         vk_renderer_finish(vk.device, *renderer++);
-   }
+   for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
+      (*renderer)->finish(vk.device, *renderer);
 
    {
       const VkSubmitInfo info =
@@ -247,9 +262,10 @@ void video_destroy()
       vkWaitForFences(vk.device, 1, &render_targets[i].chain_fence, VK_TRUE, UINT64_MAX);
 
    vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, UINT64_MAX);
-   vk_slider_destroy(vk.device);
-   vk_font_destroy(vk.device);
-   vk_frame_destroy(vk.device);
+
+   for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
+      (*renderer)->destroy(vk.device, *renderer);
+
    vk_render_targets_destroy(&vk, video.screen_count, render_targets);
    vk_context_destroy(&vk);
 
@@ -257,10 +273,16 @@ void video_destroy()
    debug_log("video destroy\n");
 }
 
+void video_toggle_vsync(void)
+{
+   vk.vsync = !vk.vsync;
+}
+
 const video_t video_vulkan =
 {
    .init         = video_init,
    .frame_init   = video_frame_init,
    .frame_update = video_frame_update,
-   .destroy      = video_destroy
+   .destroy      = video_destroy,
+   .toggle_vsync = video_toggle_vsync
 };

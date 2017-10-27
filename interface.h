@@ -41,30 +41,51 @@ typedef enum
    PAD_BUTTON_START,
    PAD_BUTTON_SELECT,
    PAD_BUTTON_MAX,
+}buttons_name_t;
+typedef union
+{
+   struct
+   {
+      int A :1;
+      int B :1;
+      int X :1;
+      int Y :1;
+
+      int up :1;
+      int down :1;
+      int left :1;
+      int right :1;
+
+      int L :1;
+      int R :1;
+      int start :1;
+      int select :1;
+   };
+   uint32_t mask;
 }buttons_t;
+
+typedef union
+{
+   struct
+   {
+      int exit :1;
+      int menu :1;
+      int vsync :1;
+   };
+   uint32_t mask;
+}meta_buttons_t;
+
 typedef struct
 {
    union
    {
       struct
       {
-         int A :1;
-         int B :1;
-         int X :1;
-         int Y :1;
-
-         int up :1;
-         int down :1;
-         int left :1;
-         int right :1;
-
-         int L :1;
-         int R :1;
-         int start :1;
-         int select :1;
+         buttons_t buttons;
+         meta_buttons_t meta;
       };
-      uint32_t mask;
-   }buttons;
+      uint64_t mask;
+   };
 
    struct
    {
@@ -77,11 +98,6 @@ typedef struct
       float x;
       float y;
    }right_stick;
-
-   struct
-   {
-      int exit :1;
-   }meta;
 
 }pad_t;
 

@@ -12,7 +12,7 @@
 #define MAX_SWAPCHAIN_IMAGES 8
 #define countof(a) (sizeof(a)/ sizeof(*a))
 
-#define VK_CHECK(vk_call) do{VkResult res = vk_call; if (res != VK_SUCCESS) {debug_log("%s:%i:%s:%s --> %s(%i)\n", __FILE__, __LINE__, __FUNCTION__, #vk_call, vk_result_to_str(res), res);fflush(stdout);}}while(0)
+#define VK_CHECK(vk_call) do{VkResult res = vk_call; if (res != VK_SUCCESS) {debug_log("%s:%i:%s:%s --> %s(%i)\n", __FILE__, __LINE__, __FUNCTION__, #vk_call, vk_result_to_str(res), res);fflush(stdout);exit(1);}}while(0)
 const char *vk_result_to_str(VkResult res);
 
 typedef struct
@@ -46,6 +46,7 @@ typedef struct
       VkSampler linear;
    } samplers;
    VkRenderPass renderpass;
+   bool vsync;
 } vk_context_t;
 
 void vk_context_init(vk_context_t* vk);
@@ -74,10 +75,13 @@ typedef struct
    VkCommandBuffer cmd;
    VkFence chain_fence;
    vk_draw_command_list_t* draw_list;
+   bool vsync;
 } vk_render_target_t;
 
 void vk_render_targets_init(vk_context_t* vk, int count, screen_t* screens, vk_render_target_t* render_targets);
 void vk_render_targets_destroy(vk_context_t* vk, int count, vk_render_target_t* render_targets);
+void vk_swapchain_init(vk_context_t *vk, vk_render_target_t *render_target);
+void vk_swapchain_destroy(vk_context_t *vk, vk_render_target_t *render_target);
 
 static inline void vk_register_draw_command(vk_draw_command_list_t** list, vk_draw_command_t fn)
 {
@@ -92,6 +96,7 @@ static inline void vk_register_draw_command(vk_draw_command_list_t** list, vk_dr
 
 static inline void vk_remove_draw_command(vk_draw_command_list_t** list, vk_draw_command_t fn)
 {
+   /* TODO */
    vk_draw_command_list_t** prev = NULL;
    while(*list)
    {
@@ -181,18 +186,6 @@ void vk_buffer_free(VkDevice device, vk_buffer_t *buffer);
 
 typedef struct
 {
-   vk_texture_t texture;
-   vk_buffer_t vbo;
-   vk_buffer_t ubo;
-   vk_buffer_t ssbo;
-   VkDescriptorSet desc;
-   VkPipeline handle;
-   VkPipelineLayout layout;
-   uint32_t vertex_stride;
-}vk_renderer_t;
-
-typedef struct
-{
    const uint32_t* code;
    size_t code_size;
 }vk_shader_code_t;
@@ -211,6 +204,26 @@ typedef struct
    VkPrimitiveTopology topology;
    const VkPipelineColorBlendAttachmentState* color_blend_attachement_state;
 }vk_renderer_init_info_t;
+
+typedef struct vk_renderer_t vk_renderer_t;
+struct vk_renderer_t
+{
+   void (*init)(vk_context_t *vk);
+   void (*destroy)(VkDevice device, vk_renderer_t *renderer);
+   void (*update)(VkDevice device, VkCommandBuffer cmd, vk_renderer_t* renderer);
+   void (*exec)(VkCommandBuffer cmd, vk_renderer_t *renderer);
+   void (*finish)(VkDevice device, vk_renderer_t* renderer);
+   vk_texture_t texture;
+   vk_buffer_t vbo;
+   vk_buffer_t ubo;
+   vk_buffer_t ssbo;
+   VkDescriptorSet desc;
+   VkPipeline handle;
+   VkPipelineLayout layout;
+   uint32_t vertex_stride;
+};
+
+#define vk_renderer_data_offset (offsetof(vk_renderer_t, texture))
 
 void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info, vk_renderer_t *dst);
 void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer);

@@ -13,8 +13,6 @@ typedef struct vertex_t
    vec2 size;
 } vertex_t;
 
-vk_renderer_t frame_renderer;
-
 void vk_frame_init(vk_context_t *vk, int width, int height, VkFormat format)
 {
    {
@@ -86,7 +84,10 @@ void vk_frame_add(int x, int y, int width, int height)
    v->size.height = height;
 }
 
-void vk_frame_destroy(VkDevice device)
+vk_renderer_t frame_renderer =
 {
-   vk_renderer_destroy(device, &frame_renderer);
-}
+   .destroy=vk_renderer_destroy,
+   .update=vk_renderer_update,
+   .exec=vk_renderer_emit,
+   .finish=vk_renderer_finish,
+};

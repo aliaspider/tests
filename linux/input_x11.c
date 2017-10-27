@@ -7,6 +7,8 @@
 #include "common.h"
 #include "interface.h"
 
+extern Atom wmDeleteMessage;
+
 void input_x11_init()
 {
    memset(&input.pad, 0, sizeof(input.pad));
@@ -21,92 +23,117 @@ void input_x11_destroy()
 void input_x11_update()
 {
    XEvent e;
+   uint64_t old_mask = input.pad.mask;
 
-   int i;
-   for (i = 0; i < video.screen_count; i++)
+   while (XPending(video.screens[0].display))
    {
-      while (XCheckWindowEvent(video.screens[0].display, video.screens[i].window, ~0, &e))
+      XNextEvent(video.screens[0].display, &e);
+
+      switch (e.type)
       {
-         switch (e.type)
+      case KeyPress:
+      case KeyRelease:
+         if (e.xkey.keycode == XKeysymToKeycode(video.screens[0].display, XK_q))
+            input.pad.buttons.A = (e.type == KeyPress);
+
+         if (e.xkey.keycode == XKeysymToKeycode(video.screens[0].display, XK_w))
+            input.pad.buttons.B = (e.type == KeyPress);
+
+         if (e.xkey.keycode == XKeysymToKeycode(video.screens[0].display, XK_a))
+            input.pad.buttons.X = (e.type == KeyPress);
+
+         if (e.xkey.keycode == XKeysymToKeycode(video.screens[0].display, XK_s))
+            input.pad.buttons.Y = (e.type == KeyPress);
+
+         if (e.xkey.keycode == XKeysymToKeycode(video.screens[0].display, XK_Up))
+            input.pad.buttons.up = (e.type == KeyPress);
+
+         if (e.xkey.keycode == XKeysymToKeycode(video.screens[0].display, XK_Down))
+            input.pad.buttons.down = (e.type == KeyPress);
+
+         if (e.xkey.keycode == XKeysymToKeycode(video.screens[0].display, XK_Left))
+            input.pad.buttons.left = (e.type == KeyPress);
+
+         if (e.xkey.keycode == XKeysymToKeycode(video.screens[0].display, XK_Right))
+            input.pad.buttons.right = (e.type == KeyPress);
+
+         if (e.xkey.keycode == XKeysymToKeycode(video.screens[0].display, XK_e))
+            input.pad.buttons.L = (e.type == KeyPress);
+
+         if (e.xkey.keycode == XKeysymToKeycode(video.screens[0].display, XK_d))
+            input.pad.buttons.R = (e.type == KeyPress);
+
+         if (e.xkey.keycode == XKeysymToKeycode(video.screens[0].display, XK_Return))
+            input.pad.buttons.start = (e.type == KeyPress);
+
+         if (e.xkey.keycode == XKeysymToKeycode(video.screens[0].display, XK_Shift_R))
+            input.pad.buttons.select = (e.type == KeyPress);
+
+         if (e.xkey.keycode == XKeysymToKeycode(video.screens[0].display, XK_Escape))
+            input.pad.meta.exit = (e.type == KeyPress);
+
+         if (e.xkey.keycode == XKeysymToKeycode(video.screens[0].display, XK_F4))
+            input.pad.meta.menu = (e.type == KeyPress);
+
+         if (e.xkey.keycode == XKeysymToKeycode(video.screens[0].display, XK_F5))
+            input.pad.meta.vsync = (e.type == KeyPress);
+
+         break;
+
+      case ButtonPress:
+         if (e.xbutton.button == Button1)
+            input.pointer.touch1 = 1;
+
+         if (e.xbutton.button == Button2)
+            input.pointer.touch2 = 1;
+
+         if (e.xbutton.button == Button3)
+            input.pointer.touch3 = 1;
+
+         break;
+
+      case ButtonRelease:
+         if (e.xbutton.button == Button1)
+            input.pointer.touch1 = 0;
+
+         if (e.xbutton.button == Button2)
+            input.pointer.touch2 = 0;
+
+         if (e.xbutton.button == Button3)
+            input.pointer.touch3 = 0;
+
+         break;
+
+      case MotionNotify:
+         input.pointer.x = e.xmotion.x;
+         input.pointer.y = e.xmotion.y;
+         break;
+
+      case DestroyNotify:
+         input.pad.meta.exit = true;
+//         video.screens[0].window = 0;
+//         video.screens[0].display = NULL;
+         printf("DestroyNotify\n");
+         fflush(stdout);
+         break;
+
+//         case ConfigureNotify:
+//            video.screens[i].width = e.xconfigure.width;
+//            video.screens[i].height = e.xconfigure.height;
+//            break;
+      case ClientMessage:
+         if (e.xclient.data.l[0] == wmDeleteMessage)
          {
-         case KeyPress:
-         case KeyRelease:
-            if (e.xkey.keycode == XKeysymToKeycode(video.screens[i].display, XK_q))
-               input.pad.buttons.A = (e.type == KeyPress);
-
-            if (e.xkey.keycode == XKeysymToKeycode(video.screens[i].display, XK_w))
-               input.pad.buttons.B = (e.type == KeyPress);
-
-            if (e.xkey.keycode == XKeysymToKeycode(video.screens[i].display, XK_a))
-               input.pad.buttons.X = (e.type == KeyPress);
-
-            if (e.xkey.keycode == XKeysymToKeycode(video.screens[i].display, XK_s))
-               input.pad.buttons.Y = (e.type == KeyPress);
-
-            if (e.xkey.keycode == XKeysymToKeycode(video.screens[i].display, XK_Up))
-               input.pad.buttons.up = (e.type == KeyPress);
-
-            if (e.xkey.keycode == XKeysymToKeycode(video.screens[i].display, XK_Down))
-               input.pad.buttons.down = (e.type == KeyPress);
-
-            if (e.xkey.keycode == XKeysymToKeycode(video.screens[i].display, XK_Left))
-               input.pad.buttons.left = (e.type == KeyPress);
-
-            if (e.xkey.keycode == XKeysymToKeycode(video.screens[i].display, XK_Right))
-               input.pad.buttons.right = (e.type == KeyPress);
-
-            if (e.xkey.keycode == XKeysymToKeycode(video.screens[i].display, XK_e))
-               input.pad.buttons.L = (e.type == KeyPress);
-
-            if (e.xkey.keycode == XKeysymToKeycode(video.screens[i].display, XK_d))
-               input.pad.buttons.R = (e.type == KeyPress);
-
-            if (e.xkey.keycode == XKeysymToKeycode(video.screens[i].display, XK_Return))
-               input.pad.buttons.start = (e.type == KeyPress);
-
-            if (e.xkey.keycode == XKeysymToKeycode(video.screens[i].display, XK_Shift_R))
-               input.pad.buttons.select = (e.type == KeyPress);
-
-            if (e.xkey.keycode == XKeysymToKeycode(video.screens[i].display, XK_Escape))
-               input.pad.meta.exit = (e.type == KeyPress);
-
-            break;
-
-         case ButtonPress:
-            if(e.xbutton.button == Button1)
-               input.pointer.touch1 = 1;
-            if(e.xbutton.button == Button2)
-               input.pointer.touch2 = 1;
-            if(e.xbutton.button == Button3)
-               input.pointer.touch3 = 1;
-            break;
-
-         case ButtonRelease:
-            if(e.xbutton.button == Button1)
-               input.pointer.touch1 = 0;
-            if(e.xbutton.button == Button2)
-               input.pointer.touch2 = 0;
-            if(e.xbutton.button == Button3)
-               input.pointer.touch3 = 0;
-            break;
-
-         case MotionNotify:
-            input.pointer.x = e.xmotion.x;
-            input.pointer.y = e.xmotion.y;
-            break;
-
-//         case FocusIn:
-//            XAutoRepeatOff(video.screens[i].display);
-//            break;
-
-//         case FocusOut:
-//            XAutoRepeatOn(video.screens[i].display);
-//            break;
+            if(e.xclient.window == video.screens[0].window)
+               input.pad.meta.exit = true;
          }
 
+         break;
       }
 
    }
+   input.pad_pressed.mask = (input.pad.mask ^ old_mask) & input.pad.mask;
+   input.pad_released.mask = (input.pad.mask ^ old_mask) & ~input.pad.mask;
 }
 
 const input_t input_x11 =

@@ -62,7 +62,7 @@ void console_draw(screen_t* screen)
    static pointer_t old_pointer;
 //   static int count = 0;
 //   printf("more %i\n", count++);
-   input.update();
+//   input.update();
 
    if (input.pointer.x < screen->width - 20 && !input.pointer.touch1 && old_pointer.touch1)
       printf("click\n");
@@ -123,7 +123,8 @@ void console_draw(screen_t* screen)
 
       {
          char buffer[512];
-         snprintf(buffer, sizeof(buffer), "\e[31m[%c] %i", grab ? '#' : ' ', input.pointer.y - old_pointer.y);
+         snprintf(buffer, sizeof(buffer), "\e[31m[%c] %i\n[%c]Vsync_button", grab ? '#' : ' ', input.pointer.y - old_pointer.y
+                  , input.pad.meta.vsync ? '#' : ' ');
 
          font_render_options_t options =
          {

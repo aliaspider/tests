@@ -18,9 +18,7 @@ typedef struct
    float size;
 } vertex_t;
 
-vk_renderer_t slider_renderer;
-
-void vk_slider_init(vk_context_t *vk)
+static void vk_slider_init(vk_context_t *vk)
 {
    const uint32_t vs_code [] =
 #include "slider.vert.inc"
@@ -81,7 +79,12 @@ void vk_slider_add(int x, int y, int w, int h, float pos, float size)
    out->size = size;
 }
 
-void vk_slider_destroy(VkDevice device)
+vk_renderer_t slider_renderer =
 {
-   vk_renderer_destroy(device, &slider_renderer);
-}
+   .init=vk_slider_init,
+   .destroy=vk_renderer_destroy,
+   .update=vk_renderer_update,
+   .exec=vk_renderer_emit,
+   .finish=vk_renderer_finish,
+};
+

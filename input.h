@@ -8,6 +8,8 @@ typedef struct
    void (*destroy)();
    void (*update)();
    pad_t pad;
+   pad_t pad_pressed;
+   pad_t pad_released;
    pointer_t pointer;
 }input_t;
 

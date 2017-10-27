@@ -66,9 +66,7 @@ static struct
    } atlas;
 } font;
 
-vk_renderer_t font_renderer;
-
-void vk_font_init(vk_context_t *vk)
+static void vk_font_init(vk_context_t *vk)
 {
 
    {
@@ -163,7 +161,7 @@ void vk_font_init(vk_context_t *vk)
    font_renderer.ubo.dirty = true;
 }
 
-void vk_font_destroy(VkDevice device)
+void vk_font_destroy(VkDevice device, vk_renderer_t* this)
 {
    FT_Done_Face(font.ftface);
    FT_Done_FreeType(font.ftlib);
@@ -444,3 +442,12 @@ void vk_font_draw_text(const char *text, const font_render_options_t *options)
    font_renderer.vbo.dirty = true;
    assert(font_renderer.vbo.info.range <= font_renderer.vbo.mem.size);
 }
+
+vk_renderer_t font_renderer =
+{
+   .init=vk_font_init,
+   .destroy=vk_font_destroy,
+   .update=vk_renderer_update,
+   .exec=vk_renderer_emit,
+   .finish=vk_renderer_finish,
+};

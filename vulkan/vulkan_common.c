@@ -3,6 +3,7 @@
 #include <assert.h>
 
 #include "vulkan_common.h"
+#include "common.h"
 
 #define VK_INST_FN_LIST    \
    VK_FN(vkCreateDebugReportCallbackEXT);\
@@ -277,6 +278,10 @@ static VkBool32 vulkan_debug_report_callback(VkDebugReportFlagsEXT flags,
 {
    static const char *debugFlags_str[] = {"INFORMATION", "WARNING", "PERFORMANCE", "ERROR", "DEBUG"};
 
+   // ignore "vkAcquireNextImageKHR: Application has already acquired the maximum number of images (0x1)"
+   if(objectType == VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT && messageCode == 108)
+      return VK_FALSE;
+
    int i;
 
    for (i = 0; i < countof(debugFlags_str); i++)
@@ -284,10 +289,6 @@ static VkBool32 vulkan_debug_report_callback(VkDebugReportFlagsEXT flags,
          break;
 
    debug_log("[%-14s - %-11s] %s\n", pLayerPrefix, debugFlags_str[i], pMessage);
-
-#ifdef HAVE_X11
-   XAutoRepeatOn(video.screens[0].display);
-#endif
 
    assert((flags & VK_DEBUG_REPORT_ERROR_BIT_EXT) == 0);
    return VK_FALSE;
@@ -574,7 +575,7 @@ void vk_context_init(vk_context_t *vk)
 
 void vk_context_destroy(vk_context_t *vk)
 {
-//   vkWaitForFences(vk->device, 1, &vk->queue_fence, VK_TRUE, UINT64_MAX);
+   vkWaitForFences(vk->device, 1, &vk->queue_fence, VK_TRUE, UINT64_MAX);
    vkDestroyFence(vk->device, vk->queue_fence, NULL);
    vkDestroyDescriptorPool(vk->device, vk->pools.desc, NULL);
    vkDestroySampler(vk->device, vk->samplers.nearest, NULL);
@@ -587,6 +588,101 @@ void vk_context_destroy(vk_context_t *vk)
    vkDestroyDebugReportCallbackEXT(vk->instance, vk->debug_cb, NULL);
    vkDestroyInstance(vk->instance, NULL);
    memset(vk, 0, sizeof(*vk));
+}
+
+void vk_swapchain_init(vk_context_t *vk, vk_render_target_t *render_target)
+{
+   VkSurfaceCapabilitiesKHR surfaceCapabilities;
+   vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vk->gpu, render_target->surface, &surfaceCapabilities);
+   render_target->screen->width = surfaceCapabilities.currentExtent.width;
+   render_target->screen->height = surfaceCapabilities.currentExtent.height;
+   render_target->vsync = vk->vsync;
+
+   {
+//      VkSwapchainCounterCreateInfoEXT swapchainCounterCreateInfo =
+//      {
+//         VK_STRUCTURE_TYPE_SWAPCHAIN_COUNTER_CREATE_INFO_EXT,
+//         .surfaceCounters = VK_SURFACE_COUNTER_VBLANK_EXT
+//      };
+
+      VkSwapchainCreateInfoKHR info =
+      {
+         VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+//         .pNext = &swapchainCounterCreateInfo,
+         .surface = render_target->surface,
+         .minImageCount = 2,
+         .imageFormat = VK_FORMAT_B8G8R8A8_UNORM,
+         .imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
+         .imageExtent.width = render_target->screen->width,
+         .imageExtent.height = render_target->screen->height,
+         .imageArrayLayers = 1,
+         .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+         .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
+         .preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
+         .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+         .presentMode = render_target->vsync? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_IMMEDIATE_KHR,
+//         .presentMode = render_target->vsync? VK_PRESENT_MODE_FIFO_RELAXED_KHR : VK_PRESENT_MODE_IMMEDIATE_KHR,
+//         .presentMode = render_target->vsync? VK_PRESENT_MODE_MAILBOX_KHR : VK_PRESENT_MODE_IMMEDIATE_KHR,
+         .clipped = VK_TRUE
+      };
+      VK_CHECK(vkCreateSwapchainKHR(vk->device, &info, NULL, &render_target->swapchain));
+   }
+
+   {
+      vkGetSwapchainImagesKHR(vk->device, render_target->swapchain, &render_target->swapchain_count, NULL);
+
+      if (render_target->swapchain_count > MAX_SWAPCHAIN_IMAGES)
+         render_target->swapchain_count = MAX_SWAPCHAIN_IMAGES;
+
+      VkImage swapchainImages[render_target->swapchain_count];
+      vkGetSwapchainImagesKHR(vk->device, render_target->swapchain, &render_target->swapchain_count,
+         swapchainImages);
+
+      int i;
+
+      for (i = 0; i < render_target->swapchain_count; i++)
+      {
+         {
+            VkImageViewCreateInfo info =
+            {
+               VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+               .image = swapchainImages[i],
+               .viewType = VK_IMAGE_VIEW_TYPE_2D,
+               .format = VK_FORMAT_B8G8R8A8_UNORM,
+               .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+               .subresourceRange.levelCount = 1,
+               .subresourceRange.layerCount = 1
+            };
+            vkCreateImageView(vk->device, &info, NULL, &render_target->views[i]);
+         }
+
+         {
+            VkFramebufferCreateInfo info =
+            {
+               VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+               .renderPass = vk->renderpass,
+               .attachmentCount = 1, &render_target->views[i],
+               .width = render_target->screen->width,
+               .height = render_target->screen->height,
+               .layers = 1
+            };
+            vkCreateFramebuffer(vk->device, &info, NULL, &render_target->framebuffers[i]);
+         }
+      }
+   }
+
+   render_target->viewport.x = 0.0f;
+   render_target->viewport.y = 0.0f;
+   render_target->viewport.width = render_target->screen->width;
+   render_target->viewport.height = render_target->screen->height;
+   render_target->viewport.minDepth = -1.0f;
+   render_target->viewport.maxDepth =  1.0f;
+
+   render_target->scissor.offset.x = 0.0f;
+   render_target->scissor.offset.y = 0.0f;
+   render_target->scissor.extent.width = render_target->screen->width;
+   render_target->scissor.extent.height = render_target->screen->height;
+
 }
 
 void vk_render_targets_init(vk_context_t *vk, int count, screen_t *screens, vk_render_target_t *render_targets)
@@ -613,91 +709,8 @@ void vk_render_targets_init(vk_context_t *vk, int count, screen_t *screens, vk_r
 
       vk_get_surface_props(vk->gpu, vk->queue_family_index, render_targets[i].surface);
 
-      {
-         VkSwapchainCounterCreateInfoEXT swapchainCounterCreateInfo =
-         {
-            VK_STRUCTURE_TYPE_SWAPCHAIN_COUNTER_CREATE_INFO_EXT,
-            .surfaceCounters = VK_SURFACE_COUNTER_VBLANK_EXT
-         };
+      vk_swapchain_init(vk, &render_targets[i]);
 
-         VkSwapchainCreateInfoKHR info =
-         {
-            VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-            .pNext = &swapchainCounterCreateInfo,
-            .surface = render_targets[i].surface,
-            .minImageCount = 2,
-            .imageFormat = VK_FORMAT_B8G8R8A8_UNORM,
-            .imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
-            .imageExtent.width = render_targets[i].screen->width,
-            .imageExtent.height = render_targets[i].screen->height,
-            .imageArrayLayers = 1,
-            .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-            .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
-            .preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
-            .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-//            .presentMode = VK_PRESENT_MODE_FIFO_KHR,
-//         .presentMode = VK_PRESENT_MODE_FIFO_RELAXED_KHR,
-//         .presentMode = VK_PRESENT_MODE_MAILBOX_KHR,
-//         .presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR,
-            .clipped = VK_TRUE
-         };
-         VK_CHECK(vkCreateSwapchainKHR(vk->device, &info, NULL, &render_targets[i].swapchain));
-      }
-
-      {
-         vkGetSwapchainImagesKHR(vk->device, render_targets[i].swapchain, &render_targets[i].swapchain_count, NULL);
-
-         if (render_targets[i].swapchain_count > MAX_SWAPCHAIN_IMAGES)
-            render_targets[i].swapchain_count = MAX_SWAPCHAIN_IMAGES;
-
-         VkImage swapchainImages[render_targets[i].swapchain_count];
-         vkGetSwapchainImagesKHR(vk->device, render_targets[i].swapchain, &render_targets[i].swapchain_count,
-            swapchainImages);
-
-         int j;
-
-         for (j = 0; j < render_targets[i].swapchain_count; j++)
-         {
-            {
-               VkImageViewCreateInfo info =
-               {
-                  VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-                  .image = swapchainImages[j],
-                  .viewType = VK_IMAGE_VIEW_TYPE_2D,
-                  .format = VK_FORMAT_B8G8R8A8_UNORM,
-                  .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                  .subresourceRange.levelCount = 1,
-                  .subresourceRange.layerCount = 1
-               };
-               vkCreateImageView(vk->device, &info, NULL, &render_targets[i].views[j]);
-            }
-
-            {
-               VkFramebufferCreateInfo info =
-               {
-                  VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-                  .renderPass = vk->renderpass,
-                  .attachmentCount = 1, &render_targets[i].views[j],
-                  .width = render_targets[i].screen->width,
-                  .height = render_targets[i].screen->height,
-                  .layers = 1
-               };
-               vkCreateFramebuffer(vk->device, &info, NULL, &render_targets[i].framebuffers[j]);
-            }
-         }
-      }
-
-      render_targets[i].viewport.x = 0.0f;
-      render_targets[i].viewport.y = 0.0f;
-      render_targets[i].viewport.width = render_targets[i].screen->width;
-      render_targets[i].viewport.height = render_targets[i].screen->height;
-      render_targets[i].viewport.minDepth = -1.0f;
-      render_targets[i].viewport.maxDepth =  1.0f;
-
-      render_targets[i].scissor.offset.x = 0.0f;
-      render_targets[i].scissor.offset.y = 0.0f;
-      render_targets[i].scissor.extent.width = render_targets[i].screen->width;
-      render_targets[i].scissor.extent.height = render_targets[i].screen->height;
 
       {
          const VkCommandBufferAllocateInfo info =
@@ -731,27 +744,34 @@ void vk_render_targets_init(vk_context_t *vk, int count, screen_t *screens, vk_r
 
 }
 
+void vk_swapchain_destroy(vk_context_t *vk, vk_render_target_t *render_target)
+{
+
+   int i;
+
+   for (i = 0; i < render_target->swapchain_count; i++)
+   {
+      vkDestroyImageView(vk->device, render_target->views[i], NULL);
+      vkDestroyFramebuffer(vk->device, render_target->framebuffers[i], NULL);
+   }
+
+   vkDestroySwapchainKHR(vk->device, render_target->swapchain, NULL);
+
+}
+
 void vk_render_targets_destroy(vk_context_t *vk, int count, vk_render_target_t *render_targets)
 {
+
+//   vkWaitForFences(vk->device, 1, &display_fence, VK_TRUE, UINT64_MAX);
+//   vkDestroyFence(vk->device, display_fence, NULL);
 
    int i;
 
    for (i = 0; i < count; i++)
    {
-//      vkWaitForFences(vk->device, 1, &render_targets[i].chain_fence, VK_TRUE, UINT64_MAX);
+      vkWaitForFences(vk->device, 1, &render_targets[i].chain_fence, VK_TRUE, UINT64_MAX);
       vkDestroyFence(vk->device, render_targets[i].chain_fence, NULL);
-//      vkWaitForFences(vk->device, 1, &display_fence, VK_TRUE, UINT64_MAX);
-//      vkDestroyFence(vk->device, display_fence, NULL);
-
-      int j;
-
-      for (j = 0; j < render_targets[i].swapchain_count; j++)
-      {
-         vkDestroyImageView(vk->device, render_targets[i].views[j], NULL);
-         vkDestroyFramebuffer(vk->device, render_targets[i].framebuffers[j], NULL);
-      }
-
-      vkDestroySwapchainKHR(vk->device, render_targets[i].swapchain, NULL);
+      vk_swapchain_destroy(vk, &render_targets[i]);
       vkDestroySurfaceKHR(vk->instance, render_targets[i].surface, NULL);
    }
 
@@ -1308,17 +1328,17 @@ void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer)
    vk_buffer_free(device, &renderer->ssbo);
    vk_texture_free(device, &renderer->texture);
 
-   memset(renderer, 0, sizeof(*renderer));
+   memset(&renderer->texture, 0, sizeof(*renderer) - offsetof(vk_renderer_t, texture));
 }
 
 
-void vk_renderer_update(VkDevice device, VkCommandBuffer cmd, vk_renderer_t* renderer)
+void vk_renderer_update(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *renderer)
 {
    if (renderer->texture.dirty && !renderer->texture.uploaded)
       vk_texture_upload(device, cmd, &renderer->texture);
 }
 
-void vk_renderer_finish(VkDevice device, vk_renderer_t* renderer)
+void vk_renderer_finish(VkDevice device, vk_renderer_t *renderer)
 {
    if (renderer->texture.dirty && !renderer->texture.flushed)
       vk_texture_flush(device, &renderer->texture);

@@ -1,7 +1,7 @@
 
 TARGET = test
-#MODULE = gambatte/gambatte_module.a
-MODULE = snes9x/snes9x_module.a
+MODULE = gambatte/gambatte_module.a
+#MODULE = snes9x/snes9x_module.a
 DEBUG = 0
 
 platform = linux
