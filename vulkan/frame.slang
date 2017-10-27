@@ -1,4 +1,4 @@
-#version 310 es
+#version 450
 precision highp float;
 
 #ifdef VERTEX_SHADER
@@ -70,6 +70,7 @@ layout(set = 0, binding = 1) uniform highp sampler2D uTex[2];
 
 void main()
 {
-   FragColor = texture(uTex[1], vTexCoord);
+   FragColor = texture(uTex[vTexCoord.x < 0.5 ? 0:1], vTexCoord);
+//   FragColor = texture(uTex[1], vTexCoord);
 }
 #endif

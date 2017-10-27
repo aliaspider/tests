@@ -133,7 +133,7 @@ void video_init()
    vk_register_draw_command(&render_targets[0].draw_list, screen_id_draw);
 
    vk_register_draw_command(&render_targets[1].draw_list, frame_draw_small);
-//   vk_register_draw_command(&render_targets[1].draw_list, sprite_test);
+   vk_register_draw_command(&render_targets[1].draw_list, sprite_test);
    vk_register_draw_command(&render_targets[1].draw_list, fps_draw);
    vk_register_draw_command(&render_targets[1].draw_list, screen_id_draw);
    vk_register_draw_command(&render_targets[1].draw_list, console_draw);
@@ -144,9 +144,9 @@ void video_init()
 
    test_image.width = 256;
    test_image.height = 256;
-   test_image.format = VK_FORMAT_R8G8B8A8_UNORM;
+   test_image.format = VK_FORMAT_R5G6B5_UNORM_PACK16;
    vk_texture_init(&vk, &test_image);
-   memset(test_image.staging.mem.u8 + test_image.staging.mem.layout.offset, 0x80,
+   memset(test_image.staging.mem.u8 + test_image.staging.mem.layout.offset, 0xFF,
       test_image.staging.mem.size - test_image.staging.mem.layout.offset);
 }
 

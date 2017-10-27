@@ -8,7 +8,7 @@
 
 #define MAX_SPRITES 256
 static VkDevice device;
-static vk_texture_t* textures[MAX_SPRITES];
+static vk_texture_t *textures[MAX_SPRITES];
 
 static void vk_sprite_renderer_init(vk_context_t *vk)
 {
@@ -85,10 +85,17 @@ void vk_sprite_emit(VkCommandBuffer cmd, vk_renderer_t *renderer)
 //   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, sprite_renderer.layout, 0, 1, &sprite_renderer.desc, 0, NULL);
    vkCmdBindVertexBuffers(cmd, 0, 1, &renderer->vbo.info.buffer, &renderer->vbo.info.offset);
 
-   for (int i = 0; i < (sprite_renderer.vbo.info.range - sprite_renderer.vbo.info.offset) / sizeof(sprite_t); i++)
+   int count = (sprite_renderer.vbo.info.range - sprite_renderer.vbo.info.offset) / sizeof(sprite_t);
+   int first_vertex = 0;
+
+   for (int i = 0; i < count; i++)
    {
+      if (i + 1 < count && textures[i] == textures[i + 1])
+         continue;
+
       vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, sprite_renderer.layout, 0, 1, &textures[i]->desc, 0, NULL);
-      vkCmdDraw(cmd, 1, 1, i, 0);
+      vkCmdDraw(cmd, i + 1 - first_vertex, 1, first_vertex, 0);
+      first_vertex = i + 1;
    }
 
    renderer->vbo.info.offset = renderer->vbo.info.range;
