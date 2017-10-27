@@ -3,10 +3,8 @@
 #include <math.h>
 
 #include "vulkan_common.h"
-#include "common.h"
+//#include "common.h"
 #include "slider.h"
-#include "input.h"
-#include "font.h"
 
 typedef struct
 {
@@ -58,9 +56,6 @@ static void vk_slider_init(vk_context_t *vk)
       .color_blend_attachement_state = &color_blend_attachement_state,
    };
 
-   slider_renderer.texture.width = 16;
-   slider_renderer.texture.height = 16;
-   slider_renderer.texture.format = VK_FORMAT_R8_UNORM;
    slider_renderer.vbo.info.range = 256 * sizeof(vertex_t);
    slider_renderer.vertex_stride = sizeof(vertex_t);
 

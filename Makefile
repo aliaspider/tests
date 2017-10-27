@@ -33,6 +33,7 @@ OBJS += vulkan/font.o
 OBJS += vulkan/frame.o
 OBJS += vulkan/main.o
 OBJS += vulkan/slider.o
+OBJS += vulkan/sprite.o
 OBJS += vulkan/vulkan_common.o
 
 OBJS := $(addprefix $(BUILD_DIR)/,$(OBJS))
@@ -40,6 +41,7 @@ OBJS := $(addprefix $(BUILD_DIR)/,$(OBJS))
 HAS_SHADERS += vulkan/font.o
 HAS_SHADERS += vulkan/frame.o
 HAS_SHADERS += vulkan/slider.o
+HAS_SHADERS += vulkan/sprite.o
 
 HAS_SHADERS := $(basename $(HAS_SHADERS))
 $(foreach obj,$(HAS_SHADERS),$(eval $(BUILD_DIR)/$(obj).o: $(obj).vert.inc $(obj).frag.inc $(obj).geom.inc))

@@ -49,22 +49,22 @@ typedef struct
    bool vsync;
 } vk_context_t;
 
-void vk_context_init(vk_context_t* vk);
-void vk_context_destroy(vk_context_t* vk);
+void vk_context_init(vk_context_t *vk);
+void vk_context_destroy(vk_context_t *vk);
 
 
-typedef void(*vk_draw_command_t)(screen_t* screen);
+typedef void(*vk_draw_command_t)(screen_t *screen);
 
 typedef struct vk_draw_command_list_t
 {
    vk_draw_command_t draw;
-   struct vk_draw_command_list_t* next;
-}vk_draw_command_list_t;
+   struct vk_draw_command_list_t *next;
+} vk_draw_command_list_t;
 
 typedef struct
 {
    VkSurfaceKHR surface;
-   screen_t* screen;
+   screen_t *screen;
    VkDisplayKHR display;
    VkSwapchainKHR swapchain;
    VkRect2D scissor;
@@ -74,18 +74,18 @@ typedef struct
    VkFramebuffer framebuffers[MAX_SWAPCHAIN_IMAGES];
    VkCommandBuffer cmd;
    VkFence chain_fence;
-   vk_draw_command_list_t* draw_list;
+   vk_draw_command_list_t *draw_list;
    bool vsync;
 } vk_render_target_t;
 
-void vk_render_targets_init(vk_context_t* vk, int count, screen_t* screens, vk_render_target_t* render_targets);
-void vk_render_targets_destroy(vk_context_t* vk, int count, vk_render_target_t* render_targets);
+void vk_render_targets_init(vk_context_t *vk, int count, screen_t *screens, vk_render_target_t *render_targets);
+void vk_render_targets_destroy(vk_context_t *vk, int count, vk_render_target_t *render_targets);
 void vk_swapchain_init(vk_context_t *vk, vk_render_target_t *render_target);
 void vk_swapchain_destroy(vk_context_t *vk, vk_render_target_t *render_target);
 
-static inline void vk_register_draw_command(vk_draw_command_list_t** list, vk_draw_command_t fn)
+static inline void vk_register_draw_command(vk_draw_command_list_t **list, vk_draw_command_t fn)
 {
-   while(*list)
+   while (*list)
       list = &(*list)->next;
 
    *list = malloc(sizeof(*fn));
@@ -94,23 +94,26 @@ static inline void vk_register_draw_command(vk_draw_command_list_t** list, vk_dr
    (*list)->next = NULL;
 }
 
-static inline void vk_remove_draw_command(vk_draw_command_list_t** list, vk_draw_command_t fn)
+static inline void vk_remove_draw_command(vk_draw_command_list_t **list, vk_draw_command_t fn)
 {
    /* TODO */
-   vk_draw_command_list_t** prev = NULL;
-   while(*list)
+   vk_draw_command_list_t **prev = NULL;
+
+   while (*list)
    {
-      if((*list)->draw == fn)
+      if ((*list)->draw == fn)
       {
-         vk_draw_command_list_t* tmp = (*list)->next;
+         vk_draw_command_list_t *tmp = (*list)->next;
          free(*list);
-         if(prev)
+
+         if (prev)
             (*prev)->next = tmp;
 
          *list = tmp;
 
          return;
       }
+
       prev = list;
       list = &(*list)->next;
    }
@@ -153,27 +156,25 @@ typedef struct
    device_memory_t mem;
    VkImage image;
    VkFormat format;
+   VkFilter filter;
    VkDescriptorImageInfo info;
+   VkDescriptorSet desc;
    int width;
    int height;
-   bool dirty;   
+   bool dirty;
    bool is_reference;
    bool flushed;
    bool uploaded;
 } vk_texture_t;
 
-void vk_texture_init(VkDevice device, const VkMemoryType *memory_types, uint32_t queue_family_index, vk_texture_t *dst);
+void vk_texture_init(vk_context_t* vk, vk_texture_t *dst);
 void vk_texture_free(VkDevice device, vk_texture_t *texture);
 void vk_texture_upload(VkDevice device, VkCommandBuffer cmd, vk_texture_t *texture);
 void vk_texture_flush(VkDevice device, vk_texture_t *texture);
 
 typedef struct
 {
-   union
-   {
-      struct VkDescriptorBufferInfo;
-      VkDescriptorBufferInfo info;
-   };
+   VkDescriptorBufferInfo info;
    device_memory_t mem;
    VkBufferUsageFlags usage;
    bool dirty;
@@ -186,9 +187,9 @@ void vk_buffer_free(VkDevice device, vk_buffer_t *buffer);
 
 typedef struct
 {
-   const uint32_t* code;
+   const uint32_t *code;
    size_t code_size;
-}vk_shader_code_t;
+} vk_shader_code_t;
 
 typedef struct
 {
@@ -197,43 +198,45 @@ typedef struct
       vk_shader_code_t vs;
       vk_shader_code_t ps;
       vk_shader_code_t gs;
-   }shaders;
+   } shaders;
 
    uint32_t attrib_count;
-   const VkVertexInputAttributeDescription* attrib_desc;
+   const VkVertexInputAttributeDescription *attrib_desc;
    VkPrimitiveTopology topology;
-   const VkPipelineColorBlendAttachmentState* color_blend_attachement_state;
-}vk_renderer_init_info_t;
+   const VkPipelineColorBlendAttachmentState *color_blend_attachement_state;
+} vk_renderer_init_info_t;
 
 typedef struct vk_renderer_t vk_renderer_t;
 struct vk_renderer_t
 {
-   void (*init)(vk_context_t *vk);
-   void (*destroy)(VkDevice device, vk_renderer_t *renderer);
-   void (*update)(VkDevice device, VkCommandBuffer cmd, vk_renderer_t* renderer);
-   void (*exec)(VkCommandBuffer cmd, vk_renderer_t *renderer);
-   void (*finish)(VkDevice device, vk_renderer_t* renderer);
+   void (*const init)(vk_context_t *vk);
+   void (*const destroy)(VkDevice device, vk_renderer_t *renderer);
+   void (*const update)(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *renderer);
+   void (*const exec)(VkCommandBuffer cmd, vk_renderer_t *renderer);
+   void (*const finish)(VkDevice device, vk_renderer_t *renderer);
    vk_texture_t texture;
    vk_buffer_t vbo;
    vk_buffer_t ubo;
    vk_buffer_t ssbo;
    VkDescriptorSet desc;
-   VkPipeline handle;
+   VkPipeline pipe;
    VkPipelineLayout layout;
    uint32_t vertex_stride;
+   VkCommandBuffer cmd[MAX_SCREENS];
 };
 
-#define vk_renderer_data_offset (offsetof(vk_renderer_t, texture))
+#define vk_renderer_data_start texture
+
 
 void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info, vk_renderer_t *dst);
 void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer);
-void vk_renderer_update(VkDevice device, VkCommandBuffer cmd, vk_renderer_t* renderer);
+void vk_renderer_update(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *renderer);
 void vk_renderer_emit(VkCommandBuffer cmd, vk_renderer_t *renderer);
-void vk_renderer_finish(VkDevice device, vk_renderer_t* renderer);
+void vk_renderer_finish(VkDevice device, vk_renderer_t *renderer);
 
-static inline void* vk_get_vbo_memory(vk_buffer_t* vbo, VkDeviceSize size)
+static inline void *vk_get_vbo_memory(vk_buffer_t *vbo, VkDeviceSize size)
 {
-   void* ptr = vbo->mem.u8 + vbo->info.range;
+   void *ptr = vbo->mem.u8 + vbo->info.range;
    vbo->info.range += size;
    vbo->dirty = true;
    assert(vbo->info.range <= vbo->mem.size);

@@ -10,6 +10,7 @@
 #include "frame.h"
 #include "font.h"
 #include "slider.h"
+#include "sprite.h"
 
 static vk_context_t vk;
 static vk_render_target_t render_targets[MAX_SCREENS];
@@ -17,6 +18,7 @@ static vk_render_target_t render_targets[MAX_SCREENS];
 static vk_renderer_t *renderers[] =
 {
    &frame_renderer,
+   &sprite_renderer,
    &font_renderer,
    &slider_renderer,
    NULL
@@ -69,6 +71,19 @@ void frame_draw_small(screen_t *screen)
    vk_frame_add(screen->width - 256 - 20, 22, 256, 224);
 }
 
+vk_texture_t test_image;
+
+void sprite_test(screen_t* screen)
+{
+   sprite_t sprite =
+   {
+      .pos = {{0.0,0.0,256.0,256.0}},
+      .coords = {{0.0,0.0,256.0,256.0}},
+      .tex_size = {{test_image.width, test_image.height}},
+   };
+   vk_sprite_add(&sprite, &test_image);
+}
+
 void video_init()
 {
    debug_log("video init\n");
@@ -85,8 +100,10 @@ void video_init()
 
    font_renderer.init(&vk);
    slider_renderer.init(&vk);
+   sprite_renderer.init(&vk);
 
    vk_register_draw_command(&render_targets[0].draw_list, frame_draw);
+   vk_register_draw_command(&render_targets[0].draw_list, sprite_test);
    vk_register_draw_command(&render_targets[0].draw_list, fps_draw);
    vk_register_draw_command(&render_targets[0].draw_list, screen_id_draw);
 
@@ -98,6 +115,12 @@ void video_init()
    vk_register_draw_command(&render_targets[2].draw_list, frame_draw);
    vk_register_draw_command(&render_targets[2].draw_list, fps_draw);
    vk_register_draw_command(&render_targets[2].draw_list, screen_id_draw);
+
+   test_image.width = 256;
+   test_image.height = 256;
+   test_image.format = VK_FORMAT_R8G8B8A8_UNORM;
+   vk_texture_init(&vk, &test_image);
+   memset(test_image.staging.mem.u8 + test_image.staging.mem.layout.offset, 0x80, test_image.staging.mem.size - test_image.staging.mem.layout.offset);
 }
 
 void video_frame_init(int width, int height, screen_format_t format)
@@ -172,8 +195,18 @@ void video_frame_update()
       for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
          (*renderer)->update(vk.device, render_targets[i].cmd, *renderer);
 
-      /* renderpass */
       {
+         vk_draw_command_list_t *draw_command = render_targets[i].draw_list;
+
+         while (draw_command)
+         {
+            draw_command->draw(render_targets[i].screen);
+            draw_command = draw_command->next;
+         }
+      }
+
+      /* renderpass */
+      {         
          {
 //         const VkClearValue clearValue = {{{0.0f, 0.1f, 1.0f, 0.0f}}};
             VkClearValue clearValue = {.color.float32 = {0.0f, 0.1f, 1.0f, 0.0f}};
@@ -195,20 +228,8 @@ void video_frame_update()
             vkCmdPushConstants(render_targets[i].cmd, vk.pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(push_constants),
                push_constants);
          }
-
          vkCmdSetViewport(render_targets[i].cmd, 0, 1, &render_targets[i].viewport);
          vkCmdSetScissor(render_targets[i].cmd, 0, 1, &render_targets[i].scissor);
-
-         {
-            vk_draw_command_list_t *draw_command = render_targets[i].draw_list;
-
-            while (draw_command)
-            {
-               draw_command->draw(render_targets[i].screen);
-               draw_command = draw_command->next;
-            }
-         }
-
 
          for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
             (*renderer)->exec(render_targets[i].cmd, *renderer);
@@ -266,6 +287,7 @@ void video_destroy()
    for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
       (*renderer)->destroy(vk.device, *renderer);
 
+   vk_texture_free(vk.device, &test_image);
    vk_render_targets_destroy(&vk, video.screen_count, render_targets);
    vk_context_destroy(&vk);
 

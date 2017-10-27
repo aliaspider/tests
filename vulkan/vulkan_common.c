@@ -279,7 +279,14 @@ static VkBool32 vulkan_debug_report_callback(VkDebugReportFlagsEXT flags,
    static const char *debugFlags_str[] = {"INFORMATION", "WARNING", "PERFORMANCE", "ERROR", "DEBUG"};
 
    // ignore "vkAcquireNextImageKHR: Application has already acquired the maximum number of images (0x1)"
-   if(objectType == VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT && messageCode == 108)
+   if (objectType == VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT && messageCode == 108)
+      return VK_FALSE;
+
+   if(messageCode == 68
+      || messageCode == 38
+      || messageCode == 438304791
+      || messageCode == 9
+      )
       return VK_FALSE;
 
    int i;
@@ -289,6 +296,7 @@ static VkBool32 vulkan_debug_report_callback(VkDebugReportFlagsEXT flags,
          break;
 
    debug_log("[%-14s - %-11s] %s\n", pLayerPrefix, debugFlags_str[i], pMessage);
+   fflush(stdout);
 
    assert((flags & VK_DEBUG_REPORT_ERROR_BIT_EXT) == 0);
    return VK_FALSE;
@@ -494,7 +502,13 @@ void vk_context_init(vk_context_t *vk)
             .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT,
-         }
+         },
+         {
+            .binding = 3,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+         },
       };
 
       const VkDescriptorSetLayoutCreateInfo info [] =
@@ -620,7 +634,7 @@ void vk_swapchain_init(vk_context_t *vk, vk_render_target_t *render_target)
          .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
          .preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
          .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-         .presentMode = render_target->vsync? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_IMMEDIATE_KHR,
+         .presentMode = render_target->vsync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_IMMEDIATE_KHR,
 //         .presentMode = render_target->vsync? VK_PRESENT_MODE_FIFO_RELAXED_KHR : VK_PRESENT_MODE_IMMEDIATE_KHR,
 //         .presentMode = render_target->vsync? VK_PRESENT_MODE_MAILBOX_KHR : VK_PRESENT_MODE_IMMEDIATE_KHR,
          .clipped = VK_TRUE
@@ -780,7 +794,7 @@ void vk_render_targets_destroy(vk_context_t *vk, int count, vk_render_target_t *
 
 }
 
-void vk_texture_init(VkDevice device, const VkMemoryType *memory_types, uint32_t queue_family_index, vk_texture_t *dst)
+void vk_texture_init(vk_context_t *vk, vk_texture_t *dst)
 {
    dst->dirty = true;
    dst->info.sampler = VK_NULL_HANDLE;
@@ -802,19 +816,19 @@ void vk_texture_init(VkDevice device, const VkMemoryType *memory_types, uint32_t
          .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
          .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
          .queueFamilyIndexCount = 1,
-         .pQueueFamilyIndices = &queue_family_index,
+         .pQueueFamilyIndices = &vk->queue_family_index,
          .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
       };
 
       dst->info.imageLayout = info.initialLayout;
-      vkCreateImage(device, &info, NULL, &dst->image);
+      VK_CHECK(vkCreateImage(vk->device, &info, NULL, &dst->image));
 
       info.tiling = VK_IMAGE_TILING_LINEAR;
       info.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
       info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
       dst->staging.format = info.format;
       dst->staging.layout = info.initialLayout;
-      vkCreateImage(device, &info, NULL, &dst->staging.image);
+      VK_CHECK(vkCreateImage(vk->device, &info, NULL, &dst->staging.image));
    }
 
    {
@@ -825,7 +839,7 @@ void vk_texture_init(VkDevice device, const VkMemoryType *memory_types, uint32_t
          .arrayLayer = 0
       };
 //      vkGetImageSubresourceLayout(device, dst->image, &imageSubresource, &dst->mem.layout);
-      vkGetImageSubresourceLayout(device, dst->staging.image, &imageSubresource, &dst->staging.mem.layout);
+      vkGetImageSubresourceLayout(vk->device, dst->staging.image, &imageSubresource, &dst->staging.mem.layout);
    }
 
    {
@@ -834,7 +848,7 @@ void vk_texture_init(VkDevice device, const VkMemoryType *memory_types, uint32_t
          .req_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
          .image = dst->image
       };
-      vk_device_memory_init(device, memory_types, &info, &dst->mem);
+      vk_device_memory_init(vk->device, vk->memoryTypes, &info, &dst->mem);
    }
    {
       memory_init_info_t info =
@@ -842,7 +856,7 @@ void vk_texture_init(VkDevice device, const VkMemoryType *memory_types, uint32_t
          .req_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
          .image = dst->staging.image
       };
-      vk_device_memory_init(device, memory_types, &info, &dst->staging.mem);
+      vk_device_memory_init(vk->device, vk->memoryTypes, &info, &dst->staging.mem);
    }
 
    {
@@ -856,12 +870,58 @@ void vk_texture_init(VkDevice device, const VkMemoryType *memory_types, uint32_t
          .subresourceRange.levelCount = 1,
          .subresourceRange.layerCount = 1
       };
-      vkCreateImageView(device, &info, NULL, &dst->info.imageView);
+      VK_CHECK(vkCreateImageView(vk->device, &info, NULL, &dst->info.imageView));
    }
+
+   {
+      VkSamplerCreateInfo info =
+      {
+         VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+         .magFilter = dst->filter,
+         .minFilter = dst->filter,
+      };
+      VK_CHECK(vkCreateSampler(vk->device, &info, NULL, &dst->info.sampler));
+   }
+
+   {
+      const VkDescriptorSetAllocateInfo info =
+      {
+         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+         .descriptorPool = vk->pools.desc,
+         .descriptorSetCount = 1, &vk->descriptor_set_layout
+      };
+      VK_CHECK(vkAllocateDescriptorSets(vk->device, &info, &dst->desc));
+   }
+
+   {
+      VkDescriptorImageInfo image_info[] =
+      {
+         {
+            .sampler = dst->info.sampler,
+            .imageView = dst->info.imageView,
+            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+         }
+      };
+
+      const VkWriteDescriptorSet write_set =
+      {
+         VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+         .dstSet = dst->desc,
+         .dstBinding = 3,
+         .dstArrayElement = 0,
+         .descriptorCount = 1,
+         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+         .pImageInfo = image_info
+      };
+
+      vkUpdateDescriptorSets(vk->device, 1, &write_set, 0, NULL);
+   }
+
 }
 
 void vk_texture_free(VkDevice device, vk_texture_t *texture)
 {
+   vkDestroySampler(device, texture->info.sampler, NULL);
    vkDestroyImageView(device, texture->info.imageView, NULL);
    vkDestroyImage(device, texture->image, NULL);
    vkDestroyImage(device, texture->staging.image, NULL);
@@ -990,7 +1050,7 @@ void vk_device_memory_init(VkDevice device, const VkMemoryType *memory_types, co
          .allocationSize = dst->size,
          .memoryTypeIndex = type - memory_types
       };
-      vkAllocateMemory(device, &info, NULL, &dst->handle);
+      VK_CHECK(vkAllocateMemory(device, &info, NULL, &dst->handle));
    }
 
    if (init_info->req_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
@@ -1116,8 +1176,8 @@ void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info
 {
    if (dst->texture.image)
       dst->texture.is_reference = true;
-   else
-      vk_texture_init(vk->device, vk->memoryTypes, vk->queue_family_index, &dst->texture);
+   else if (dst->texture.format != VK_FORMAT_UNDEFINED)
+      vk_texture_init(vk, &dst->texture);
 
    if (dst->ssbo.info.range)
    {
@@ -1214,8 +1274,18 @@ void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info
       vkUpdateDescriptorSets(vk->device, write_set_count, write_set, 0, NULL);
    }
 
-
    dst->layout = vk->pipeline_layout;
+
+   {
+      const VkCommandBufferAllocateInfo info =
+      {
+         VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+         .commandPool = vk->pools.cmd,
+         .level = VK_COMMAND_BUFFER_LEVEL_SECONDARY,
+         .commandBufferCount = countof(dst->cmd)
+      };
+      vkAllocateCommandBuffers(vk->device, &info, dst->cmd);
+   }
 
    {
       const VkPipelineShaderStageCreateInfo shaders_info[] =
@@ -1309,7 +1379,7 @@ void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info
             .subpass = 0
          }
       };
-      vkCreateGraphicsPipelines(vk->device, VK_NULL_HANDLE, 1, info, NULL, &dst->handle);
+      vkCreateGraphicsPipelines(vk->device, VK_NULL_HANDLE, 1, info, NULL, &dst->pipe);
 
       vkDestroyShaderModule(vk->device, shaders_info[0].module, NULL);
       vkDestroyShaderModule(vk->device, shaders_info[1].module, NULL);
@@ -1322,13 +1392,13 @@ void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info
 
 void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer)
 {
-   vkDestroyPipeline(device, renderer->handle, NULL);
+   vkDestroyPipeline(device, renderer->pipe, NULL);
    vk_buffer_free(device, &renderer->vbo);
    vk_buffer_free(device, &renderer->ubo);
    vk_buffer_free(device, &renderer->ssbo);
    vk_texture_free(device, &renderer->texture);
 
-   memset(&renderer->texture, 0, sizeof(*renderer) - offsetof(vk_renderer_t, texture));
+   memset(&renderer->vk_renderer_data_start, 0, sizeof(*renderer) - offsetof(vk_renderer_t, vk_renderer_data_start));
 }
 
 
@@ -1363,7 +1433,7 @@ void vk_renderer_emit(VkCommandBuffer cmd, vk_renderer_t *renderer)
    if (renderer->vbo.info.range - renderer->vbo.info.offset == 0)
       return;
 
-   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->handle);
+   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipe);
    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, 1, &renderer->desc, 0, NULL);
    vkCmdBindVertexBuffers(cmd, 0, 1, &renderer->vbo.info.buffer, &renderer->vbo.info.offset);
 
