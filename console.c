@@ -6,6 +6,7 @@
 
 static char con_buffer[1 << 13];
 static int con_pos;
+int console_update_counter;
 
 void console_log(const char *fmt, ...)
 {
@@ -18,6 +19,8 @@ void console_log(const char *fmt, ...)
    int len = vsnprintf(con_buffer + con_pos, available, fmt, va);
 
    va_end(va);
+
+   console_update_counter++;
 
    if (len > (available - 1))
    {
@@ -59,4 +62,3 @@ int console_get_len(void)
 {
    return con_pos < (sizeof(con_buffer) >> 1) ? con_pos : (sizeof(con_buffer) >> 1);
 }
-

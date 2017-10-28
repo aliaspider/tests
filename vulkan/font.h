@@ -15,6 +15,8 @@ typedef struct
    } color;
    string_list_t* lines;
    bool dry_run;
+   void** cache;
+   int cache_size;
 } font_render_options_t;
 
 typedef enum
@@ -43,4 +45,4 @@ typedef enum
 
 extern vk_renderer_t font_renderer;
 
-void vk_font_draw_text(const char *text, const font_render_options_t *options);
+void vk_font_draw_text(const char *text, font_render_options_t *options);

@@ -5,7 +5,12 @@
 #include "slider.h"
 #include "font.h"
 
-void console_draw(screen_t* screen)
+static int last_update_counter;
+static void *console_cache;
+static int console_cache_size;
+static const char *last_line_pointer;
+string_list_t *lines;
+void console_draw(screen_t *screen)
 {
    {
       char buffer[512];
@@ -67,17 +72,21 @@ void console_draw(screen_t* screen)
    if (input.pointer.x < screen->width - 20 && !input.pointer.touch1 && old_pointer.touch1)
       printf("click\n");
 
-   string_list_t *lines = string_list_create();
+   if(last_update_counter != console_update_counter)
    {
-      font_render_options_t options =
+      free(lines);
+      lines = string_list_create();
       {
-         .y = 100,
-         .max_width = screen->width - 20,
-         .max_height = screen->height,
-         .lines = lines,
-         .dry_run = true
-      };
-      vk_font_draw_text(console_get(), &options);
+         font_render_options_t options =
+         {
+            .y = 100,
+            .max_width = screen->width - 20,
+            .max_height = screen->height,
+            .lines = lines,
+            .dry_run = true
+         };
+         vk_font_draw_text(console_get(), &options);
+      }
    }
 
    int visible_lines = (screen->height - 100) / 22;
@@ -124,7 +133,7 @@ void console_draw(screen_t* screen)
       {
          char buffer[512];
          snprintf(buffer, sizeof(buffer), "\e[31m[%c] %i\n[%c]Vsync_button", grab ? '#' : ' ', input.pointer.y - old_pointer.y
-                  , input.pad.meta.vsync ? '#' : ' ');
+            , input.pad.meta.vsync ? '#' : ' ');
 
          font_render_options_t options =
          {
@@ -140,8 +149,21 @@ void console_draw(screen_t* screen)
             .y = 100,
             .max_width = screen->width - 20,
             .max_height = screen->height,
+            .cache = &console_cache,
+            .cache_size = console_cache_size,
          };
-         vk_font_draw_text(lines->data[(int)(0.5 + lines->count * real_pos)], &options);
+         const char *line = lines->data[(int)(0.5 + lines->count * real_pos)];
+
+         if (last_update_counter != console_update_counter || line != last_line_pointer)
+         {
+            free(console_cache);
+            console_cache = NULL;
+         }
+
+         last_line_pointer = line;
+
+         vk_font_draw_text(line, &options);
+         console_cache_size = options.cache_size;
       }
    }
    else
@@ -155,7 +177,7 @@ void console_draw(screen_t* screen)
       vk_font_draw_text(lines->data[0], &options);
    }
 
-   free(lines);
    old_pointer = input.pointer;
 
+   last_update_counter = console_update_counter;
 }

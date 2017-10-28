@@ -17,3 +17,4 @@
 
 const char* console_get(void);
 int console_get_len(void);
+extern int console_update_counter;
