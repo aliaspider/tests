@@ -165,6 +165,7 @@ typedef struct
    VkDescriptorSet desc;
    int width;
    int height;
+   bool ignore_alpha;
    bool dirty;
    bool is_reference;
    bool flushed;

@@ -83,6 +83,7 @@ layout(set = 1, binding = 0, location = 0) uniform highp sampler2D uTex;
 layout(set = 0, binding = 0, std140) uniform UBO
 {
    int format;
+   int ignore_alpha;
 };
 
 void main()
@@ -95,5 +96,7 @@ void main()
       FragColor = texture(uTex, vTexCoord) * color;
 //      FragColor = texture(uTex, vTexCoord);
 //   FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+   if(ignore_alpha != 0)
+      FragColor.a = color.a;
 }
 #endif

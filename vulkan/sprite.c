@@ -11,6 +11,7 @@ typedef union
    struct
    {
       int format;
+      int ignore_alpha;
    };
    uint8_t align[VK_UBO_ALIGNMENT];
 }uniform_t;
@@ -77,6 +78,7 @@ void vk_sprite_add(sprite_t *sprite, vk_texture_t *texture)
    {
       sprite_renderer.textures[vertex_count] = texture;
       ((uniform_t*)sprite_renderer.ubo.mem.ptr)[vertex_count + 1].format = texture->format;
+      ((uniform_t*)sprite_renderer.ubo.mem.ptr)[vertex_count + 1].ignore_alpha = texture->ignore_alpha;
       sprite_renderer.ubo.dirty = true;
    }
 

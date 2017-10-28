@@ -76,6 +76,7 @@ void vk_frame_init(vk_context_t *vk, int width, int height, VkFormat format)
    }
 
    frame_renderer.default_texture.dirty = true;
+   frame_renderer.default_texture.ignore_alpha = true;
 
    ((uniform_t*)frame_renderer.ubo.mem.ptr)->tex_size.width = frame_renderer.default_texture.width;
    ((uniform_t*)frame_renderer.ubo.mem.ptr)->tex_size.height = frame_renderer.default_texture.height;
