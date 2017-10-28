@@ -10,6 +10,7 @@ static void *console_cache;
 static int console_cache_size;
 static const char *last_line_pointer;
 string_list_t *lines;
+screen_t last_screen;
 void console_draw(screen_t *screen)
 {
    {
@@ -72,7 +73,7 @@ void console_draw(screen_t *screen)
    if (input.pointer.x < screen->width - 20 && !input.pointer.touch1 && old_pointer.touch1)
       printf("click\n");
 
-   if(last_update_counter != console_update_counter)
+   if(last_update_counter != console_update_counter || last_screen.width != screen->width)
    {
       free(lines);
       lines = string_list_create();
@@ -180,4 +181,5 @@ void console_draw(screen_t *screen)
    old_pointer = input.pointer;
 
    last_update_counter = console_update_counter;
+   last_screen = *screen;
 }
