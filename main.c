@@ -16,9 +16,9 @@ audio_t audio;
 input_t input;
 module_info_t module;
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
-   debug_log("main\n");   
+   debug_log("main\n");
 
    video = video_vulkan;
 #ifdef __WIN32__
@@ -32,10 +32,16 @@ int main(int argc, char **argv)
 #endif
 
    video.screen_count = 2;
+   video.screens[0].x = 600;
+   video.screens[0].y = 400;
    video.screens[0].width = 640;
    video.screens[0].height = 480;
+   video.screens[1].x = 0;
+   video.screens[1].y = 0;
    video.screens[1].width = 800;
    video.screens[1].height = 500;
+   video.screens[2].x = 400;
+   video.screens[2].y = 800;
    video.screens[2].width = 256;
    video.screens[2].height = 224;
 
@@ -62,6 +68,7 @@ int main(int argc, char **argv)
 
    while (true)
    {
+      platform_update();
       input.update();
       if(input.pad_pressed.meta.vsync)
          video.toggle_vsync();

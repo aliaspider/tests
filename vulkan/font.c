@@ -44,7 +44,7 @@ typedef struct atlas_slot
 {
    unsigned charcode;
    unsigned last_used;
-   struct atlas_slot *next;
+   struct atlas_slot* next;
 } atlas_slot_t;
 
 static struct
@@ -57,31 +57,35 @@ static struct
    bool monochrome;
    struct
    {
-      font_uniforms_t *data;
+      font_uniforms_t* data;
       int slot_width;
       int slot_height;
       atlas_slot_t slot_map[256];
-      atlas_slot_t *uc_map[256];
+      atlas_slot_t* uc_map[256];
       unsigned usage_counter;
    } atlas;
 } font;
 
-static void vk_font_init(vk_context_t *vk)
+static void vk_font_init(vk_context_t* vk)
 {
 
    {
-      const char *font_path = "/usr/share/fonts/TTF/DejaVuSansMono.ttf";
+#ifdef WIN32
+      const char* font_path = "C:/Windows/Fonts/consola.ttf";
+#else
+      const char* font_path = "/usr/share/fonts/TTF/DejaVuSansMono.ttf";
 //      const char *font_path = "/usr/share/fonts/TTF/NotoSerif-Regular.ttf";
 //      const char *font_path = "/usr/share/fonts/TTF/HanaMinA.ttf";
 //      const char* font_path = "/usr/share/fonts/TTF/LiberationMono-Regular.ttf";
 //      const char* font_path = "/usr/share/fonts/75dpi/courR18.pcf.gz";
 //      const char* font_path = "/usr/share/fonts/WindowsFonts/cour.ttf";
+#endif
 
       FT_UInt font_size = 18;
-      FT_Init_FreeType(&font.ftlib);
-      FT_New_Face(font.ftlib, font_path, 0, &font.ftface);
-      FT_Select_Charmap(font.ftface, FT_ENCODING_UNICODE);
-      FT_Set_Pixel_Sizes(font.ftface, 0, font_size);
+      CHECK_ERR(FT_Init_FreeType(&font.ftlib));
+      CHECK_ERR(FT_New_Face(font.ftlib, font_path, 0, &font.ftface));
+      CHECK_ERR(FT_Select_Charmap(font.ftface, FT_ENCODING_UNICODE));
+      CHECK_ERR(FT_Set_Pixel_Sizes(font.ftface, 0, font_size));
    }
 
 //   font.monochrome = true;
@@ -149,19 +153,19 @@ static void vk_font_init(vk_context_t *vk)
    }
 
    {
-      device_memory_t *mem = &font_renderer.default_texture.staging.mem;
+      device_memory_t* mem = &font_renderer.default_texture.staging.mem;
       memset(mem->u8 + mem->layout.offset, 0x00, mem->layout.size - mem->layout.offset);
    }
 
    font_renderer.default_texture.dirty = true;
 
-   font.atlas.data = (font_uniforms_t *)font_renderer.ubo.mem.ptr;
+   font.atlas.data = (font_uniforms_t*)font_renderer.ubo.mem.ptr;
    font.atlas.data->tex_size.width = font_renderer.default_texture.width;
    font.atlas.data->tex_size.height = font_renderer.default_texture.height;
    font_renderer.ubo.dirty = true;
 }
 
-void vk_font_destroy(VkDevice device, vk_renderer_t *this)
+void vk_font_destroy(VkDevice device, vk_renderer_t* this)
 {
    FT_Done_Face(font.ftface);
    FT_Done_FreeType(font.ftlib);
@@ -175,7 +179,7 @@ static int vulkan_font_get_new_slot(void)
 {
    int i;
    unsigned oldest = 0;
-   atlas_slot_t *const slot_map = font.atlas.slot_map;
+   atlas_slot_t* const slot_map = font.atlas.slot_map;
 
    for (i = 1; i < 256; i++)
    {
@@ -187,13 +191,13 @@ static int vulkan_font_get_new_slot(void)
 
    int map_id = font.atlas.slot_map[oldest].charcode & 0xFF;
 
-   atlas_slot_t **const uc_map = font.atlas.uc_map;
+   atlas_slot_t** const uc_map = font.atlas.uc_map;
 
    if (uc_map[map_id] == &slot_map[oldest])
       uc_map[map_id] = slot_map[oldest].next;
    else if (uc_map[map_id])
    {
-      atlas_slot_t *ptr = uc_map[map_id];
+      atlas_slot_t* ptr = uc_map[map_id];
 
       while (ptr->next && ptr->next != &slot_map[oldest])
          ptr = ptr->next;
@@ -234,14 +238,12 @@ static void ft_font_render_glyph(unsigned charcode, int slot_id)
 {
    int row;
 
-   FT_Load_Char(font.ftface, charcode, FT_LOAD_RENDER | (font.monochrome ? FT_LOAD_MONOCHROME : 0));
-
-   FT_Bitmap *bitmap = &font.ftface->glyph->bitmap;
-   uint8_t *src = bitmap->buffer;
-   device_memory_t *mem = &font_renderer.default_texture.staging.mem;
-   uint8_t *dst = mem->u8 + mem->layout.offset + (slot_id & 0xF) * font.atlas.slot_width +
-      (((slot_id >> 4) * font.atlas.slot_height)) * mem->layout.rowPitch;
-
+   CHECK_ERR(FT_Load_Char(font.ftface, charcode, FT_LOAD_RENDER | (font.monochrome ? FT_LOAD_MONOCHROME : 0)));
+   FT_Bitmap* bitmap = &font.ftface->glyph->bitmap;
+   uint8_t* src = bitmap->buffer;
+   device_memory_t* mem = &font_renderer.default_texture.staging.mem;
+   uint8_t* dst = mem->u8 + mem->layout.offset + (slot_id & 0xF) * font.atlas.slot_width +
+                  (((slot_id >> 4) * font.atlas.slot_height)) * mem->layout.rowPitch;
    assert((dst - mem->u8 + mem->layout.rowPitch * (bitmap->rows + 1) < mem->layout.size));
 
    for (row = 0; row < bitmap->rows; row++)
@@ -278,7 +280,7 @@ static int vulkan_font_get_slot_id(uint32_t charcode)
    unsigned map_id = charcode & 0xFF;
 
    {
-      atlas_slot_t *atlas_slot = font.atlas.uc_map[map_id];
+      atlas_slot_t* atlas_slot = font.atlas.uc_map[map_id];
 
       while (atlas_slot)
       {
@@ -303,7 +305,7 @@ static int vulkan_font_get_slot_id(uint32_t charcode)
    return slot_id;
 }
 
-void vk_font_draw_text(const char *text, font_render_options_t *options)
+void vk_font_draw_text(const char* text, font_render_options_t* options)
 {
    if (options->cache && *options->cache)
    {
@@ -312,8 +314,8 @@ void vk_font_draw_text(const char *text, font_render_options_t *options)
       return;
    }
 
-   const unsigned char *in = (const unsigned char *)text;
-   const unsigned char *last_space = NULL;
+   const unsigned char* in = (const unsigned char*)text;
+   const unsigned char* last_space = NULL;
    int last_space_vertex = 0;
    int last_space_x = 0;
    int pos = 0;
@@ -321,17 +323,17 @@ void vk_font_draw_text(const char *text, font_render_options_t *options)
    if (options->lines)
       string_list_push(options->lines, text);
 
-   font_vertex_t *out = NULL;
+   font_vertex_t* out = NULL;
 
    if (!options->dry_run)
-      out = (font_vertex_t *)(font_renderer.vbo.mem.u8 + font_renderer.vbo.info.range);
+      out = (font_vertex_t*)(font_renderer.vbo.mem.u8 + font_renderer.vbo.info.range);
 
    font_vertex_t vertex;
-   vertex.color = *(typeof(vertex.color) *)&options->color;
+   vertex.color = *(typeof(vertex.color)*)&options->color;
    vertex.position.x = options->x;
    vertex.position.y = options->y + font.ascender;
 
-   while (*in && (!out || ((uint8_t *)out - font_renderer.vbo.mem.u8 < font_renderer.vbo.mem.size - sizeof(*out))))
+   while (*in && (!out || ((uint8_t*)out - font_renderer.vbo.mem.u8 < font_renderer.vbo.mem.size - sizeof(*out))))
    {
       if (vertex.position.y > options->max_height)
          out = NULL;
@@ -349,9 +351,9 @@ void vk_font_draw_text(const char *text, font_render_options_t *options)
             color_code = color_code * 10 + *(in++) - '0';
 
          if (color_code == CONSOLE_COLOR_RESET)
-            vertex.color = *(typeof(vertex.color) *)&options->color;
+            vertex.color = *(typeof(vertex.color)*)&options->color;
          else if (color_code < CONSOLE_COLORS_MAX)
-            vertex.color = *(typeof(vertex.color) *)&console_colors[color_code];
+            vertex.color = *(typeof(vertex.color)*)&console_colors[color_code];
 
          in++;
          continue;
@@ -363,7 +365,7 @@ void vk_font_draw_text(const char *text, font_render_options_t *options)
          vertex.position.y += font.line_height;
 
          if (*in && options->lines)
-            string_list_push(options->lines, (const char *)in);
+            string_list_push(options->lines, (const char*)in);
 
          continue;
       }
@@ -403,16 +405,16 @@ void vk_font_draw_text(const char *text, font_render_options_t *options)
          vertex.position.y += font.line_height;
 
          if (last_space && (last_space + 1 < in) &&
-            (last_space + (options->max_width / (2 * font.max_advance))) > in)
+               (last_space + (options->max_width / (2 * font.max_advance))) > in)
          {
             vertex.position.x -= last_space_x;
 
             if (options->lines)
-               string_list_push(options->lines, (const char *)last_space);
+               string_list_push(options->lines, (const char*)last_space);
 
             if (out)
             {
-               font_vertex_t *ptr = out + last_space_vertex + 1;
+               font_vertex_t* ptr = out + last_space_vertex + 1;
 
                while (ptr < out + pos)
                {
@@ -427,7 +429,7 @@ void vk_font_draw_text(const char *text, font_render_options_t *options)
          else
          {
             if (*in && options->lines)
-               string_list_push(options->lines, (const char *)in);
+               string_list_push(options->lines, (const char*)in);
 
             vertex.position.x = 0;
 

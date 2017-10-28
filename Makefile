@@ -62,11 +62,12 @@ ifeq ($(platform),linux)
    CFLAGS += -DVK_USE_PLATFORM_XLIB_KHR
    CFLAGS += -DVK_USE_PLATFORM_XLIB_XRANDR_EXT
    CFLAGS += -DHAVE_X11
-   CFLAGS += $(shell freetype-config --cflags)
    LIBS += -lvulkan -lX11 -lasound -lfreetype
+   CFLAGS += $(shell freetype-config --cflags)
 else ifeq ($(platform),win)
-CFLAGS += -I$(VULKAN_SDK)/Include -DVK_USE_PLATFORM_WIN32_KHR
-   LIBS +=  -L$(VULKAN_SDK)/Lib -lvulkan-1
+   CFLAGS += $(shell pkg-config.exe freetype2 --cflags)
+   CFLAGS += -I$(VULKAN_SDK)/Include -DVK_USE_PLATFORM_WIN32_KHR
+   LIBS +=  -L$(VULKAN_SDK)/Lib -lvulkan-1 -lfreetype -lgdi32
 endif
 
 

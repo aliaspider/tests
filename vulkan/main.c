@@ -15,7 +15,7 @@
 static vk_context_t vk;
 static vk_render_target_t render_targets[MAX_SCREENS];
 
-static vk_renderer_t *renderers[] =
+static vk_renderer_t* renderers[] =
 {
    &frame_renderer,
    &sprite_renderer,
@@ -25,8 +25,8 @@ static vk_renderer_t *renderers[] =
 };
 
 
-void console_draw(screen_t *screen);
-void fps_draw(screen_t *screen)
+void console_draw(screen_t* screen);
+void fps_draw(screen_t* screen)
 {
    font_render_options_t options =
    {
@@ -36,7 +36,7 @@ void fps_draw(screen_t *screen)
    vk_font_draw_text(video.fps, &options);
 }
 
-void screen_id_draw(screen_t *screen)
+void screen_id_draw(screen_t* screen)
 {
    char buffer[16];
    snprintf(buffer, sizeof(buffer), "SCREEN: \e[%im%i", RED, (int)(screen - video.screens));
@@ -51,7 +51,7 @@ void screen_id_draw(screen_t *screen)
    vk_font_draw_text(buffer, &options);
 }
 
-void frame_draw(screen_t *screen)
+void frame_draw(screen_t* screen)
 {
    static bool is_menu = false;
 
@@ -66,14 +66,14 @@ void frame_draw(screen_t *screen)
       vk_frame_add(0, 0, screen->width, screen->height);
 }
 
-void frame_draw_small(screen_t *screen)
+void frame_draw_small(screen_t* screen)
 {
    vk_frame_add(screen->width - 256 - 20, 22, 256, 224);
 }
 
 vk_texture_t test_image;
 
-void sprite_test(screen_t *screen)
+void sprite_test(screen_t* screen)
 {
    static int calls = 0;
    test_image.staging.mem.u8[calls++] = 0xFF;
@@ -125,17 +125,17 @@ void video_init()
 {
    debug_log("video init\n");
    debug_log("color test : \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s "
-      "\e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[39m\n",
-      BLACK, "BLACK", RED, "RED", GREEN, "GREEN", YELLOW, "YELLOW",
-      BLUE, "BLUE", MAGENTA, "MAGENTA", CYAN, "CYAN", LIGHT_GRAY, "LIGHT_GRAY",
-      DARK_GRAY, "DARK_GRAY", LIGHT_RED, "LIGHT_RED", LIGHT_GREEN, "LIGHT_GREEN", LIGHT_YELLOW, "LIGHT_YELLOW",
-      LIGHT_BLUE, "LIGHT_BLUE", LIGHT_MAGENTA, "LIGHT_MAGENTA", LIGHT_CYAN, "LIGHT_CYAN", WHITE, "WHITE");
+             "\e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[39m\n",
+             BLACK, "BLACK", RED, "RED", GREEN, "GREEN", YELLOW, "YELLOW",
+             BLUE, "BLUE", MAGENTA, "MAGENTA", CYAN, "CYAN", LIGHT_GRAY, "LIGHT_GRAY",
+             DARK_GRAY, "DARK_GRAY", LIGHT_RED, "LIGHT_RED", LIGHT_GREEN, "LIGHT_GREEN", LIGHT_YELLOW, "LIGHT_YELLOW",
+             LIGHT_BLUE, "LIGHT_BLUE", LIGHT_MAGENTA, "LIGHT_MAGENTA", LIGHT_CYAN, "LIGHT_CYAN", WHITE, "WHITE");
 
    vk_context_init(&vk);
 
    vk_render_targets_init(&vk, video.screen_count, video.screens, render_targets);
 
-   for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
+   for (vk_renderer_t** renderer = renderers; *renderer; renderer++)
       if ((*renderer)->init)(*renderer)->init(&vk);
 
    vk_register_draw_command(&render_targets[0].draw_list, frame_draw);
@@ -149,16 +149,16 @@ void video_init()
    vk_register_draw_command(&render_targets[1].draw_list, screen_id_draw);
    vk_register_draw_command(&render_targets[1].draw_list, console_draw);
 
-   vk_register_draw_command(&render_targets[2].draw_list, frame_draw);
-   vk_register_draw_command(&render_targets[2].draw_list, fps_draw);
-   vk_register_draw_command(&render_targets[2].draw_list, screen_id_draw);
+//   vk_register_draw_command(&render_targets[2].draw_list, frame_draw);
+//   vk_register_draw_command(&render_targets[2].draw_list, fps_draw);
+//   vk_register_draw_command(&render_targets[2].draw_list, screen_id_draw);
 
    test_image.width = 256;
    test_image.height = 256;
    test_image.format = VK_FORMAT_R5G6B5_UNORM_PACK16;
    vk_texture_init(&vk, &test_image);
    memset(test_image.staging.mem.u8 + test_image.staging.mem.layout.offset, 0x80,
-      test_image.staging.mem.size - test_image.staging.mem.layout.offset);
+          test_image.staging.mem.size - test_image.staging.mem.layout.offset);
 }
 
 void video_frame_init(int width, int height, screen_format_t format)
@@ -210,13 +210,12 @@ void video_frame_update()
       }
 
       while (vkAcquireNextImageKHR(vk.device, render_targets[i].swapchain, UINT64_MAX, NULL,
-            render_targets[i].chain_fence, &image_indices[i]) != VK_SUCCESS)
+                                   render_targets[i].chain_fence, &image_indices[i]) != VK_SUCCESS)
       {
          usleep(100000);
          vk_swapchain_destroy(&vk, &render_targets[i]);
          vk_swapchain_init(&vk, &render_targets[i]);
       }
-
 
       //   vkWaitForFences(vk.device, 1, &display_fence, VK_TRUE, UINT64_MAX);
       //   vkResetFences(vk.device, 1, &display_fence);
@@ -230,9 +229,8 @@ void video_frame_update()
          vkBeginCommandBuffer(render_targets[i].cmd, &info);
       }
 
-
       {
-         vk_draw_command_list_t *draw_command = render_targets[i].draw_list;
+         vk_draw_command_list_t* draw_command = render_targets[i].draw_list;
 
          while (draw_command)
          {
@@ -241,7 +239,7 @@ void video_frame_update()
          }
       }
 
-      for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
+      for (vk_renderer_t** renderer = renderers; *renderer; renderer++)
          (*renderer)->update(vk.device, render_targets[i].cmd, *renderer);
 
       /* renderpass */
@@ -265,12 +263,12 @@ void video_frame_update()
          {
             float push_constants[2] = {render_targets[i].viewport.width, render_targets[i].viewport.height};
             vkCmdPushConstants(render_targets[i].cmd, vk.pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(push_constants),
-               push_constants);
+                               push_constants);
          }
          vkCmdSetViewport(render_targets[i].cmd, 0, 1, &render_targets[i].viewport);
          vkCmdSetScissor(render_targets[i].cmd, 0, 1, &render_targets[i].scissor);
 
-         for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
+         for (vk_renderer_t** renderer = renderers; *renderer; renderer++)
             (*renderer)->exec(render_targets[i].cmd, *renderer);
 
          vkCmdEndRenderPass(render_targets[i].cmd);
@@ -281,7 +279,7 @@ void video_frame_update()
       swapchains[i] = render_targets[i].swapchain;
    }
 
-   for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
+   for (vk_renderer_t** renderer = renderers; *renderer; renderer++)
       (*renderer)->finish(vk.device, *renderer);
 
    {
@@ -308,7 +306,7 @@ void video_frame_update()
    {
       uint64_t vblank_counter = 0;
       VK_CHECK(vkGetSwapchainCounterEXT(vk.device, chain.handle, VK_SURFACE_COUNTER_VBLANK_EXT,
-            &vblank_counter));
+                                        &vblank_counter));
       debug_log("vblank_counter : %" PRId64 "\n", vblank_counter);
    }
 #endif
@@ -323,7 +321,7 @@ void video_destroy()
 
    vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, UINT64_MAX);
 
-   for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
+   for (vk_renderer_t** renderer = renderers; *renderer; renderer++)
       (*renderer)->destroy(vk.device, *renderer);
 
    vk_texture_free(vk.device, &test_image);
@@ -343,7 +341,7 @@ void video_toggle_filter(void)
 {
    frame_renderer.default_texture.filter = !frame_renderer.default_texture.filter;
    frame_renderer.default_texture.info.sampler = frame_renderer.default_texture.filter ? vk.samplers.linear :
-      vk.samplers.nearest;
+         vk.samplers.nearest;
    vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, UINT64_MAX);
    vk_texture_update_descriptor_sets(&vk, &frame_renderer.default_texture);
 }

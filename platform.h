@@ -14,3 +14,4 @@ extern platform_t platform;
 
 void platform_init();
 void platform_destroy();
+void platform_update();

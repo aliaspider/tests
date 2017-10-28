@@ -92,7 +92,7 @@ static inline void vk_register_draw_command(vk_draw_command_list_t **list, vk_dr
    while (*list)
       list = &(*list)->next;
 
-   *list = malloc(sizeof(*fn));
+   *list = malloc(sizeof(**list));
 
    (*list)->draw = fn;
    (*list)->next = NULL;

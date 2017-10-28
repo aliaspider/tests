@@ -48,3 +48,7 @@ void platform_destroy()
 #endif
 }
 
+void platform_update()
+{
+
+}

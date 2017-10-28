@@ -12,9 +12,17 @@
    VK_FN(vkDestroyDebugReportCallbackEXT);\
    VK_FN(vkRegisterDisplayEventEXT);\
    VK_FN(vkGetPhysicalDeviceSurfaceCapabilities2EXT);\
-   VK_FN(vkReleaseDisplayEXT);\
-   VK_FN(vkAcquireXlibDisplayEXT);\
+   VK_FN(vkReleaseDisplayEXT);
+
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+#define VK_PLATFORM_FN_LIST \
+   VK_FN(vkAcquireXlibDisplayEXT); \
    VK_FN(vkGetRandROutputDisplayEXT);
+#elif defined(VK_USE_PLATFORM_WIN32_KHR)
+#define VK_INST_FN_LIST_XLIB
+#else
+#define VK_INST_FN_LIST_XLIB
+#endif
 
 #define VK_DEV_FN_LIST    \
    VK_FN(vkGetRefreshCycleDurationGOOGLE);\
@@ -24,6 +32,7 @@
 #define VK_FN(fn)     static PFN_##fn fn##p
 
 VK_INST_FN_LIST
+VK_INST_FN_LIST_XLIB
 VK_DEV_FN_LIST
 
 #undef VK_FN
@@ -33,6 +42,7 @@ static void vk_init_instance_pfn(VkInstance instance)
 {
 #define VK_FN(fn)     fn##p = (PFN_##fn)vkGetInstanceProcAddr(instance, #fn);
    VK_INST_FN_LIST
+   VK_INST_FN_LIST_XLIB
 #undef VK_FN
 }
 
@@ -331,9 +341,11 @@ void vk_context_init(vk_context_t *vk)
       {
          VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
          VK_KHR_SURFACE_EXTENSION_NAME,
-         VK_KHR_DISPLAY_EXTENSION_NAME,
 //         VK_EXT_DIRECT_MODE_DISPLAY_EXTENSION_NAME,
          VK_EXT_DISPLAY_SURFACE_COUNTER_EXTENSION_NAME,
+#ifdef __linux__
+         VK_KHR_DISPLAY_EXTENSION_NAME,
+#endif
 #ifdef VK_USE_PLATFORM_WIN32_KHR
          VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
 #endif
@@ -637,7 +649,9 @@ void vk_swapchain_init(vk_context_t *vk, vk_render_target_t *render_target)
 //         VK_STRUCTURE_TYPE_SWAPCHAIN_COUNTER_CREATE_INFO_EXT,
 //         .surfaceCounters = VK_SURFACE_COUNTER_VBLANK_EXT
 //      };
-
+#ifdef WIN32
+#define VK_PRESENT_MODE_IMMEDIATE_KHR VK_PRESENT_MODE_MAILBOX_KHR
+#endif
       VkSwapchainCreateInfoKHR info =
       {
          VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
@@ -735,7 +749,13 @@ void vk_render_targets_init(vk_context_t *vk, int count, screen_t *screens, vk_r
       };
       vkCreateXlibSurfaceKHR(vk->instance, &info, NULL, &render_targets[i].surface);
 #elif defined(VK_USE_PLATFORM_WIN32_KHR)
-
+      VkWin32SurfaceCreateInfoKHR info =
+      {
+         VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
+         .hinstance = render_targets[i].screen->hinstance,
+         .hwnd = render_targets[i].screen->hwnd,
+      };
+      vkCreateWin32SurfaceKHR(vk->instance, &info, NULL, &render_targets[i].surface);
 #else
 #error platform not supported
 #endif
