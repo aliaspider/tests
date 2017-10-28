@@ -84,27 +84,41 @@ void sprite_test(screen_t *screen)
    test_image.flushed = false;
    test_image.uploaded = false;
    test_image.dirty = true;
-
-   sprite_t sprite =
    {
-      .pos = {{330.0, 100.0, (calls >> 3) & 0xFF, 256.0}},
-      .coords = {{0.0, 0.0, 256.0, 256.0}},
-   };
-   vk_sprite_add(&sprite, &test_image);
-
-   sprite_t sprite2 =
+      sprite_t sprite =
+      {
+         .pos.values = {330.0, 100.0, (calls >> 3) & 0xFF, 256.0},
+         .coords.values = {0.0, 0.0, 256.0, 256.0},
+         .color.values = {0.4, 1.0, 0.5, 0.20},
+      };
+      vk_sprite_add(&sprite, &test_image);
+   }
    {
-      .pos = {{10.0, 40.0, 320.0, 64.0}},
-      .coords = {{20.0, 120.0, 132.0, 32.0}},
-   };
-   vk_sprite_add(&sprite2, &frame_renderer.texture);
-
-   sprite_t sprite3 =
+      sprite_t sprite =
+      {
+         .pos.values = {100.0, 40.0, 128, 32.0},
+         .color.values = {1.0, 0.0, 0.5, 0.50},
+      };
+      vk_sprite_add(&sprite, NULL);
+   }
    {
-      .pos = {{10.0, 190.0, 300.0, 300.0}},
-      .coords = {{0.0, 0.0, font_renderer.texture.width, font_renderer.texture.height}},
-   };
-   vk_sprite_add(&sprite3, &font_renderer.texture);
+      sprite_t sprite =
+      {
+         .pos.values = {10.0, 40.0, 320.0, 64.0},
+         .coords.values = {20.0, 120.0, 132.0, 32.0},
+         .color.values = {0.4, 1.0, 0.5, 1.20},
+      };
+      vk_sprite_add(&sprite, &frame_renderer.default_texture);
+   }
+   {
+      sprite_t sprite =
+      {
+         .pos.values = {10.0, 190.0, 300.0, 300.0},
+         .coords.values = {0.0, 0.0, font_renderer.default_texture.width, font_renderer.default_texture.height},
+         .color.values = {1.0, 1.0, 1.0, 1.0},
+      };
+      vk_sprite_add(&sprite, &font_renderer.default_texture);
+   }
 }
 
 void video_init()
@@ -125,7 +139,7 @@ void video_init()
       if ((*renderer)->init)(*renderer)->init(&vk);
 
    vk_register_draw_command(&render_targets[0].draw_list, frame_draw);
-//   vk_register_draw_command(&render_targets[0].draw_list, sprite_test);
+   vk_register_draw_command(&render_targets[0].draw_list, sprite_test);
    vk_register_draw_command(&render_targets[0].draw_list, fps_draw);
    vk_register_draw_command(&render_targets[0].draw_list, screen_id_draw);
 
@@ -143,7 +157,7 @@ void video_init()
    test_image.height = 256;
    test_image.format = VK_FORMAT_R5G6B5_UNORM_PACK16;
    vk_texture_init(&vk, &test_image);
-   memset(test_image.staging.mem.u8 + test_image.staging.mem.layout.offset, 0xFF,
+   memset(test_image.staging.mem.u8 + test_image.staging.mem.layout.offset, 0x80,
       test_image.staging.mem.size - test_image.staging.mem.layout.offset);
 }
 
@@ -175,7 +189,7 @@ void video_frame_update()
    VkCommandBuffer cmds[MAX_SCREENS];
    VkSwapchainKHR swapchains[MAX_SCREENS];
 
-   frame_renderer.texture.dirty = true;
+   frame_renderer.default_texture.dirty = true;
 
 //   vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, UINT64_MAX);
    VK_CHECK(vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, 100000000));
@@ -327,10 +341,11 @@ void video_toggle_vsync(void)
 
 void video_toggle_filter(void)
 {
-   frame_renderer.texture.filter = !frame_renderer.texture.filter;
-   frame_renderer.texture.info.sampler = frame_renderer.texture.filter? vk.samplers.linear : vk.samplers.nearest;
+   frame_renderer.default_texture.filter = !frame_renderer.default_texture.filter;
+   frame_renderer.default_texture.info.sampler = frame_renderer.default_texture.filter ? vk.samplers.linear :
+      vk.samplers.nearest;
    vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, UINT64_MAX);
-   vk_update_descriptor_sets(&vk, &frame_renderer);
+   vk_texture_update_descriptor_sets(&vk, &frame_renderer.default_texture);
 }
 
 const video_t video_vulkan =

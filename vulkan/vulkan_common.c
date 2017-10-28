@@ -282,11 +282,13 @@ static VkBool32 vulkan_debug_report_callback(VkDebugReportFlagsEXT flags,
    if (objectType == VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT && messageCode == 108)
       return VK_FALSE;
 
-   if(messageCode == 68
-      || messageCode == 38
-      || messageCode == 438304791
-      || messageCode == 9
-      )
+   if ( false
+    || messageCode == 61
+//   || messageCode == 68
+//      || messageCode == 38
+//      || messageCode == 438304791
+//      || messageCode == 9
+   )
       return VK_FALSE;
 
    int i;
@@ -452,7 +454,7 @@ void vk_context_init(vk_context_t *vk)
    {
       const VkDescriptorPoolSize sizes[] =
       {
-         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 32},
+         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 32},
          {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 32},
          {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 32}
       };
@@ -489,9 +491,9 @@ void vk_context_init(vk_context_t *vk)
       {
          {
             .binding = 0,
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
             .descriptorCount = 1,
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
          },
          {
             .binding = 1,
@@ -505,24 +507,36 @@ void vk_context_init(vk_context_t *vk)
             .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT,
-         },
+         }
+      };
+
+      VkDescriptorSetLayoutCreateInfo info =
+      {
+         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+         .bindingCount = countof(bindings), bindings
+
+      };
+      vkCreateDescriptorSetLayout(vk->device, &info, NULL, &vk->set_layouts.full);
+   }
+
+   {
+      const VkDescriptorSetLayoutBinding bindings[] =
+      {
          {
-            .binding = 3,
+            .binding = 0,
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
          },
       };
 
-      const VkDescriptorSetLayoutCreateInfo info [] =
+      VkDescriptorSetLayoutCreateInfo info =
       {
-         {
-            VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-            .bindingCount = countof(bindings), bindings
+         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+         .bindingCount = countof(bindings), bindings
 
-         }
       };
-      vkCreateDescriptorSetLayout(vk->device, &info[0], NULL, &vk->descriptor_set_layout);
+      vkCreateDescriptorSetLayout(vk->device, &info, NULL, &vk->set_layouts.texture);
    }
 
    {
@@ -538,7 +552,8 @@ void vk_context_init(vk_context_t *vk)
       const VkPipelineLayoutCreateInfo info =
       {
          VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-         .setLayoutCount = 1, &vk->descriptor_set_layout,
+         .setLayoutCount = sizeof(vk->set_layouts) / sizeof(VkDescriptorSetLayout),
+         .pSetLayouts = (VkDescriptorSetLayout *) &vk->set_layouts,
          .pushConstantRangeCount = countof(ranges), ranges
       };
 
@@ -597,7 +612,8 @@ void vk_context_destroy(vk_context_t *vk)
    vkDestroyDescriptorPool(vk->device, vk->pools.desc, NULL);
    vkDestroySampler(vk->device, vk->samplers.nearest, NULL);
    vkDestroySampler(vk->device, vk->samplers.linear, NULL);
-   vkDestroyDescriptorSetLayout(vk->device, vk->descriptor_set_layout, NULL);
+   vkDestroyDescriptorSetLayout(vk->device, vk->set_layouts.full, NULL);
+   vkDestroyDescriptorSetLayout(vk->device, vk->set_layouts.texture, NULL);
    vkDestroyPipelineLayout(vk->device, vk->pipeline_layout, NULL);
    vkDestroyRenderPass(vk->device, vk->renderpass, NULL);
    vkDestroyCommandPool(vk->device, vk->pools.cmd, NULL);
@@ -796,6 +812,31 @@ void vk_render_targets_destroy(vk_context_t *vk, int count, vk_render_target_t *
 
 
 }
+void vk_texture_update_descriptor_sets(vk_context_t *vk, vk_texture_t *dst)
+
+{
+   VkDescriptorImageInfo image_info[] =
+   {
+      {
+         .sampler = dst->info.sampler,
+         .imageView = dst->info.imageView,
+         .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+      }
+   };
+
+   const VkWriteDescriptorSet write_set =
+   {
+      VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+      .dstSet = dst->desc,
+      .dstBinding = 0,
+      .dstArrayElement = 0,
+      .descriptorCount = 1,
+      .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+      .pImageInfo = image_info
+   };
+
+   vkUpdateDescriptorSets(vk->device, 1, &write_set, 0, NULL);
+}
 
 void vk_texture_init(vk_context_t *vk, vk_texture_t *dst)
 {
@@ -876,41 +917,19 @@ void vk_texture_init(vk_context_t *vk, vk_texture_t *dst)
       VK_CHECK(vkCreateImageView(vk->device, &info, NULL, &dst->info.imageView));
    }
 
-   dst->info.sampler = dst->filter == VK_FILTER_LINEAR? vk->samplers.linear : vk->samplers.nearest;
+   dst->info.sampler = dst->filter == VK_FILTER_LINEAR ? vk->samplers.linear : vk->samplers.nearest;
 
    {
       const VkDescriptorSetAllocateInfo info =
       {
          VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
          .descriptorPool = vk->pools.desc,
-         .descriptorSetCount = 1, &vk->descriptor_set_layout
+         .descriptorSetCount = 1, &vk->set_layouts.texture
       };
       VK_CHECK(vkAllocateDescriptorSets(vk->device, &info, &dst->desc));
    }
 
-   {
-      VkDescriptorImageInfo image_info[] =
-      {
-         {
-            .sampler = dst->info.sampler,
-            .imageView = dst->info.imageView,
-            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-         }
-      };
-
-      const VkWriteDescriptorSet write_set =
-      {
-         VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-         .dstSet = dst->desc,
-         .dstBinding = 3,
-         .dstArrayElement = 0,
-         .descriptorCount = 1,
-         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-         .pImageInfo = image_info
-      };
-
-      vkUpdateDescriptorSets(vk->device, 1, &write_set, 0, NULL);
-   }
+   vk_texture_update_descriptor_sets(vk, dst);
 
 }
 
@@ -1166,13 +1185,14 @@ static inline VkShaderModule vk_shader_code_init(VkDevice device, const vk_shade
    return shader;
 }
 
-void vk_update_descriptor_sets(vk_context_t* vk, vk_renderer_t * dst)
+void vk_update_descriptor_sets(vk_context_t *vk, vk_renderer_t *dst)
 {
-   VkWriteDescriptorSet write_set[4];
+   VkWriteDescriptorSet write_set[3];
    int write_set_count = 0;
 
    if (dst->ubo.info.buffer)
    {
+//      dst->ubo.info.range =VK_WHOLE_SIZE;
       VkWriteDescriptorSet set =
       {
          VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -1180,7 +1200,7 @@ void vk_update_descriptor_sets(vk_context_t* vk, vk_renderer_t * dst)
          .dstBinding = 0,
          .dstArrayElement = 0,
          .descriptorCount = 1,
-         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
          .pBufferInfo = &dst->ubo.info
       };
       write_set[write_set_count++] = set;
@@ -1189,18 +1209,18 @@ void vk_update_descriptor_sets(vk_context_t* vk, vk_renderer_t * dst)
    VkDescriptorImageInfo image_info[] =
    {
       {
-         .sampler = dst->texture.info.sampler,
-         .imageView = dst->texture.info.imageView,
+         .sampler = dst->default_texture.info.sampler,
+         .imageView = dst->default_texture.info.imageView,
          .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
       },
       {
-         .sampler = dst->texture.info.sampler,
-         .imageView = dst->texture.info.imageView,
+         .sampler = dst->default_texture.info.sampler,
+         .imageView = dst->default_texture.info.imageView,
          .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
       }
    };
 
-   if (dst->texture.image)
+   if (dst->default_texture.image)
    {
       VkWriteDescriptorSet set =
       {
@@ -1212,9 +1232,6 @@ void vk_update_descriptor_sets(vk_context_t* vk, vk_renderer_t * dst)
          .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
          .pImageInfo = image_info
       };
-      write_set[write_set_count++] = set;
-      set.dstBinding = 3;
-      set.descriptorCount = 1;
       write_set[write_set_count++] = set;
    }
 
@@ -1236,13 +1253,12 @@ void vk_update_descriptor_sets(vk_context_t* vk, vk_renderer_t * dst)
    vkUpdateDescriptorSets(vk->device, write_set_count, write_set, 0, NULL);
 }
 
-
 void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info, vk_renderer_t *dst)
 {
-   if (dst->texture.image)
-      dst->texture.is_reference = true;
-   else if (dst->texture.format != VK_FORMAT_UNDEFINED)
-      vk_texture_init(vk, &dst->texture);
+   if (dst->default_texture.image)
+      dst->default_texture.is_reference = true;
+   else if (dst->default_texture.format != VK_FORMAT_UNDEFINED)
+      vk_texture_init(vk, &dst->default_texture);
 
    if (dst->ssbo.info.range)
    {
@@ -1268,7 +1284,7 @@ void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info
       {
          VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
          .descriptorPool = vk->pools.desc,
-         .descriptorSetCount = 1, &vk->descriptor_set_layout
+         .descriptorSetCount = 1, &vk->set_layouts.full
       };
       vkAllocateDescriptorSets(vk->device, &info, &dst->desc);
    }
@@ -1387,7 +1403,7 @@ void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer)
    vk_buffer_free(device, &renderer->vbo);
    vk_buffer_free(device, &renderer->ubo);
    vk_buffer_free(device, &renderer->ssbo);
-   vk_texture_free(device, &renderer->texture);
+   vk_texture_free(device, &renderer->default_texture);
 
    memset(&renderer->vk_renderer_data_start, 0, sizeof(*renderer) - offsetof(vk_renderer_t, vk_renderer_data_start));
 }
@@ -1395,14 +1411,90 @@ void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer)
 
 void vk_renderer_update(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *renderer)
 {
-   if (renderer->texture.dirty && !renderer->texture.uploaded)
-      vk_texture_upload(device, cmd, &renderer->texture);
+   if (renderer->default_texture.dirty && !renderer->default_texture.uploaded)
+      vk_texture_upload(device, cmd, &renderer->default_texture);
+
+   int vertex_count = (renderer->vbo.info.range - renderer->vbo.info.offset) / renderer->vertex_stride;
+
+   if (vertex_count < VK_RENDERER_MAX_TEXTURES)
+   {
+      for (int i = 0; i < vertex_count; i++)
+      {
+         if (!renderer->textures[i])
+            continue;
+
+         if (renderer->textures[i]->dirty && !renderer->textures[i]->flushed)
+            vk_texture_flush(device, renderer->textures[i]);
+
+         if (renderer->textures[i]->dirty && !renderer->textures[i]->uploaded)
+            vk_texture_upload(device, cmd, renderer->textures[i]);
+      }
+   }
+
+}
+
+void vk_renderer_exec(VkCommandBuffer cmd, vk_renderer_t *renderer)
+{
+   if (renderer->vbo.info.range - renderer->vbo.info.offset == 0)
+      return;
+
+   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipe);
+   vkCmdBindVertexBuffers(cmd, 0, 1, &renderer->vbo.info.buffer, &renderer->vbo.info.offset);
+
+   int count = (renderer->vbo.info.range - renderer->vbo.info.offset) / renderer->vertex_stride;
+   int first_vertex = 0;
+
+   for (uint32_t i = 0; i < count; i++)
+   {
+      if (i + 1 < count)
+      {
+         if (i < VK_RENDERER_MAX_TEXTURES)
+         {
+            if (renderer->textures[i] == renderer->textures[i + 1])
+            {
+               renderer->textures[i] = NULL;
+               continue;
+            }
+         }
+         else
+            i = count - 1;
+      }
+
+
+      if (i < VK_RENDERER_MAX_TEXTURES && renderer->textures[i])
+      {
+//         uint32_t dynamic_offset = 0;
+         uint32_t dynamic_offset = (i + 1) * VK_UBO_ALIGNMENT;
+         VkDescriptorSet descs [] = {renderer->desc, renderer->textures[i]->desc};
+         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, countof(descs), descs, 1, &dynamic_offset);
+         renderer->textures[i] = NULL;
+      }
+      else
+      {
+         uint32_t dynamic_offset = 0;
+         if(renderer->default_texture.desc)
+         {
+            VkDescriptorSet descs [] = {renderer->desc, renderer->default_texture.desc};
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, countof(descs), descs, 1, &dynamic_offset);
+         }
+         else
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, 1, &renderer->desc, 1, &dynamic_offset);
+      }
+
+//         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, 1, &renderer->default_texture.desc,0, NULL);
+
+
+      vkCmdDraw(cmd, i + 1 - first_vertex, 1, first_vertex, 0);
+      first_vertex = i + 1;
+   }
+
+   renderer->vbo.info.offset = renderer->vbo.info.range;
 }
 
 void vk_renderer_finish(VkDevice device, vk_renderer_t *renderer)
 {
-   if (renderer->texture.dirty && !renderer->texture.flushed)
-      vk_texture_flush(device, &renderer->texture);
+   if (renderer->default_texture.dirty && !renderer->default_texture.flushed)
+      vk_texture_flush(device, &renderer->default_texture);
 
    if (renderer->vbo.dirty)
       vk_buffer_flush(device, &renderer->vbo);
@@ -1415,22 +1507,8 @@ void vk_renderer_finish(VkDevice device, vk_renderer_t *renderer)
 
    renderer->vbo.info.offset = 0;
    renderer->vbo.info.range = 0;
-   renderer->texture.flushed = false;
-   renderer->texture.uploaded = false;
-}
-
-void vk_renderer_emit(VkCommandBuffer cmd, vk_renderer_t *renderer)
-{
-   if (renderer->vbo.info.range - renderer->vbo.info.offset == 0)
-      return;
-
-   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipe);
-   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, 1, &renderer->desc, 0, NULL);
-   vkCmdBindVertexBuffers(cmd, 0, 1, &renderer->vbo.info.buffer, &renderer->vbo.info.offset);
-
-   vkCmdDraw(cmd, (renderer->vbo.info.range - renderer->vbo.info.offset) / renderer->vertex_stride, 1, 0, 0);
-
-   renderer->vbo.info.offset = renderer->vbo.info.range;
+   renderer->default_texture.flushed = false;
+   renderer->default_texture.uploaded = false;
 }
 
 const char *vk_result_to_str(VkResult res)

@@ -79,7 +79,7 @@ vk_renderer_t slider_renderer =
    .init=vk_slider_init,
    .destroy=vk_renderer_destroy,
    .update=vk_renderer_update,
-   .exec=vk_renderer_emit,
+   .exec=vk_renderer_exec,
    .finish=vk_renderer_finish,
 };
 

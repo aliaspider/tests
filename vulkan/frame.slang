@@ -74,7 +74,7 @@ layout(location = 0) in vec2 vTexCoord;
 
 layout(location = 0) out vec4 FragColor;
 
-layout(set = 0, binding = 3) uniform highp sampler2D uTex;
+layout(set = 1, binding = 0) uniform highp sampler2D uTex;
 
 void main()
 {

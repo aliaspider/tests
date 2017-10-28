@@ -6,9 +6,14 @@
 #include "common.h"
 #include "sprite.h"
 
-#define MAX_SPRITES 256
-static VkDevice device;
-static vk_texture_t *textures[MAX_SPRITES];
+typedef union
+{
+   struct
+   {
+      int format;
+   };
+   uint8_t align[VK_UBO_ALIGNMENT];
+}uniform_t;
 
 static void vk_sprite_renderer_init(vk_context_t *vk)
 {
@@ -27,11 +32,18 @@ static void vk_sprite_renderer_init(vk_context_t *vk)
    {
       {0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(sprite_t, pos)},
       {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(sprite_t, coords)},
+      {2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(sprite_t, color)},
    };
 
    const VkPipelineColorBlendAttachmentState color_blend_attachement_state =
    {
-      .blendEnable = VK_FALSE,
+      .blendEnable = VK_TRUE,
+      .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+      .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+      .colorBlendOp = VK_BLEND_OP_ADD,
+      .srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+      .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+      .alphaBlendOp = VK_BLEND_OP_ADD,
       .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
       VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
    };
@@ -50,71 +62,33 @@ static void vk_sprite_renderer_init(vk_context_t *vk)
       .color_blend_attachement_state = &color_blend_attachement_state,
    };
 
-   sprite_renderer.vbo.info.range = MAX_SPRITES * sizeof(sprite_t);
+   sprite_renderer.vbo.info.range = VK_RENDERER_MAX_TEXTURES * sizeof(sprite_t);
    sprite_renderer.vertex_stride = sizeof(sprite_t);
+   sprite_renderer.ubo.info.range = (1 + VK_RENDERER_MAX_TEXTURES) * sizeof(uniform_t);
 
    vk_renderer_init(vk, &info, &sprite_renderer);
-   device = vk->device;
-}
-
-void vk_sprite_update(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *renderer)
-{
-   for (int i = 0; i < (sprite_renderer.vbo.info.range - sprite_renderer.vbo.info.offset) / sizeof(sprite_t); i++)
-   {
-      if (textures[i]->dirty && !textures[i]->flushed)
-         vk_texture_flush(device, textures[i]);
-
-      if (textures[i]->dirty && !textures[i]->uploaded)
-         vk_texture_upload(device, cmd, textures[i]);
-   }
 }
 
 void vk_sprite_add(sprite_t *sprite, vk_texture_t *texture)
 {
-   textures[(sprite_renderer.vbo.info.range - sprite_renderer.vbo.info.offset) / sizeof(sprite_t)] = texture;
-   *(sprite_t *)vk_get_vbo_memory(&sprite_renderer.vbo, sizeof(sprite_t)) = *sprite;
-}
+   int vertex_count = (sprite_renderer.vbo.info.range - sprite_renderer.vbo.info.offset) / sizeof(sprite_t);
 
-void vk_sprite_emit(VkCommandBuffer cmd, vk_renderer_t *renderer)
-{
-   if (renderer->vbo.info.range - renderer->vbo.info.offset == 0)
-      return;
-
-   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipe);
-//   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, sprite_renderer.layout, 0, 1, &sprite_renderer.desc, 0, NULL);
-   vkCmdBindVertexBuffers(cmd, 0, 1, &renderer->vbo.info.buffer, &renderer->vbo.info.offset);
-
-   int count = (sprite_renderer.vbo.info.range - sprite_renderer.vbo.info.offset) / sizeof(sprite_t);
-   int first_vertex = 0;
-
-   for (int i = 0; i < count; i++)
+   if(texture)
    {
-      if (i + 1 < count && textures[i] == textures[i + 1])
-         continue;
-
-      vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, sprite_renderer.layout, 0, 1, &textures[i]->desc, 0, NULL);
-      vkCmdDraw(cmd, i + 1 - first_vertex, 1, first_vertex, 0);
-      first_vertex = i + 1;
+      sprite_renderer.textures[vertex_count] = texture;
+      ((uniform_t*)sprite_renderer.ubo.mem.ptr)[vertex_count + 1].format = texture->format;
+      sprite_renderer.ubo.dirty = true;
    }
 
-   renderer->vbo.info.offset = renderer->vbo.info.range;
-}
-
-void vk_sprite_finish(VkDevice device, vk_renderer_t *renderer)
-{
-   if (renderer->vbo.dirty)
-      vk_buffer_flush(device, &renderer->vbo);
-
-   renderer->vbo.info.offset = 0;
-   renderer->vbo.info.range = 0;
+   *(sprite_t *)vk_get_vbo_memory(&sprite_renderer.vbo, sizeof(sprite_t)) = *sprite;
 }
 
 vk_renderer_t sprite_renderer =
 {
    .init = vk_sprite_renderer_init,
    .destroy = vk_renderer_destroy,
-   .update = vk_sprite_update,
-   .exec = vk_sprite_emit,
-   .finish = vk_sprite_finish,
+   .update = vk_renderer_update,
+   .exec = vk_renderer_exec,
+   .finish = vk_renderer_finish,
 };
 

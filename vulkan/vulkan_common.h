@@ -15,7 +15,7 @@
 #define VK_CHECK(vk_call) do{VkResult res = vk_call; if (res != VK_SUCCESS) {debug_log("%s:%i:%s:%s --> %s(%i)\n", __FILE__, __LINE__, __FUNCTION__, #vk_call, vk_result_to_str(res), res);fflush(stdout);exit(1);}}while(0)
 const char *vk_result_to_str(VkResult res);
 
-typedef struct
+typedef struct vk_context_t
 {
    VkInstance instance;
    VkDebugReportCallbackEXT debug_cb;
@@ -38,7 +38,11 @@ typedef struct
       VkCommandPool cmd;
       VkDescriptorPool desc;
    } pools;
-   VkDescriptorSetLayout descriptor_set_layout;
+   struct
+   {
+      VkDescriptorSetLayout full;
+      VkDescriptorSetLayout texture;
+   } set_layouts;
    VkPipelineLayout pipeline_layout;
    struct
    {
@@ -167,8 +171,9 @@ typedef struct
    bool uploaded;
 } vk_texture_t;
 
-void vk_texture_init(vk_context_t* vk, vk_texture_t *dst);
+void vk_texture_init(vk_context_t *vk, vk_texture_t *dst);
 void vk_texture_free(VkDevice device, vk_texture_t *texture);
+void vk_texture_update_descriptor_sets(vk_context_t *vk, vk_texture_t *dst);
 void vk_texture_upload(VkDevice device, VkCommandBuffer cmd, vk_texture_t *texture);
 void vk_texture_flush(VkDevice device, vk_texture_t *texture);
 
@@ -206,6 +211,8 @@ typedef struct
    const VkPipelineColorBlendAttachmentState *color_blend_attachement_state;
 } vk_renderer_init_info_t;
 
+#define VK_RENDERER_MAX_TEXTURES 64
+
 typedef struct vk_renderer_t vk_renderer_t;
 struct vk_renderer_t
 {
@@ -214,7 +221,7 @@ struct vk_renderer_t
    void (*const update)(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *renderer);
    void (*const exec)(VkCommandBuffer cmd, vk_renderer_t *renderer);
    void (*const finish)(VkDevice device, vk_renderer_t *renderer);
-   vk_texture_t texture;
+   vk_texture_t default_texture;
    vk_buffer_t vbo;
    vk_buffer_t ubo;
    vk_buffer_t ssbo;
@@ -222,16 +229,19 @@ struct vk_renderer_t
    VkPipeline pipe;
    VkPipelineLayout layout;
    uint32_t vertex_stride;
+   vk_texture_t *textures[VK_RENDERER_MAX_TEXTURES + 1];
 };
 
-#define vk_renderer_data_start texture
+#define vk_renderer_data_start default_texture
 
-void vk_update_descriptor_sets(vk_context_t* vk, vk_renderer_t * dst);
 void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info, vk_renderer_t *dst);
 void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer);
 void vk_renderer_update(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *renderer);
-void vk_renderer_emit(VkCommandBuffer cmd, vk_renderer_t *renderer);
+void vk_renderer_exec(VkCommandBuffer cmd, vk_renderer_t *renderer);
+void vk_renderer_exec_simple(VkCommandBuffer cmd, vk_renderer_t *renderer);
 void vk_renderer_finish(VkDevice device, vk_renderer_t *renderer);
+
+#define VK_UBO_ALIGNMENT 0x100
 
 static inline void *vk_get_vbo_memory(vk_buffer_t *vbo, VkDeviceSize size)
 {
@@ -259,6 +269,7 @@ typedef union
       float width;
       float height;
    };
+   float values[4];
 } vec2;
 
 typedef union vec4
@@ -288,6 +299,7 @@ typedef union vec4
          };
       };
    };
+   float values[4];
 } vec4 __attribute__((aligned((sizeof(union vec4)))));
 
 #define DEBUG_VEC4(v) do{debug_log("%-40s : (%f,%f,%f,%f)\n", #v, v.x, v.y, v.z, v.w); fflush(stdout);}while(0)

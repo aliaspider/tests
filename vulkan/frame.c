@@ -59,10 +59,10 @@ void vk_frame_init(vk_context_t *vk, int width, int height, VkFormat format)
          .color_blend_attachement_state = &color_blend_attachement_state,
       };
 
-      frame_renderer.texture.width = width;
-      frame_renderer.texture.height = height;
-      frame_renderer.texture.format = format;
-      frame_renderer.texture.filter = VK_FILTER_LINEAR;
+      frame_renderer.default_texture.width = width;
+      frame_renderer.default_texture.height = height;
+      frame_renderer.default_texture.format = format;
+      frame_renderer.default_texture.filter = VK_FILTER_LINEAR;
       frame_renderer.vbo.info.range = sizeof(vertex_t) * 8;
       frame_renderer.vertex_stride = sizeof(vertex_t);
       frame_renderer.ubo.info.range = sizeof(uniform_t);
@@ -71,20 +71,20 @@ void vk_frame_init(vk_context_t *vk, int width, int height, VkFormat format)
    }
 
    {
-      device_memory_t *mem = &frame_renderer.texture.staging.mem;
+      device_memory_t *mem = &frame_renderer.default_texture.staging.mem;
       memset(mem->u8 + mem->layout.offset, 0xFF, mem->layout.size - mem->layout.offset);
    }
 
-   frame_renderer.texture.dirty = true;
+   frame_renderer.default_texture.dirty = true;
 
-   ((uniform_t*)frame_renderer.ubo.mem.ptr)->tex_size.width = frame_renderer.texture.width;
-   ((uniform_t*)frame_renderer.ubo.mem.ptr)->tex_size.height = frame_renderer.texture.height;
+   ((uniform_t*)frame_renderer.ubo.mem.ptr)->tex_size.width = frame_renderer.default_texture.width;
+   ((uniform_t*)frame_renderer.ubo.mem.ptr)->tex_size.height = frame_renderer.default_texture.height;
    frame_renderer.ubo.dirty = true;
 
    video.frame.width = width;
    video.frame.height = height;
-   video.frame.pitch = frame_renderer.texture.staging.mem.layout.rowPitch / 4;
-   video.frame.data = frame_renderer.texture.staging.mem.u8 + frame_renderer.texture.staging.mem.layout.offset;
+   video.frame.pitch = frame_renderer.default_texture.staging.mem.layout.rowPitch / 4;
+   video.frame.data = frame_renderer.default_texture.staging.mem.u8 + frame_renderer.default_texture.staging.mem.layout.offset;
 }
 
 void vk_frame_add(int x, int y, int width, int height)
@@ -100,6 +100,6 @@ vk_renderer_t frame_renderer =
 {
    .destroy=vk_renderer_destroy,
    .update=vk_renderer_update,
-   .exec=vk_renderer_emit,
+   .exec=vk_renderer_exec,
    .finish=vk_renderer_finish,
 };
