@@ -113,9 +113,9 @@ void sprite_test(screen_t* screen)
    {
       sprite_t sprite =
       {
-         .pos.values = {10.0, 190.0, 300.0, 300.0},
+         .pos.values = {10.0, 190.0, font_renderer.default_texture.width, font_renderer.default_texture.height},
          .coords.values = {0.0, 0.0, font_renderer.default_texture.width, font_renderer.default_texture.height},
-         .color.values = {1.0, 1.0, 1.0, 1.0},
+         .color.values = {1.0, 1.0, 0.0, 1.0},
       };
       vk_sprite_add(&sprite, &font_renderer.default_texture);
    }

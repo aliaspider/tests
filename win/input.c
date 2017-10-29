@@ -139,7 +139,7 @@ void mouse_update(void)
          {
             if (FAILED(IDirectInputDevice8_GetDeviceState(mouse, sizeof(state), &state)))
             {
-               IDirectInputDevice8_Release(mice[i]);
+//               IDirectInputDevice8_Release(mice[i]);
                return;
             }
 
