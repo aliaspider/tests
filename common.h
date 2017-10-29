@@ -7,7 +7,7 @@
 
 #define fatal(...)   do{debug_log(__VA_ARGS__); fflush(stdout); assert(0);}while(0)
 
-#define CHECK_ERR(x) do{if((x) < 0) {fflush(stdout);assert(0);}}while(0)
+#define CHECK_ERR(x) do{if((x) != 0) {fflush(stdout);assert(0);}}while(0)
 
 #define DEBUG_LINE(x) do{debug_log("%s@%i : %s\n", __FILE__, __LINE__, __FUNCTION__); fflush(stdout);}while(0)
 #define DEBUG_CHAR(x) do{debug_log("%-40s : %6c\n", #x, x); fflush(stdout);}while(0)

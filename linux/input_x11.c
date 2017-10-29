@@ -23,7 +23,6 @@ void input_x11_destroy()
 void input_x11_update()
 {
    XEvent e;
-   uint64_t old_mask = input.pad.mask;
 
    while (XPending(video.screens[0].display))
    {
@@ -135,9 +134,6 @@ void input_x11_update()
       }
 
    }
-
-   input.pad_pressed.mask = (input.pad.mask ^ old_mask) & input.pad.mask;
-   input.pad_released.mask = (input.pad.mask ^ old_mask) & ~input.pad.mask;
 }
 
 const input_t input_x11 =

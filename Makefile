@@ -67,7 +67,7 @@ ifeq ($(platform),linux)
 else ifeq ($(platform),win)
    CFLAGS += $(shell pkg-config.exe freetype2 --cflags)
    CFLAGS += -I$(VULKAN_SDK)/Include -DVK_USE_PLATFORM_WIN32_KHR
-   LIBS +=  -L$(VULKAN_SDK)/Lib -lvulkan-1 -lfreetype -lgdi32
+   LIBS +=  -L$(VULKAN_SDK)/Lib -lvulkan-1 -lfreetype -lgdi32 -ldinput -ldxguid -ldinput8
 endif
 
 

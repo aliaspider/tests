@@ -37,7 +37,7 @@ static LRESULT CALLBACK wndproc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
 
 void platform_init()
 {
-   HINSTANCE hInstance = GetModuleHandle(NULL);
+   platform.hInstance = GetModuleHandle(NULL);
    WNDCLASSEX wndclass =
    {
       .cbSize = sizeof(WNDCLASSEX),
@@ -45,23 +45,23 @@ void platform_init()
       .lpfnWndProc = wndproc,
       .cbClsExtra = 0,
       .cbWndExtra = 0,
-      .hInstance = hInstance,
-      .hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APPLICATION)),
+      .hInstance = platform.hInstance,
+      .hIcon = LoadIcon(platform.hInstance, MAKEINTRESOURCE(IDI_APPLICATION)),
       .hCursor = LoadCursor(NULL, IDC_ARROW),
       .hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH),
 //      .lpszMenuName = NULL,
       .lpszClassName = "myWndClass",
-      .hIconSm = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APPLICATION)),
+      .hIconSm = LoadIcon(platform.hInstance, MAKEINTRESOURCE(IDI_APPLICATION)),
    };
    RegisterClassEx(&wndclass);
 
    for (int i = video.screen_count - 1; i >= 0; i--)
    {
-      video.screens[i].hinstance = hInstance;
+      video.screens[i].hinstance = platform.hInstance;
       video.screens[i].hwnd = CreateWindow(wndclass.lpszClassName, "Vulkan Test",
                                            WS_OVERLAPPEDWINDOW | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_VISIBLE,
                                            video.screens[i].x, video.screens[i].y, video.screens[i].width, video.screens[i].height,
-                                           NULL, NULL, hInstance, NULL);
+                                           NULL, NULL, platform.hInstance, NULL);
    }
 }
 

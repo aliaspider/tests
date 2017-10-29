@@ -69,18 +69,25 @@ int main(int argc, char** argv)
    while (true)
    {
       platform_update();
-      input.update();
-      if(input.pad_pressed.meta.vsync)
+      {
+         uint64_t old_mask = input.pad.mask;
+         input.update();
+         input.pad_pressed.mask = (input.pad.mask ^ old_mask) & input.pad.mask;
+         input.pad_released.mask = (input.pad.mask ^ old_mask) & ~input.pad.mask;
+      }
+
+      if (input.pad_pressed.meta.vsync)
          video.toggle_vsync();
 
-      if(input.pad_pressed.meta.filter)
+      if (input.pad_pressed.meta.filter)
          video.toggle_filter();
 
-      if(input.pad.meta.exit)
+      if (input.pad.meta.exit)
          break;
 
       module_run_info_t info = {};
       uint32_t sound_buffer[40000 + 2064];
+
       do
       {
          info.screen.ptr = video.frame.data;
@@ -104,6 +111,7 @@ int main(int argc, char** argv)
       frames++;
 
       snprintf(video.fps, sizeof(video.fps), "fps: %f", frames / diff);
+
       if (diff > 0.5f)
       {
 
