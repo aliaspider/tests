@@ -73,3 +73,5 @@
 const char* console_get(void);
 int console_get_len(void);
 extern int console_update_counter;
+
+void display_message(int frames, int x, int y, unsigned screens, const char* fmt, ...);

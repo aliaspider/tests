@@ -85,6 +85,9 @@ int main(int argc, char** argv)
       if (input.pad.meta.exit)
          break;
 
+      if(input.pad_pressed.buttons.start)
+         display_message(600, 160, 60, ~0, "start pressed at frame : %i", frames);
+
       module_run_info_t info = {};
       uint32_t sound_buffer[40000 + 2064];
 

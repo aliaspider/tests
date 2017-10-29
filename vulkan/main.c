@@ -1,4 +1,5 @@
-
+#define _GNU_SOURCE
+#include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 #include <assert.h>
@@ -121,6 +122,59 @@ void sprite_test(screen_t* screen)
    }
 }
 
+typedef struct
+{
+   char* msg;
+   int frames;
+   unsigned screen_mask;
+   font_render_options_t options;
+}msg_buffer_t;
+msg_buffer_t msg_buffer[64];
+
+static void display_message_handler(screen_t* screen)
+{
+   msg_buffer_t* ptr = msg_buffer;
+   while(ptr->msg && ptr - msg_buffer < countof(msg_buffer))
+   {
+      if(ptr->screen_mask & (1 << (screen - video.screens)))
+      {
+         ptr->options.max_width = screen->width;
+         ptr->options.max_height = screen->height;
+         vk_font_draw_text(ptr->msg, &ptr->options);
+         ptr->frames--;
+         if(!ptr->frames)
+         {
+            free(ptr->msg);
+            ptr->msg = NULL;
+            if(msg_buffer + countof(msg_buffer) - 1 - ptr > 0)
+               memmove(ptr, ptr + 1, (msg_buffer + countof(msg_buffer) - 1 - ptr) * sizeof(msg_buffer_t));
+
+            continue;
+         }
+      }
+      ptr++;
+   }
+}
+
+void display_message(int frames, int x, int y, unsigned screen_mask, const char* fmt, ...)
+{
+   msg_buffer_t* ptr = msg_buffer;
+   while(ptr->msg && ptr - msg_buffer < countof(msg_buffer))
+      ptr++;
+
+   if(ptr - msg_buffer == countof(msg_buffer))
+      return;
+
+   va_list va;
+   va_start(va, fmt);
+   vasprintf(&ptr->msg, fmt, va);
+   va_end(va);
+   ptr->frames = frames;
+   ptr->screen_mask = screen_mask;
+   ptr->options.x = x;
+   ptr->options.y = y;
+}
+
 void video_init()
 {
    debug_log("video init\n");
@@ -142,12 +196,14 @@ void video_init()
 //   vk_register_draw_command(&render_targets[0].draw_list, sprite_test);
    vk_register_draw_command(&render_targets[0].draw_list, fps_draw);
    vk_register_draw_command(&render_targets[0].draw_list, screen_id_draw);
+   vk_register_draw_command(&render_targets[0].draw_list, display_message_handler);
 
    vk_register_draw_command(&render_targets[1].draw_list, frame_draw_small);
 //   vk_register_draw_command(&render_targets[1].draw_list, sprite_test);
    vk_register_draw_command(&render_targets[1].draw_list, fps_draw);
    vk_register_draw_command(&render_targets[1].draw_list, screen_id_draw);
    vk_register_draw_command(&render_targets[1].draw_list, console_draw);
+   vk_register_draw_command(&render_targets[1].draw_list, display_message_handler);
 
 //   vk_register_draw_command(&render_targets[2].draw_list, frame_draw);
 //   vk_register_draw_command(&render_targets[2].draw_list, fps_draw);
