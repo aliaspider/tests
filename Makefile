@@ -1,6 +1,7 @@
 
 TARGET = test
-MODULE = gambatte/gambatte_module.a
+MODULE = module.a
+#MODULE = gambatte/gambatte_module.a
 #MODULE = snes9x/snes9x_module.a
 DEBUG = 0
 
@@ -67,7 +68,7 @@ ifeq ($(platform),linux)
 else ifeq ($(platform),win)
    CFLAGS += $(shell pkg-config.exe freetype2 --cflags)
    CFLAGS += -I$(VULKAN_SDK)/Include -DVK_USE_PLATFORM_WIN32_KHR
-   LIBS +=  -L$(VULKAN_SDK)/Lib -lvulkan-1 -lfreetype -lgdi32 -ldinput -ldxguid -ldinput8
+   LIBS +=  -L$(VULKAN_SDK)/Lib -lvulkan-1 -lfreetype -lgdi32 -ldinput -ldxguid -ldinput8 -ldsound
 endif
 
 

@@ -16,17 +16,6 @@ POINT origin_pos;
 DIMOUSESTATE origin_state;
 HWND active_window;
 
-//char err_str[256];
-//FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, HRESULT_CODE(hr), 0, err_str, sizeof(err_str), NULL);
-//printf("%s\n", err_str);
-
-#define CHECK_WINERR(x) do{HRESULT hr = x; if(FAILED(hr)) {\
-   printf("error at %s:%i:%s: (0x%X, 0x%X, 0x%X) 0x%08X(%i)\n", \
-   __FILE__, __LINE__, __FUNCTION__, HRESULT_SEVERITY(hr), HRESULT_FACILITY(hr), HRESULT_CODE(hr), hr, hr);\
-   fflush(stdout);assert(0);}}while(0)
-
-#define DEBUG_WINERR(x) do{printf("(0x%X, 0x%X, 0x%X) 0x%08X\n", HRESULT_SEVERITY(hr), HRESULT_FACILITY(hr), HRESULT_CODE(hr), hr);fflush(stdout);}while(0)
-
 static void print_mouse_state(screen_t* screen)
 {
    char mouse_state[512];
