@@ -9,6 +9,7 @@
 #include "video.h"
 #include "audio.h"
 #include "input.h"
+#include "vulkan/font.h"
 
 
 video_t video;
@@ -77,10 +78,16 @@ int main(int argc, char** argv)
       }
 
       if (input.pad_pressed.meta.vsync)
+      {
          video.vsync = !video.vsync;
+         display_message(60, 0, video.screens[0].height - 30, 1, "\e[%imV-Sync %s", YELLOW,  video.vsync ? "ON" : "OFF");
+      }
 
       if (input.pad_pressed.meta.filter)
+      {
          video.filter = !video.filter;
+         display_message(60, 0, video.screens[0].height - 30, 1, "\e[%imFiltering %s", RED, video.filter ? "ON" : "OFF");
+      }
 
       if (input.pad.meta.exit)
          break;

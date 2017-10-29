@@ -74,4 +74,25 @@ const char* console_get(void);
 int console_get_len(void);
 extern int console_update_counter;
 
-void display_message(int frames, int x, int y, unsigned screens, const char* fmt, ...);
+void display_message(int frames, int x, int y, unsigned screen_mask, const char* fmt, ...);
+
+
+#ifdef __WIN32__
+typedef int8_t s8;
+typedef uint8_t u8;
+typedef int16_t s16;
+typedef uint16_t u16;
+typedef __LONG32 s32;
+typedef unsigned __LONG32 u32;
+typedef int64_t s64;
+typedef uint64_t u64;
+#else
+typedef int8_t s8;
+typedef uint8_t u8;
+typedef int16_t s16;
+typedef uint16_t u16;
+typedef int32_t s32;
+typedef uint32_t u32;
+typedef int64_t s64;
+typedef uint64_t u64;
+#endif

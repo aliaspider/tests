@@ -37,7 +37,7 @@ void input_init()
 {
    video.register_draw_command(1, print_mouse_state);
 
-   CHECK_WINERR(DirectInput8Create(platform.hInstance, DIRECTINPUT_VERSION, &IID_IDirectInput8, (LPVOID*)&dinput, NULL));
+   CHECK_WINERR(DirectInput8Create(platform.hInstance, DIRECTINPUT_VERSION, &IID_IDirectInput8, (void**)&dinput, NULL));
 
    for (int i = 0; i < video.screen_count; i++)
    {

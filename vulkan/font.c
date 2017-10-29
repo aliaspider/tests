@@ -29,10 +29,10 @@ typedef struct
 
 typedef struct
 {
-   uint8_t slot_id;
+   u8 slot_id;
    struct
    {
-      uint8_t r, g, b;
+      u8 r, g, b;
    } color;
    struct
    {
@@ -210,7 +210,7 @@ static int vulkan_font_get_new_slot(void)
 
 typedef struct
 {
-   uint8_t r, g, b;
+   u8 r, g, b;
 } colorR8G8B8_t;
 
 
@@ -240,9 +240,9 @@ static void ft_font_render_glyph(unsigned charcode, int slot_id)
 
    CHECK_ERR(FT_Load_Char(font.ftface, charcode, FT_LOAD_RENDER | (font.monochrome ? FT_LOAD_MONOCHROME : 0)));
    FT_Bitmap* bitmap = &font.ftface->glyph->bitmap;
-   uint8_t* src = bitmap->buffer;
+   u8* src = bitmap->buffer;
    device_memory_t* mem = &font_renderer.default_texture.staging.mem;
-   uint8_t* dst = mem->u8 + mem->layout.offset + (slot_id & 0xF) * font.atlas.slot_width +
+   u8* dst = mem->u8 + mem->layout.offset + (slot_id & 0xF) * font.atlas.slot_width +
                   (((slot_id >> 4) * font.atlas.slot_height)) * mem->layout.rowPitch;
    assert((dst - mem->u8 + mem->layout.rowPitch * (bitmap->rows + 1) < mem->layout.size));
 
@@ -333,7 +333,7 @@ void vk_font_draw_text(const char* text, font_render_options_t* options)
    vertex.position.x = options->x;
    vertex.position.y = options->y + font.ascender;
 
-   while (*in && (!out || ((uint8_t*)out - font_renderer.vbo.mem.u8 < font_renderer.vbo.mem.size - sizeof(*out))))
+   while (*in && (!out || ((u8*)out - font_renderer.vbo.mem.u8 < font_renderer.vbo.mem.size - sizeof(*out))))
    {
       if (vertex.position.y > options->max_height)
          out = NULL;

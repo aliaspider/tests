@@ -13,7 +13,7 @@ static snd_pcm_t *pcm;
 
 void alsa_init()
 {
-   //   uint8_t *sound_buffer;
+   //   u8 *sound_buffer;
    snd_pcm_sw_params_t *sw_params;
    snd_pcm_uframes_t alsa_buffer_size, alsa_period_size;
 

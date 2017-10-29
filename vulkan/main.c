@@ -128,30 +128,34 @@ typedef struct
    int frames;
    unsigned screen_mask;
    font_render_options_t options;
-}msg_buffer_t;
+} msg_buffer_t;
 msg_buffer_t msg_buffer[64];
 
 static void display_message_handler(screen_t* screen)
 {
    msg_buffer_t* ptr = msg_buffer;
-   while(ptr->msg && ptr - msg_buffer < countof(msg_buffer))
+
+   while (ptr->msg && ptr - msg_buffer < countof(msg_buffer))
    {
-      if(ptr->screen_mask & (1 << (screen - video.screens)))
+      if (ptr->screen_mask & (1 << (screen - video.screens)))
       {
          ptr->options.max_width = screen->width;
          ptr->options.max_height = screen->height;
          vk_font_draw_text(ptr->msg, &ptr->options);
          ptr->frames--;
-         if(!ptr->frames)
+
+         if (!ptr->frames)
          {
             free(ptr->msg);
             ptr->msg = NULL;
-            if(msg_buffer + countof(msg_buffer) - 1 - ptr > 0)
+
+            if (msg_buffer + countof(msg_buffer) - 1 - ptr > 0)
                memmove(ptr, ptr + 1, (msg_buffer + countof(msg_buffer) - 1 - ptr) * sizeof(msg_buffer_t));
 
             continue;
          }
       }
+
       ptr++;
    }
 }
@@ -159,10 +163,11 @@ static void display_message_handler(screen_t* screen)
 void display_message(int frames, int x, int y, unsigned screen_mask, const char* fmt, ...)
 {
    msg_buffer_t* ptr = msg_buffer;
-   while(ptr->msg && ptr - msg_buffer < countof(msg_buffer))
+
+   while (ptr->msg && ptr - msg_buffer < countof(msg_buffer))
       ptr++;
 
-   if(ptr - msg_buffer == countof(msg_buffer))
+   if (ptr - msg_buffer == countof(msg_buffer))
       return;
 
    va_list va;

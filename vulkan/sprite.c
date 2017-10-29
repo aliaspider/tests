@@ -13,7 +13,7 @@ typedef union
       int format;
       int ignore_alpha;
    };
-   uint8_t align[VK_UBO_ALIGNMENT];
+   u8 align[VK_UBO_ALIGNMENT];
 }uniform_t;
 
 static void vk_sprite_renderer_init(vk_context_t *vk)
