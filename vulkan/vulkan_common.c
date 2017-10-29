@@ -641,7 +641,7 @@ void vk_swapchain_init(vk_context_t *vk, vk_render_target_t *render_target)
    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vk->gpu, render_target->surface, &surfaceCapabilities);
    render_target->screen->width = surfaceCapabilities.currentExtent.width;
    render_target->screen->height = surfaceCapabilities.currentExtent.height;
-   render_target->vsync = vk->vsync;
+   render_target->vsync = video.vsync;
 
    {
 //      VkSwapchainCounterCreateInfoEXT swapchainCounterCreateInfo =

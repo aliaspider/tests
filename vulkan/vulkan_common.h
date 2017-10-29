@@ -50,7 +50,6 @@ typedef struct vk_context_t
       VkSampler linear;
    } samplers;
    VkRenderPass renderpass;
-   bool vsync;
 } vk_context_t;
 
 void vk_context_init(vk_context_t *vk);

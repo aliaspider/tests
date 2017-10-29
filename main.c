@@ -44,6 +44,8 @@ int main(int argc, char** argv)
    video.screens[2].y = 800;
    video.screens[2].width = 256;
    video.screens[2].height = 224;
+   video.vsync = true;
+   video.filter = true;
 
    platform_init();
 
@@ -60,8 +62,6 @@ int main(int argc, char** argv)
    audio.init();
    input.init();
 
-   video.frame_init(module.output_width, module.output_height, module.screen_format);
-
    int frames = 0;
    struct timespec start_time;
    clock_gettime(CLOCK_MONOTONIC, &start_time);
@@ -77,10 +77,10 @@ int main(int argc, char** argv)
       }
 
       if (input.pad_pressed.meta.vsync)
-         video.toggle_vsync();
+         video.vsync = !video.vsync;
 
       if (input.pad_pressed.meta.filter)
-         video.toggle_filter();
+         video.filter = !video.filter;
 
       if (input.pad.meta.exit)
          break;
@@ -102,7 +102,7 @@ int main(int argc, char** argv)
 
       audio.play(info.sound_buffer.ptr, info.max_samples);
 
-      video.frame_update();
+      video.render();
 
       struct timespec end_time;
       clock_gettime(CLOCK_MONOTONIC, &end_time);

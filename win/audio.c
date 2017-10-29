@@ -6,7 +6,6 @@
 #include "video.h"
 #include "interface.h"
 
-#define WRAP(type,fn,...) static inline type CONCAT(PREFIX__,fn) (MERGE_TYPE(__VA_ARGS__)) {return DROP_TYPE(THIS_)->lpVtbl->fn(DROP_TYPE(__VA_ARGS__));}
 #undef THIS_
 
 #define THIS_ LPDIRECTSOUND8, dSound8
@@ -140,14 +139,6 @@ void audio_play(void* buffer, int samples)
    void* ptr2 = NULL;
    DWORD size2;
 
-
-
-//   while(((write_ptr - buffer_start - write_cursor ) & (DS_BUFFER_SIZE - 1)) > 1000)
-//   {
-//      usleep(1000);
-//      printf("sleep\n");
-//      DSB_GetCurrentPosition(ds_buffer, &play_cursor, &write_cursor);
-//   }
 
    while(true)
    {

@@ -136,7 +136,7 @@ void video_init()
    vk_render_targets_init(&vk, video.screen_count, video.screens, render_targets);
 
    for (vk_renderer_t** renderer = renderers; *renderer; renderer++)
-      if ((*renderer)->init)(*renderer)->init(&vk);
+      (*renderer)->init(&vk);
 
    vk_register_draw_command(&render_targets[0].draw_list, frame_draw);
 //   vk_register_draw_command(&render_targets[0].draw_list, sprite_test);
@@ -161,29 +161,7 @@ void video_init()
           test_image.staging.mem.size - test_image.staging.mem.layout.offset);
 }
 
-void video_frame_init(int width, int height, screen_format_t format)
-{
-   VkFormat vkformat;
-
-   switch (format)
-   {
-   case screen_format_RGB565:
-      vkformat = VK_FORMAT_R5G6B5_UNORM_PACK16;
-      break;
-
-   case screen_format_ARGB5551:
-      vkformat = VK_FORMAT_R5G5B5A1_UNORM_PACK16;
-      break;
-
-   default:
-      vkformat = VK_FORMAT_R8G8B8A8_UNORM;
-      break;
-   }
-
-   vk_frame_init(&vk, width, height, vkformat);
-}
-
-void video_frame_update()
+void video_render()
 {
    uint32_t image_indices[MAX_SCREENS];
    VkCommandBuffer cmds[MAX_SCREENS];
@@ -203,7 +181,14 @@ void video_frame_update()
       vkWaitForFences(vk.device, 1, &render_targets[i].chain_fence, VK_TRUE, UINT64_MAX);
       vkResetFences(vk.device, 1, &render_targets[i].chain_fence);
 
-      if (vk.vsync != render_targets[i].vsync)
+      if (frame_renderer.default_texture.filter != video.filter)
+      {
+         frame_renderer.default_texture.filter = video.filter ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
+         frame_renderer.default_texture.info.sampler = video.filter ? vk.samplers.linear : vk.samplers.nearest;
+         vk_texture_update_descriptor_sets(&vk, &frame_renderer.default_texture);
+      }
+
+      if (video.vsync != render_targets[i].vsync)
       {
          vk_swapchain_destroy(&vk, &render_targets[i]);
          vk_swapchain_init(&vk, &render_targets[i]);
@@ -332,20 +317,6 @@ void video_destroy()
    debug_log("video destroy\n");
 }
 
-void video_toggle_vsync(void)
-{
-   vk.vsync = !vk.vsync;
-}
-
-void video_toggle_filter(void)
-{
-   frame_renderer.default_texture.filter = !frame_renderer.default_texture.filter;
-   frame_renderer.default_texture.info.sampler = frame_renderer.default_texture.filter ? vk.samplers.linear :
-         vk.samplers.nearest;
-   vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, UINT64_MAX);
-   vk_texture_update_descriptor_sets(&vk, &frame_renderer.default_texture);
-}
-
 void video_register_draw_command(int screen_id, draw_command_t fn)
 {
    vk_register_draw_command(&render_targets[screen_id].draw_list, fn);
@@ -353,11 +324,8 @@ void video_register_draw_command(int screen_id, draw_command_t fn)
 
 const video_t video_vulkan =
 {
-   .init         = video_init,
-   .frame_init   = video_frame_init,
-   .frame_update = video_frame_update,
-   .destroy      = video_destroy,
-   .toggle_vsync = video_toggle_vsync,
-   .toggle_filter = video_toggle_filter,
+   .init = video_init,
+   .render = video_render,
+   .destroy = video_destroy,
    .register_draw_command = video_register_draw_command,
 };

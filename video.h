@@ -38,16 +38,15 @@ typedef void(*draw_command_t)(screen_t *screen);
 typedef struct video_t
 {
    void (*init)();
-   void (*frame_init)(int width, int height, screen_format_t format);
-   void (*frame_update)();
+   void (*render)();
    void (*destroy)();
-   void (*toggle_vsync)();
-   void (*toggle_filter)();
    void (*register_draw_command)(int screen_id, draw_command_t fn);
    int screen_count;
    screen_t screens[MAX_SCREENS];
    frame_t frame;
    char fps[256];
+   bool vsync;
+   bool filter;
 }video_t;
 
 

@@ -19,8 +19,25 @@ typedef struct uniform_t
 } uniform_t;
 
 
-void vk_frame_init(vk_context_t *vk, int width, int height, VkFormat format)
+static void vk_frame_init(vk_context_t* vk)
 {
+   VkFormat format;
+
+   switch (module.screen_format)
+   {
+   case screen_format_RGB565:
+      format = VK_FORMAT_R5G6B5_UNORM_PACK16;
+      break;
+
+   case screen_format_ARGB5551:
+      format = VK_FORMAT_R5G5B5A1_UNORM_PACK16;
+      break;
+
+   default:
+      format = VK_FORMAT_R8G8B8A8_UNORM;
+      break;
+   }
+
    {
       const uint32_t vs_code [] =
 #include "frame.vert.inc"
@@ -59,10 +76,10 @@ void vk_frame_init(vk_context_t *vk, int width, int height, VkFormat format)
          .color_blend_attachement_state = &color_blend_attachement_state,
       };
 
-      frame_renderer.default_texture.width = width;
-      frame_renderer.default_texture.height = height;
+      frame_renderer.default_texture.width = module.output_width;
+      frame_renderer.default_texture.height = module.output_height;
       frame_renderer.default_texture.format = format;
-      frame_renderer.default_texture.filter = VK_FILTER_LINEAR;
+      frame_renderer.default_texture.filter = video.filter ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
       frame_renderer.vbo.info.range = sizeof(vertex_t) * 8;
       frame_renderer.vertex_stride = sizeof(vertex_t);
       frame_renderer.ubo.info.range = sizeof(uniform_t);
@@ -71,7 +88,7 @@ void vk_frame_init(vk_context_t *vk, int width, int height, VkFormat format)
    }
 
    {
-      device_memory_t *mem = &frame_renderer.default_texture.staging.mem;
+      device_memory_t* mem = &frame_renderer.default_texture.staging.mem;
       memset(mem->u8 + mem->layout.offset, 0xFF, mem->layout.size - mem->layout.offset);
    }
 
@@ -82,15 +99,16 @@ void vk_frame_init(vk_context_t *vk, int width, int height, VkFormat format)
    ((uniform_t*)frame_renderer.ubo.mem.ptr)->tex_size.height = frame_renderer.default_texture.height;
    frame_renderer.ubo.dirty = true;
 
-   video.frame.width = width;
-   video.frame.height = height;
+   video.frame.width = frame_renderer.default_texture.width;
+   video.frame.height = frame_renderer.default_texture.height;
    video.frame.pitch = frame_renderer.default_texture.staging.mem.layout.rowPitch / 4;
-   video.frame.data = frame_renderer.default_texture.staging.mem.u8 + frame_renderer.default_texture.staging.mem.layout.offset;
+   video.frame.data = frame_renderer.default_texture.staging.mem.u8 +
+                      frame_renderer.default_texture.staging.mem.layout.offset;
 }
 
 void vk_frame_add(int x, int y, int width, int height)
 {
-   vertex_t *v = vk_get_vbo_memory(&frame_renderer.vbo, sizeof(vertex_t));
+   vertex_t* v = vk_get_vbo_memory(&frame_renderer.vbo, sizeof(vertex_t));
    v->position.x = x;
    v->position.y = y;
    v->size.width = width;
@@ -99,8 +117,9 @@ void vk_frame_add(int x, int y, int width, int height)
 
 vk_renderer_t frame_renderer =
 {
-   .destroy=vk_renderer_destroy,
-   .update=vk_renderer_update,
-   .exec=vk_renderer_exec,
-   .finish=vk_renderer_finish,
+   .init = vk_frame_init,
+   .destroy = vk_renderer_destroy,
+   .update = vk_renderer_update,
+   .exec = vk_renderer_exec,
+   .finish = vk_renderer_finish,
 };
