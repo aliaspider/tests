@@ -67,7 +67,13 @@
 #define DEBUG_WINERR(x) do{printf("(0x%X, 0x%X, 0x%X) 0x%08X\n", HRESULT_SEVERITY(hr), HRESULT_FACILITY(hr), HRESULT_CODE(hr), hr);fflush(stdout);}while(0)
 
 //#define WRAP(type,fn,...) static inline type CONCAT(PREFIX__,fn) (MERGE_TYPE(__VA_ARGS__)) {return DROP_TYPE(THIS_)->lpVtbl->fn(DROP_TYPE(__VA_ARGS__));}
-#define WRAP(type,fn,...) static inline type CONCAT(PREFIX__,fn) (TYPE__ THIS__ MERGE_TYPE(__VA_ARGS__)) {return THIS__->lpVtbl->fn(THIS__ DROP_TYPE( __VA_ARGS__));}
+#define WRAP_(type,fn,...) static inline type CONCAT(PREFIX__,fn) (TYPE__ THIS__ MERGE_TYPE(__VA_ARGS__)) {return THIS__->lpVtbl->fn(THIS__ DROP_TYPE( __VA_ARGS__));}
+#define WRAP(...) WRAP_(HRESULT, __VA_ARGS__)
+#define IUNKNOWN__ \
+   WRAP_(HRESULT, QueryInterface,  REFIID, riid, void**, Object) \
+   WRAP_(ULONG, AddRef) \
+   WRAP_(ULONG, Release) \
+
 
 #endif
 

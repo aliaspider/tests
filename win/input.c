@@ -7,6 +7,24 @@
 #include "common.h"
 #include "vulkan/font.h"
 
+#define THIS__ dinput8
+#define TYPE__ IDirectInput8A*
+#define PREFIX__ DI8_
+IUNKNOWN__
+WRAP(CreateDevice, REFGUID, rguid, LPDIRECTINPUTDEVICE8 *,lplpDirectInputDevice, LPUNKNOWN, pUnkOuter)
+WRAP(EnumDevices, DWORD, dwDevType, LPDIENUMDEVICESCALLBACK, lpCallback, LPVOID, pvRef, DWORD, dwFlags)
+WRAP(GetDeviceStatus, REFGUID, rguidInstance)
+WRAP(RunControlPanel, HWND, hwndOwner, DWORD, dwFlags)
+WRAP(Initialize, HINSTANCE, hinst, DWORD, dwVersion)
+WRAP(FindDevice, REFGUID, rguid, LPCSTR, pszName, LPGUID, pguidInstance)
+WRAP(EnumDevicesBySemantics, LPCSTR, ptszUserName, LPDIACTIONFORMAT, lpdiActionFormat, LPDIENUMDEVICESBYSEMANTICSCB, lpCallback, LPVOID, pvRef, DWORD, dwFlags)
+WRAP(ConfigureDevices, LPDICONFIGUREDEVICESCALLBACK, lpdiCallback, LPDICONFIGUREDEVICESPARAMS, lpdiCDParams, DWORD, dwFlags, LPVOID, pvRefData)
+#undef THIS__
+#undef TYPE__
+#undef PREFIX__
+
+
+
 static IDirectInput8* dinput;
 static IDirectInputDevice8* keyboards[MAX_SCREENS];
 static IDirectInputDevice8* mice[MAX_SCREENS];
