@@ -159,9 +159,9 @@ void audio_play(void* buffer, int samples)
       DWORD play_cursor;
       DWORD write_cursor;
       DSB_GetCurrentPosition(ds_buffer, &play_cursor, &write_cursor);
-      if((((write_ptr - buffer_start - write_cursor ) & (DS_BUFFER_SIZE - 1)) < 2048))
+      if((((write_ptr - buffer_start - write_cursor ) & (DS_BUFFER_SIZE - 1)) < 2048 * 2))
          break;
-      usleep(100);
+      usleep(1);
 //      printf("sleep\n");
    }
 
