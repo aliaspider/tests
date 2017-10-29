@@ -8,21 +8,59 @@
 #include "vulkan/font.h"
 
 #define THIS__ dinput8
-#define TYPE__ IDirectInput8A*
+#define TYPE__ IDirectInput8*
 #define PREFIX__ DI8_
 IUNKNOWN__
-WRAP(CreateDevice, REFGUID, rguid, LPDIRECTINPUTDEVICE8 *,lplpDirectInputDevice, LPUNKNOWN, pUnkOuter)
-WRAP(EnumDevices, DWORD, dwDevType, LPDIENUMDEVICESCALLBACK, lpCallback, LPVOID, pvRef, DWORD, dwFlags)
+WRAP(CreateDevice, REFGUID, guid, LPDIRECTINPUTDEVICE8*, DirectInputDevice, IUnknown*, UnkOuter)
+WRAP(EnumDevices, u32, dwDevType, LPDIENUMDEVICESCALLBACK, lpCallback, void*, pvRef, u32, dwFlags)
 WRAP(GetDeviceStatus, REFGUID, rguidInstance)
-WRAP(RunControlPanel, HWND, hwndOwner, DWORD, dwFlags)
-WRAP(Initialize, HINSTANCE, hinst, DWORD, dwVersion)
-WRAP(FindDevice, REFGUID, rguid, LPCSTR, pszName, LPGUID, pguidInstance)
-WRAP(EnumDevicesBySemantics, LPCSTR, ptszUserName, LPDIACTIONFORMAT, lpdiActionFormat, LPDIENUMDEVICESBYSEMANTICSCB, lpCallback, LPVOID, pvRef, DWORD, dwFlags)
-WRAP(ConfigureDevices, LPDICONFIGUREDEVICESCALLBACK, lpdiCallback, LPDICONFIGUREDEVICESPARAMS, lpdiCDParams, DWORD, dwFlags, LPVOID, pvRefData)
+WRAP(RunControlPanel, HWND, hwndOwner, u32, dwFlags)
+WRAP(Initialize, HINSTANCE, hinst, u32, dwVersion)
+WRAP(FindDevice, REFGUID, guid, LPCSTR, pszName, LPGUID, pguidInstance)
+WRAP(EnumDevicesBySemantics, LPCSTR, ptszUserName, LPDIACTIONFORMAT, lpdiActionFormat, LPDIENUMDEVICESBYSEMANTICSCB,
+     lpCallback, void*, pvRef, u32, dwFlags)
+WRAP(ConfigureDevices, LPDICONFIGUREDEVICESCALLBACK, lpdiCallback, LPDICONFIGUREDEVICESPARAMS, lpdiCDParams, u32,
+     dwFlags, void*, pvRefData)
 #undef THIS__
 #undef TYPE__
 #undef PREFIX__
 
+#define THIS__ diDevice
+#define TYPE__ IDirectInputDevice8A*
+#define PREFIX__ DIDEV8_
+IUNKNOWN__
+WRAP(GetCapabilities, LPDIDEVCAPS, lpDIDevCaps)
+WRAP(EnumObjects, LPDIENUMDEVICEOBJECTSCALLBACK, lpCallback, void*, pvRef, u32, dwFlags)
+WRAP(GetProperty, REFGUID, rguidProp, LPDIPROPHEADER, pdiph)
+WRAP(SetProperty, REFGUID, rguidProp, LPCDIPROPHEADER, pdiph)
+WRAP(Acquire)
+WRAP(Unacquire)
+WRAP(GetDeviceState, u32, cbData, void*, lpvData)
+WRAP(GetDeviceData, u32, cbObjectData, LPDIDEVICEOBJECTDATA, rgdod, u32*, pdwInOut, u32, dwFlags)
+WRAP(SetDataFormat, LPCDIDATAFORMAT, lpdf)
+WRAP(SetEventNotification, HANDLE, hEvent)
+WRAP(SetCooperativeLevel, HWND, hwnd, u32, dwFlags)
+WRAP(GetObjectInfo, DIDEVICEOBJECTINSTANCE*, pdidoi, u32, dwObj, u32, dwHow)
+WRAP(GetDeviceInfo, DIDEVICEINSTANCE*, pdidi)
+WRAP(RunControlPanel, HWND, hwndOwner, u32, dwFlags)
+WRAP(Initialize, HINSTANCE, hinst, u32, dwVersion, REFGUID, guid)
+WRAP(CreateEffect, REFGUID, guid, LPCDIEFFECT, lpeff, LPDIRECTINPUTEFFECT*, ppdeff, IUnknown*, punkOuter)
+WRAP(EnumEffects, LPDIENUMEFFECTSCALLBACKA, lpCallback, void*, pvRef, u32, dwEffType)
+WRAP(GetEffectInfo, DIEFFECTINFO*, pdei, REFGUID, guid)
+WRAP(GetForceFeedbackState, u32*, pdwOut)
+WRAP(SendForceFeedbackCommand, u32, dwFlags)
+WRAP(EnumCreatedEffectObjects, LPDIENUMCREATEDEFFECTOBJECTSCALLBACK, lpCallback, void*, pvRef, u32, fl)
+WRAP(Escape, LPDIEFFESCAPE, pesc)
+WRAP(Poll)
+WRAP(SendDeviceData, u32, cbObjectData, LPCDIDEVICEOBJECTDATA, rgdod, u32*, pdwInOut, u32, fl)
+WRAP(EnumEffectsInFile, LPCSTR, lpszFileName, LPDIENUMEFFECTSINFILECALLBACK, pec, void*, pvRef, u32, dwFlags)
+WRAP(WriteEffectToFile, LPCSTR, lpszFileName, u32, dwEntries, DIFILEEFFECT*, rgDiFileEft, u32, dwFlags)
+WRAP(BuildActionMap, DIACTIONFORMAT*, lpdiaf, LPCSTR, lpszUserName, u32, dwFlags)
+WRAP(SetActionMap, DIACTIONFORMAT*, lpdiaf, LPCSTR, lpszUserName, u32, dwFlags)
+WRAP(GetImageInfo, DIDEVICEIMAGEINFOHEADER*, lpdiDevImageInfoHeader)
+#undef THIS__
+#undef TYPE__
+#undef PREFIX__
 
 
 static IDirectInput8* dinput;
@@ -59,32 +97,30 @@ void input_init()
 
    for (int i = 0; i < video.screen_count; i++)
    {
-      CHECK_WINERR(IDirectInput8_CreateDevice(dinput, &GUID_SysKeyboard, &keyboards[i], NULL));
-      CHECK_WINERR(IDirectInput8_CreateDevice(dinput, &GUID_SysMouse, &mice[i], NULL));
+      CHECK_WINERR(DI8_CreateDevice(dinput, &GUID_SysKeyboard, &keyboards[i], NULL));
+      CHECK_WINERR(DI8_CreateDevice(dinput, &GUID_SysMouse, &mice[i], NULL));
       {
          DIDEVCAPS caps = {sizeof(caps)};
-         CHECK_WINERR(IDirectInputDevice8_GetCapabilities(keyboards[i], &caps));
-         CHECK_WINERR(IDirectInputDevice8_GetCapabilities(mice[i], &caps));
+         CHECK_WINERR(DIDEV8_GetCapabilities(keyboards[i], &caps));
+         CHECK_WINERR(DIDEV8_GetCapabilities(mice[i], &caps));
       }
 
-      CHECK_WINERR(IDirectInputDevice8_SetCooperativeLevel(keyboards[i], video.screens[i].hwnd,
-                   DISCL_NONEXCLUSIVE | DISCL_FOREGROUND));
+      CHECK_WINERR(DIDEV8_SetCooperativeLevel(keyboards[i], video.screens[i].hwnd, DISCL_NONEXCLUSIVE | DISCL_FOREGROUND));
 
-      CHECK_WINERR(IDirectInputDevice8_SetCooperativeLevel(mice[i], video.screens[i].hwnd,
-                   DISCL_NONEXCLUSIVE | DISCL_FOREGROUND));
+      CHECK_WINERR(DIDEV8_SetCooperativeLevel(mice[i], video.screens[i].hwnd, DISCL_NONEXCLUSIVE | DISCL_FOREGROUND));
 
-      CHECK_WINERR(IDirectInputDevice8_SetDataFormat(keyboards[i], &c_dfDIKeyboard));
+      CHECK_WINERR(DIDEV8_SetDataFormat(keyboards[i], &c_dfDIKeyboard));
 #if 0
-      CHECK_WINERR(IDirectInputDevice8_SetDataFormat(mice[i], &c_dfDIMouse));
+      CHECK_WINERR(DIDEV8_SetDataFormat(mice[i], &c_dfDIMouse));
 
       DIPROPDWORD props;
 //      props.dwData
 //      DIPROPAXISMODE_ABS
-//      CHECK_WINERR(IDirectInputDevice8_SetProperty(mice[i], DIPROP_AXISMODE , ));
+//      CHECK_WINERR(DIDEV8_SetProperty(mice[i], DIPROP_AXISMODE , ));
 #else
       DIDATAFORMAT c_dfDIMouse_absaxis = c_dfDIMouse;
       c_dfDIMouse_absaxis.dwFlags = DIDF_ABSAXIS;
-      CHECK_WINERR(IDirectInputDevice8_SetDataFormat(mice[i], &c_dfDIMouse_absaxis));
+      CHECK_WINERR(DIDEV8_SetDataFormat(mice[i], &c_dfDIMouse_absaxis));
 #endif
 
    }
@@ -99,11 +135,11 @@ void input_destroy()
 {
    for (int i = 0; i < video.screen_count; i++)
    {
-      CHECK_WINERR(IDirectInputDevice8_Release(keyboards[i]));
-      CHECK_WINERR(IDirectInputDevice8_Release(mice[i]));
+      CHECK_WINERR(DIDEV8_Release(keyboards[i]));
+      CHECK_WINERR(DIDEV8_Release(mice[i]));
    }
 
-   CHECK_WINERR(IDirectInput8_Release(dinput));
+   CHECK_WINERR(DI8_Release(dinput));
 
 }
 
@@ -111,18 +147,18 @@ void keyboard_update(void)
 {
    int8_t state[256];
 
-   if (FAILED(IDirectInputDevice8_GetDeviceState(keyboard, sizeof(state), state)))
+   if (FAILED(DIDEV8_GetDeviceState(keyboard, sizeof(state), state)))
    {
       for (int i = 0; i < video.screen_count; i++)
       {
-         if (SUCCEEDED(IDirectInputDevice8_Acquire(keyboards[i])))
+         if (SUCCEEDED(DIDEV8_Acquire(keyboards[i])))
          {
             keyboard = keyboards[i];
             break;
          }
       }
 
-      if (FAILED(IDirectInputDevice8_GetDeviceState(keyboard, sizeof(state), state)))
+      if (FAILED(DIDEV8_GetDeviceState(keyboard, sizeof(state), state)))
          return;
    }
 
@@ -149,15 +185,15 @@ void mouse_update(void)
    DIMOUSESTATE state;
    POINT pos;
 
-   if (FAILED(IDirectInputDevice8_GetDeviceState(mouse, sizeof(state), &state)))
+   if (FAILED(DIDEV8_GetDeviceState(mouse, sizeof(state), &state)))
    {
       for (int i = 0; i < video.screen_count; i++)
       {
-         if (SUCCEEDED(IDirectInputDevice8_Acquire(mice[i])))
+         if (SUCCEEDED(DIDEV8_Acquire(mice[i])))
          {
-            if (FAILED(IDirectInputDevice8_GetDeviceState(mouse, sizeof(state), &state)))
+            if (FAILED(DIDEV8_GetDeviceState(mouse, sizeof(state), &state)))
             {
-//               IDirectInputDevice8_Release(mice[i]);
+//               DIDEV8_Release(mice[i]);
                return;
             }
 
