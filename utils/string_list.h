@@ -13,7 +13,7 @@ static inline string_list_t* string_list_create()
 {
    string_list_t* dst;
    int capacity = 256;
-   dst = (string_list_t*)malloc(sizeof(dst) + capacity * sizeof(*dst->data));
+   dst = (string_list_t*)malloc(sizeof(*dst) + capacity * sizeof(*dst->data));
    dst->count = 0;
    dst->capacity = capacity;
    return dst;
