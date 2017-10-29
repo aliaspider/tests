@@ -7,11 +7,11 @@
 #include "common.h"
 #include "vulkan/font.h"
 
-static LPDIRECTINPUT8 dinput;
-static LPDIRECTINPUTDEVICE8 keyboards[MAX_SCREENS];
-static LPDIRECTINPUTDEVICE8 mice[MAX_SCREENS];
-static LPDIRECTINPUTDEVICE8 keyboard;
-static LPDIRECTINPUTDEVICE8 mouse;
+static IDirectInput8* dinput;
+static IDirectInputDevice8* keyboards[MAX_SCREENS];
+static IDirectInputDevice8* mice[MAX_SCREENS];
+static IDirectInputDevice8* keyboard;
+static IDirectInputDevice8* mouse;
 POINT origin_pos;
 DIMOUSESTATE origin_state;
 HWND active_window;

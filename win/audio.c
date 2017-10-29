@@ -6,76 +6,78 @@
 #include "video.h"
 #include "interface.h"
 
-#undef THIS_
-
-#define THIS_ LPDIRECTSOUND8, dSound8
+#define THIS__ dsound8
+#define TYPE__ IDirectSound8*
 #define PREFIX__ DS8_
-WRAP(HRESULT, CreateSoundBuffer, THIS_, const DSBUFFERDESC*, lpcDSBufferDesc, IDirectSoundBuffer**,
-     lplpDirectSoundBuffer,
-     IUnknown*, pUnkOuter)
-WRAP(HRESULT, GetCaps, THIS_, LPDSCAPS, lpDSCaps)
-WRAP(HRESULT, DuplicateSoundBuffer, THIS_, IDirectSoundBuffer*, lpDsbOriginal, IDirectSoundBuffer**, lplpDsbDuplicate)
-WRAP(HRESULT, SetCooperativeLevel, THIS_, HWND, hwnd, u32, dwLevel)
-WRAP(HRESULT, Compact, THIS_)
-WRAP(HRESULT, GetSpeakerConfig, THIS_, u32*, lpdwSpeakerConfig)
-WRAP(HRESULT, SetSpeakerConfig, THIS_, u32, dwSpeakerConfig)
-WRAP(HRESULT, Initialize, THIS_, LPCGUID, lpcGuid)
-WRAP(HRESULT, VerifyCertification, THIS_, u32*, pdwCertified)
-#undef THIS_
+WRAP(HRESULT, CreateSoundBuffer, const DSBUFFERDESC*, lpcDSBufferDesc, IDirectSoundBuffer**, lplpDirectSoundBuffer, IUnknown*, pUnkOuter)
+WRAP(HRESULT, GetCaps, LPDSCAPS, lpDSCaps)
+WRAP(HRESULT, DuplicateSoundBuffer, IDirectSoundBuffer*, lpDsbOriginal, IDirectSoundBuffer**, lplpDsbDuplicate)
+WRAP(HRESULT, SetCooperativeLevel, HWND, hwnd, u32, dwLevel)
+WRAP(HRESULT, Compact)
+WRAP(HRESULT, GetSpeakerConfig, u32*, lpdwSpeakerConfig)
+WRAP(HRESULT, SetSpeakerConfig, u32, dwSpeakerConfig)
+WRAP(HRESULT, Initialize, LPCGUID, lpcGuid)
+WRAP(HRESULT, VerifyCertification, u32*, pdwCertified)
+#undef THIS__
+#undef TYPE__
 #undef PREFIX__
 
-#define THIS_ IDirectSoundBuffer8*, dSoundBuffer8
+#define THIS__ dsbuffer8
+#define TYPE__ IDirectSoundBuffer8*
 #define PREFIX__ DSb8_
-WRAP(HRESULT, GetCaps, THIS_, DSBCAPS*, lpDSBufferCaps)
-WRAP(HRESULT, GetCurrentPosition, THIS_, u32*, lpdwCurrentPlayCursor, u32*, lpdwCurrentWriteCursor)
-WRAP(HRESULT, GetFormat, THIS_, WAVEFORMATEX*, lpwfxFormat, u32, dwSizeAllocated, u32*, lpdwSizeWritten)
-WRAP(HRESULT, GetVolume, THIS_, s32*, lplVolume)
-WRAP(HRESULT, GetPan, THIS_, s32*, lplpan)
-WRAP(HRESULT, GetFrequency, THIS_, u32*, lpdwFrequency)
-WRAP(HRESULT, GetStatus, THIS_, u32*, lpdwStatus)
-WRAP(HRESULT, Initialize, THIS_, IDirectSound*, lpDirectSound, const DSBUFFERDESC*, lpcDSBufferDesc)
-WRAP(HRESULT, Lock, THIS_, u32, dwOffset, u32, dwBytes, void**, ppvAudioPtr1, u32*, pdwAudioBytes1, void**,
+WRAP(HRESULT, GetCaps, DSBCAPS*, lpDSBufferCaps)
+WRAP(HRESULT, GetCurrentPosition, u32*, lpdwCurrentPlayCursor, u32*, lpdwCurrentWriteCursor)
+WRAP(HRESULT, GetFormat, WAVEFORMATEX*, lpwfxFormat, u32, dwSizeAllocated, u32*, lpdwSizeWritten)
+WRAP(HRESULT, GetVolume, s32*, lplVolume)
+WRAP(HRESULT, GetPan, s32*, lplpan)
+WRAP(HRESULT, GetFrequency, u32*, lpdwFrequency)
+WRAP(HRESULT, GetStatus, u32*, lpdwStatus)
+WRAP(HRESULT, Initialize, IDirectSound*, lpDirectSound, const DSBUFFERDESC*, lpcDSBufferDesc)
+WRAP(HRESULT, Lock, u32, dwOffset, u32, dwBytes, void**, ppvAudioPtr1, u32*, pdwAudioBytes1, void**,
      ppvAudioPtr2, u32*, pdwAudioBytes2, u32, dwFlags)
-WRAP(HRESULT, Play, THIS_, u32, dwReserved1, u32, dwReserved2, u32, dwFlags)
-WRAP(HRESULT, SetCurrentPosition, THIS_, u32, dwNewPosition)
-WRAP(HRESULT, SetFormat, THIS_, const WAVEFORMATEX*, lpcfxFormat)
-WRAP(HRESULT, SetVolume, THIS_, s32, lVolume)
-WRAP(HRESULT, SetPan, THIS_, s32, lPan)
-WRAP(HRESULT, SetFrequency, THIS_, u32, dwFrequency)
-WRAP(HRESULT, Stop, THIS_)
-WRAP(HRESULT, Unlock, THIS_, void*, pvAudioPtr1, u32, dwAudioBytes1, void*, pvAudioPtr2, u32, dwAudioPtr2)
-WRAP(HRESULT, Restore, THIS_)
-WRAP(HRESULT, SetFX, THIS_, u32, dwEffectsCount, DSEFFECTDESC*, pDSFXDesc, u32*, pdwResultCodes)
-WRAP(HRESULT, AcquireResources, THIS_, u32, dwFlags, u32, dwEffectsCount, u32*, pdwResultCodes)
-WRAP(HRESULT, GetObjectInPath, THIS_, REFGUID, rguidObject, u32, dwIndex, REFGUID, rguidInterface, void**, ppObject)
-#undef THIS_
+WRAP(HRESULT, Play, u32, dwReserved1, u32, dwReserved2, u32, dwFlags)
+WRAP(HRESULT, SetCurrentPosition, u32, dwNewPosition)
+WRAP(HRESULT, SetFormat, const WAVEFORMATEX*, lpcfxFormat)
+WRAP(HRESULT, SetVolume, s32, lVolume)
+WRAP(HRESULT, SetPan, s32, lPan)
+WRAP(HRESULT, SetFrequency, u32, dwFrequency)
+WRAP(HRESULT, Stop)
+WRAP(HRESULT, Unlock, void*, pvAudioPtr1, u32, dwAudioBytes1, void*, pvAudioPtr2, u32, dwAudioPtr2)
+WRAP(HRESULT, Restore)
+WRAP(HRESULT, SetFX, u32, dwEffectsCount, DSEFFECTDESC*, pDSFXDesc, u32*, pdwResultCodes)
+WRAP(HRESULT, AcquireResources, u32, dwFlags, u32, dwEffectsCount, u32*, pdwResultCodes)
+WRAP(HRESULT, GetObjectInPath, REFGUID, rguidObject, u32, dwIndex, REFGUID, rguidInterface, void**, ppObject)
+#undef THIS__
+#undef TYPE__
 #undef PREFIX__
 
-#define THIS_ IDirectSoundBuffer*, dSoundBuffer
+#define THIS__ dsbuffer
+#define TYPE__ IDirectSoundBuffer*
 #define PREFIX__ DSb_
-WRAP(HRESULT, QueryInterface, THIS_,  REFIID, riid, void**, ppvObject)
-WRAP(ULONG, AddRef, THIS_)
-WRAP(ULONG, Release, THIS_)
-WRAP(HRESULT, GetCaps, THIS_, DSBCAPS*, lpDSBufferCaps)
-WRAP(HRESULT, GetCurrentPosition, THIS_, u32*, lpdwCurrentPlayCursor, u32*, lpdwCurrentWriteCursor)
-WRAP(HRESULT, GetFormat, THIS_, WAVEFORMATEX*, lpwfxFormat, u32, dwSizeAllocated, u32*, lpdwSizeWritten)
-WRAP(HRESULT, GetVolume, THIS_, s32*, lplVolume)
-WRAP(HRESULT, GetPan, THIS_, s32*, lplpan)
-WRAP(HRESULT, GetFrequency, THIS_, u32*, lpdwFrequency)
-WRAP(HRESULT, GetStatus, THIS_, u32*, lpdwStatus)
-WRAP(HRESULT, Initialize, THIS_, IDirectSound*, lpDirectSound, const DSBUFFERDESC*, lpcDSBufferDesc)
-WRAP(HRESULT, Lock, THIS_, u32, dwOffset, u32, dwBytes, void**, ppvAudioPtr1, u32*, pdwAudioBytes1, void**,
+WRAP(HRESULT, QueryInterface,  REFIID, riid, void**, ppvObject)
+WRAP(ULONG, AddRef)
+WRAP(ULONG, Release)
+WRAP(HRESULT, GetCaps, DSBCAPS*, lpDSBufferCaps)
+WRAP(HRESULT, GetCurrentPosition, u32*, lpdwCurrentPlayCursor, u32*, lpdwCurrentWriteCursor)
+WRAP(HRESULT, GetFormat, WAVEFORMATEX*, lpwfxFormat, u32, dwSizeAllocated, u32*, lpdwSizeWritten)
+WRAP(HRESULT, GetVolume, s32*, lplVolume)
+WRAP(HRESULT, GetPan, s32*, lplpan)
+WRAP(HRESULT, GetFrequency, u32*, lpdwFrequency)
+WRAP(HRESULT, GetStatus, u32*, lpdwStatus)
+WRAP(HRESULT, Initialize, IDirectSound*, lpDirectSound, const DSBUFFERDESC*, lpcDSBufferDesc)
+WRAP(HRESULT, Lock, u32, dwOffset, u32, dwBytes, void**, ppvAudioPtr1, u32*, pdwAudioBytes1, void**,
      ppvAudioPtr2, u32*, pdwAudioBytes2, u32, dwFlags)
-WRAP(HRESULT, Play, THIS_, u32, dwReserved1, u32, dwPriority, u32, dwFlags)
-WRAP(HRESULT, SetCurrentPosition, THIS_, u32, dwNewPosition)
-WRAP(HRESULT, SetFormat, THIS_, const WAVEFORMATEX*, lpcfxFormat)
-WRAP(HRESULT, SetVolume, THIS_, s32, lVolume)
-WRAP(HRESULT, SetPan, THIS_, s32, lPan)
-WRAP(HRESULT, SetFrequency, THIS_, u32, dwFrequency)
-WRAP(HRESULT, Stop, THIS_)
-WRAP(HRESULT, Unlock, THIS_, void*, pvAudioPtr1, u32, dwAudioBytes1, void*, pvAudioPtr2, u32, dwAudioPtr2)
-WRAP(HRESULT, Restore, THIS_)
-#undef THIS_
+WRAP(HRESULT, Play, u32, dwReserved1, u32, dwPriority, u32, dwFlags)
+WRAP(HRESULT, SetCurrentPosition, u32, dwNewPosition)
+WRAP(HRESULT, SetFormat, const WAVEFORMATEX*, lpcfxFormat)
+WRAP(HRESULT, SetVolume, s32, lVolume)
+WRAP(HRESULT, SetPan, s32, lPan)
+WRAP(HRESULT, SetFrequency, u32, dwFrequency)
+WRAP(HRESULT, Stop)
+WRAP(HRESULT, Unlock, void*, pvAudioPtr1, u32, dwAudioBytes1, void*, pvAudioPtr2, u32, dwAudioPtr2)
+WRAP(HRESULT, Restore)
+#undef THIS__
+#undef TYPE__
 #undef PREFIX__
 
 static IDirectSound8* dsound;
