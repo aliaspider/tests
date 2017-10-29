@@ -56,12 +56,9 @@ typedef struct vk_context_t
 void vk_context_init(vk_context_t *vk);
 void vk_context_destroy(vk_context_t *vk);
 
-
-typedef void(*vk_draw_command_t)(screen_t *screen);
-
 typedef struct vk_draw_command_list_t
 {
-   vk_draw_command_t draw;
+   draw_command_t draw;
    struct vk_draw_command_list_t *next;
 } vk_draw_command_list_t;
 
@@ -87,7 +84,7 @@ void vk_render_targets_destroy(vk_context_t *vk, int count, vk_render_target_t *
 void vk_swapchain_init(vk_context_t *vk, vk_render_target_t *render_target);
 void vk_swapchain_destroy(vk_context_t *vk, vk_render_target_t *render_target);
 
-static inline void vk_register_draw_command(vk_draw_command_list_t **list, vk_draw_command_t fn)
+static inline void vk_register_draw_command(vk_draw_command_list_t **list, draw_command_t fn)
 {
    while (*list)
       list = &(*list)->next;
@@ -98,7 +95,7 @@ static inline void vk_register_draw_command(vk_draw_command_list_t **list, vk_dr
    (*list)->next = NULL;
 }
 
-static inline void vk_remove_draw_command(vk_draw_command_list_t **list, vk_draw_command_t fn)
+static inline void vk_remove_draw_command(vk_draw_command_list_t **list, draw_command_t fn)
 {
    /* TODO */
    vk_draw_command_list_t **prev = NULL;

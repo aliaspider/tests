@@ -346,6 +346,11 @@ void video_toggle_filter(void)
    vk_texture_update_descriptor_sets(&vk, &frame_renderer.default_texture);
 }
 
+void video_register_draw_command(int screen_id, draw_command_t fn)
+{
+   vk_register_draw_command(&render_targets[screen_id].draw_list, fn);
+}
+
 const video_t video_vulkan =
 {
    .init         = video_init,
@@ -354,4 +359,5 @@ const video_t video_vulkan =
    .destroy      = video_destroy,
    .toggle_vsync = video_toggle_vsync,
    .toggle_filter = video_toggle_filter,
+   .register_draw_command = video_register_draw_command,
 };

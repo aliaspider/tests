@@ -33,6 +33,8 @@ typedef struct
    void* data;
 }frame_t;
 
+typedef void(*draw_command_t)(screen_t *screen);
+
 typedef struct video_t
 {
    void (*init)();
@@ -41,11 +43,13 @@ typedef struct video_t
    void (*destroy)();
    void (*toggle_vsync)();
    void (*toggle_filter)();
+   void (*register_draw_command)(int screen_id, draw_command_t fn);
    int screen_count;
    screen_t screens[MAX_SCREENS];
    frame_t frame;
    char fps[256];
 }video_t;
+
 
 extern const video_t video_vulkan;
 extern video_t video;
