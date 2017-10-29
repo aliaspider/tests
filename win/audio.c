@@ -116,22 +116,17 @@ void audio_init(void)
    CHECK_WINERR((dsb_QueryInterface(pDsb, &IID_IDirectSoundBuffer8, (void**) &ds_buffer)));
    CHECK_WINERR(dsb_Release(pDsb));
 
-   void* ptr1;
-   DWORD size1;
-   void* ptr2;
-   DWORD size2;
-   DSB_Lock(ds_buffer, 0, DS_BUFFER_SIZE, &ptr1, &size1, &ptr2, &size2, DSBLOCK_ENTIREBUFFER);
+   DWORD size;
+   DSB_Lock(ds_buffer, 0, DS_BUFFER_SIZE, (void**)&buffer_start, &size, NULL, NULL, DSBLOCK_ENTIREBUFFER);
 
-   memset(ptr1, 0x00, size1);
+   memset(buffer_start, 0x00, size);
 
-   if (size2)
-      memset(ptr2, 0x00, size2);
 
-   DSB_Unlock(ds_buffer, ptr1 , size1, ptr2, size2);
+   DSB_Unlock(ds_buffer, buffer_start, size, NULL, 0);
 
    DSB_Play(ds_buffer, 0, 0, DSBPLAY_LOOPING);
 
-   write_ptr = buffer_start = ptr1;
+   write_ptr = buffer_start;
 
 }
 void audio_destroy(void)
