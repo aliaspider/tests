@@ -45,7 +45,7 @@ int main(int argc, char** argv)
    video.screens[2].y = 800;
    video.screens[2].width = 256;
    video.screens[2].height = 224;
-   video.vsync = true;
+//   video.vsync = true;
    video.filter = true;
 
    platform_init();
