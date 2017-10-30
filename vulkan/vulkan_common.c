@@ -316,7 +316,7 @@ void vk_context_init(vk_context_t *vk)
 {
 
    {
-      const char *layers[] =
+      static const char *layers[] =
       {
          "VK_LAYER_LUNARG_standard_validation",
          "VK_LAYER_GOOGLE_unique_objects",
@@ -335,7 +335,7 @@ void vk_context_init(vk_context_t *vk)
 //         "VK_LAYER_RENDERDOC_Capture"
 #endif
       };
-      const char *instance_ext[] =
+      static const char *instance_ext[] =
       {
          VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
          VK_KHR_SURFACE_EXTENSION_NAME,
@@ -358,7 +358,7 @@ void vk_context_init(vk_context_t *vk)
 
       vk_get_instance_props();
 
-      VkApplicationInfo appinfo =
+      static const VkApplicationInfo appinfo =
       {
          VK_STRUCTURE_TYPE_APPLICATION_INFO,
          .pApplicationName = "Vulkan Test",
@@ -367,7 +367,7 @@ void vk_context_init(vk_context_t *vk)
          .engineVersion = VK_MAKE_VERSION(0, 1, 0)
       };
 
-      VkInstanceCreateInfo info =
+      static const VkInstanceCreateInfo info =
       {
          VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
          .pApplicationInfo = &appinfo,
@@ -382,7 +382,7 @@ void vk_context_init(vk_context_t *vk)
    vk_init_instance_pfn(vk->instance);
 
    {
-      VkDebugReportCallbackCreateInfoEXT info =
+      static const VkDebugReportCallbackCreateInfoEXT info =
       {
          VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
          .flags =
@@ -410,7 +410,7 @@ void vk_context_init(vk_context_t *vk)
 
    {
       const float  one = 1.0;
-      const char *device_ext[] =
+      static const char *device_ext[] =
       {
          VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 #ifdef __linux__
@@ -428,7 +428,7 @@ void vk_context_init(vk_context_t *vk)
          .pQueuePriorities = &one
       };
 
-      VkPhysicalDeviceFeatures enabledFeatures =
+      static const VkPhysicalDeviceFeatures enabledFeatures =
       {
          .geometryShader = VK_TRUE,
          .samplerAnisotropy = VK_TRUE,
@@ -462,14 +462,14 @@ void vk_context_init(vk_context_t *vk)
    }
 
    {
-      const VkDescriptorPoolSize sizes[] =
+      static const VkDescriptorPoolSize sizes[] =
       {
          {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 32},
          {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 32},
          {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 32}
       };
 
-      const VkDescriptorPoolCreateInfo info =
+      static const VkDescriptorPoolCreateInfo info =
       {
          VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
          .maxSets = 32,
@@ -530,7 +530,7 @@ void vk_context_init(vk_context_t *vk)
    }
 
    {
-      const VkDescriptorSetLayoutBinding bindings[] =
+      static const VkDescriptorSetLayoutBinding bindings[] =
       {
          {
             .binding = 0,
@@ -540,7 +540,7 @@ void vk_context_init(vk_context_t *vk)
          },
       };
 
-      VkDescriptorSetLayoutCreateInfo info =
+      static const VkDescriptorSetLayoutCreateInfo info =
       {
          VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
          .bindingCount = countof(bindings), bindings
@@ -550,7 +550,7 @@ void vk_context_init(vk_context_t *vk)
    }
 
    {
-      VkPushConstantRange ranges[] =
+      static const VkPushConstantRange ranges[] =
       {
          {
             .stageFlags = VK_SHADER_STAGE_ALL,
@@ -571,7 +571,7 @@ void vk_context_init(vk_context_t *vk)
    }
 
    {
-      VkAttachmentDescription attachmentDescriptions[] =
+      static const VkAttachmentDescription attachmentDescriptions[] =
       {
          {
             0, VK_FORMAT_B8G8R8A8_UNORM, VK_SAMPLE_COUNT_1_BIT,
@@ -581,13 +581,13 @@ void vk_context_init(vk_context_t *vk)
          }
       };
 
-      VkAttachmentReference ColorAttachment =
+      static const VkAttachmentReference ColorAttachment =
       {
          0,
          VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
       };
 
-      VkSubpassDescription subpassDescriptions[] =
+      static const VkSubpassDescription subpassDescriptions[] =
       {
          {
             .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -595,7 +595,7 @@ void vk_context_init(vk_context_t *vk)
          }
       };
 
-      VkRenderPassCreateInfo renderPassCreateInfo =
+      static const VkRenderPassCreateInfo renderPassCreateInfo =
       {
          VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
          .attachmentCount = countof(attachmentDescriptions), attachmentDescriptions,
@@ -1340,20 +1340,20 @@ void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info
          .primitiveRestartEnable = VK_FALSE
       };
 
-      VkPipelineViewportStateCreateInfo viewport_state =
+      static const VkPipelineViewportStateCreateInfo viewport_state =
       {
          VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
          .viewportCount = 1, .scissorCount = 1
       };
 
-      const VkPipelineRasterizationStateCreateInfo rasterization_info =
+      static const VkPipelineRasterizationStateCreateInfo rasterization_info =
       {
          VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
 //         .rasterizerDiscardEnable = VK_TRUE,
          .lineWidth = 1.0f
       };
 
-      const VkPipelineMultisampleStateCreateInfo multisample_state =
+      static const VkPipelineMultisampleStateCreateInfo multisample_state =
       {
          VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
          .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
@@ -1365,8 +1365,8 @@ void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info
          .attachmentCount = 1, init_info->color_blend_attachement_state
       };
 
-      const VkDynamicState dynamic_states[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
-      const VkPipelineDynamicStateCreateInfo dynamic_state_info =
+      static const VkDynamicState dynamic_states[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+      static const VkPipelineDynamicStateCreateInfo dynamic_state_info =
       {
          VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
          .dynamicStateCount = countof(dynamic_states), dynamic_states
