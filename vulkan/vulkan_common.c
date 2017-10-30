@@ -19,9 +19,7 @@
    VK_FN(vkAcquireXlibDisplayEXT); \
    VK_FN(vkGetRandROutputDisplayEXT);
 #elif defined(VK_USE_PLATFORM_WIN32_KHR)
-#define VK_INST_FN_LIST_XLIB
 #else
-#define VK_INST_FN_LIST_XLIB
 #endif
 
 #define VK_DEV_FN_LIST    \
@@ -32,7 +30,7 @@
 #define VK_FN(fn)     static PFN_##fn fn##p
 
 VK_INST_FN_LIST
-VK_INST_FN_LIST_XLIB
+VK_PLATFORM_FN_LIST
 VK_DEV_FN_LIST
 
 #undef VK_FN
@@ -42,7 +40,7 @@ static void vk_init_instance_pfn(VkInstance instance)
 {
 #define VK_FN(fn)     fn##p = (PFN_##fn)vkGetInstanceProcAddr(instance, #fn);
    VK_INST_FN_LIST
-   VK_INST_FN_LIST_XLIB
+   VK_PLATFORM_FN_LIST
 #undef VK_FN
 }
 

@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <assert.h>
+#include <stdarg.h>
 
 #include "common.h"
 #include "video.h"

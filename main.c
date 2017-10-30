@@ -60,7 +60,7 @@ int main(int argc, char** argv)
    }
 
    video.init();
-   audio.init();
+//   audio.init();
    input.init();
 
    int frames = 0;
@@ -110,7 +110,7 @@ int main(int argc, char** argv)
       }
       while (!info.frame_completed);
 
-      audio.play(info.sound_buffer.ptr, info.max_samples);
+//      audio.play(info.sound_buffer.ptr, info.max_samples);
 
       video.render();
 
@@ -139,7 +139,7 @@ int main(int argc, char** argv)
 
    module_destroy();
    input.destroy();
-   audio.destroy();
+//   audio.destroy();
    video.destroy();
    platform_destroy();
 
