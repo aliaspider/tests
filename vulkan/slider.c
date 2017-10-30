@@ -37,12 +37,7 @@ static void vk_slider_init(vk_context_t *vk)
 
    const vk_renderer_init_info_t info =
    {
-      .shaders.vs.code = vs_code,
-      .shaders.vs.code_size = sizeof(vs_code),
-      .shaders.ps.code = ps_code,
-      .shaders.ps.code_size = sizeof(ps_code),
-      .shaders.gs.code = gs_code,
-      .shaders.gs.code_size = sizeof(gs_code),
+      SHADER_INFO,
       .attrib_count = countof(attrib_desc),
       .attrib_desc = attrib_desc,
       .topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST,

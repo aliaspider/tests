@@ -12,3 +12,11 @@ const uint32_t ps_code [] =
 const uint32_t gs_code [] =
 #include GS_SHADER_FILE
    ;
+
+#define SHADER_INFO \
+.shaders.vs.code = vs_code, \
+.shaders.vs.code_size = sizeof(vs_code), \
+.shaders.ps.code = ps_code, \
+.shaders.ps.code_size = sizeof(ps_code), \
+.shaders.gs.code = gs_code, \
+.shaders.gs.code_size = sizeof(gs_code)
