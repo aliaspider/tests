@@ -91,8 +91,7 @@ static void vk_frame_init(vk_context_t *vk)
    video.frame.width = R_frame.tex.width;
    video.frame.height = R_frame.tex.height;
    video.frame.pitch = R_frame.tex.staging.mem.layout.rowPitch / 4;
-   video.frame.data = R_frame.tex.staging.mem.u8 +
-                      R_frame.tex.staging.mem.layout.offset;
+   video.frame.data = R_frame.tex.staging.mem.u8 + R_frame.tex.staging.mem.layout.offset;
 }
 
 void vk_frame_add(int x, int y, int width, int height)
