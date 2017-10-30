@@ -25,6 +25,12 @@ WRAP(ConfigureDevices, LPDICONFIGUREDEVICESCALLBACK, diCallback, LPDICONFIGUREDE
 #undef TYPE__
 #undef PREFIX__
 
+#ifdef UNICODE
+#define LPDIENUMEFFECTSCALLBACK LPDIENUMEFFECTSCALLBACKW
+#else
+#define LPDIENUMEFFECTSCALLBACK LPDIENUMEFFECTSCALLBACKA
+#endif
+
 #define THIS__ diDevice
 #define TYPE__ IDirectInputDevice8*
 #define PREFIX__ DIDEV8_
@@ -45,7 +51,7 @@ WRAP(GetDeviceInfo, DIDEVICEINSTANCE*, DevInstance)
 WRAP(RunControlPanel, HWND, hwndOwner, u32, Flags)
 WRAP(Initialize, HINSTANCE, hinst, u32, Version, REFGUID, guid)
 WRAP(CreateEffect, REFGUID, guid, LPCDIEFFECT, eff, LPDIRECTINPUTEFFECT*, ppdeff, IUnknown*, punkOuter)
-WRAP(EnumEffects, LPDIENUMEFFECTSCALLBACKA, Callback, void*, Ref, u32, EffType)
+WRAP(EnumEffects, LPDIENUMEFFECTSCALLBACK, Callback, void*, Ref, u32, EffType)
 WRAP(GetEffectInfo, DIEFFECTINFO*, EffectInfo, REFGUID, guid)
 WRAP(GetForceFeedbackState, u32*, Out)
 WRAP(SendForceFeedbackCommand, u32, Flags)
