@@ -1560,3 +1560,18 @@ const char *vk_result_to_str(VkResult res)
    return "unknown";
 
 }
+
+const VkPipelineColorBlendAttachmentState vk_blend_state_on =
+{
+   .blendEnable = VK_TRUE,
+   .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA, VK_BLEND_OP_ADD,
+   .srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA, VK_BLEND_OP_ADD,
+   .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
+};
+
+const VkPipelineColorBlendAttachmentState vk_blend_state_off =
+{
+   .blendEnable = VK_FALSE,
+   .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
+};
+

@@ -28,20 +28,13 @@ static void vk_slider_init(vk_context_t *vk)
       {1, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(vertex_t, pos)},
    };
 
-   const VkPipelineColorBlendAttachmentState color_blend_attachement_state =
-   {
-      .blendEnable = VK_FALSE,
-      .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-      VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
-   };
-
    const vk_renderer_init_info_t info =
    {
       SHADER_INFO,
       .attrib_count = countof(attrib_desc),
       .attrib_desc = attrib_desc,
       .topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
-      .color_blend_attachement_state = &color_blend_attachement_state,
+      .color_blend_attachement_state = &vk_blend_state_off,
    };
 
    R_slider.vbo.info.range = 256 * sizeof(vertex_t);

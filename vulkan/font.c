@@ -109,27 +109,13 @@ static void vk_font_init(vk_context_t *vk)
          {2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(font_vertex_t, position)}
       };
 
-      const VkPipelineColorBlendAttachmentState color_blend_attachement_state =
-      {
-         .blendEnable = VK_TRUE,
-         .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
-         .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-         .colorBlendOp = VK_BLEND_OP_ADD,
-         .srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
-         .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-         .alphaBlendOp = VK_BLEND_OP_ADD,
-         .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-         VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
-      };
-
-
       const vk_renderer_init_info_t info =
       {
          SHADER_INFO,
          .attrib_count = countof(attrib_desc),
          .attrib_desc = attrib_desc,
          .topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
-         .color_blend_attachement_state = &color_blend_attachement_state,
+         .color_blend_attachement_state = &vk_blend_state_on,
       };
 
       R_font.tex.width = font.atlas.slot_width << 4;

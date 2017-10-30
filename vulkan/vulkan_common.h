@@ -360,3 +360,6 @@ static inline void VkCmdBeginRenderPass(VkCommandBuffer commandBuffer, VkRenderP
    };
    vkCmdBeginRenderPass(commandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
 }
+
+extern const VkPipelineColorBlendAttachmentState vk_blend_state_on;
+extern const VkPipelineColorBlendAttachmentState vk_blend_state_off;
