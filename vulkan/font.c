@@ -104,9 +104,9 @@ static void vk_font_init(vk_context_t *vk)
 
       static const VkVertexInputAttributeDescription attrib_desc[] =
       {
-         {0, 0, VK_FORMAT_R8_UINT, offsetof(font_vertex_t, slot_id)},
-         {1, 0, VK_FORMAT_R8G8B8_UNORM, offsetof(font_vertex_t, color)},
-         {2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(font_vertex_t, position)}
+         {.location = 0, .binding = 0, VK_FORMAT_R8_UINT, offsetof(font_vertex_t, slot_id)},
+         {.location = 1, .binding = 0, VK_FORMAT_R8G8B8_UNORM, offsetof(font_vertex_t, color)},
+         {.location = 2, .binding = 0, VK_FORMAT_R32G32_SFLOAT, offsetof(font_vertex_t, position)}
       };
 
       static const VkPipelineColorBlendAttachmentState blend_state =

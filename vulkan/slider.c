@@ -24,8 +24,8 @@ static void vk_slider_init(vk_context_t *vk)
 
    static const VkVertexInputAttributeDescription attrib_desc[] =
    {
-      {0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(vertex_t, x)},
-      {1, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(vertex_t, pos)},
+      {.location = 0, .binding = 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(vertex_t, x)},
+      {.location = 1, .binding = 0, VK_FORMAT_R32G32_SFLOAT, offsetof(vertex_t, pos)},
    };
 
    static const VkPipelineColorBlendAttachmentState blend_state =
