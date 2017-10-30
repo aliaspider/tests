@@ -140,9 +140,9 @@ static void vk_font_init(vk_context_t* vk)
          .color_blend_attachement_state = &color_blend_attachement_state,
       };
 
-      font_renderer.default_texture.width = font.atlas.slot_width << 4;
-      font_renderer.default_texture.height = font.atlas.slot_height << 4;
-      font_renderer.default_texture.format = VK_FORMAT_R8_UNORM;
+      font_renderer.tex.width = font.atlas.slot_width << 4;
+      font_renderer.tex.height = font.atlas.slot_height << 4;
+      font_renderer.tex.format = VK_FORMAT_R8_UNORM;
 
       font_renderer.ssbo.info.range = sizeof(font_shader_storage_t);
       font_renderer.ubo.info.range = sizeof(font_uniforms_t);
@@ -153,15 +153,15 @@ static void vk_font_init(vk_context_t* vk)
    }
 
    {
-      device_memory_t* mem = &font_renderer.default_texture.staging.mem;
+      device_memory_t* mem = &font_renderer.tex.staging.mem;
       memset(mem->u8 + mem->layout.offset, 0x00, mem->layout.size - mem->layout.offset);
    }
 
-   font_renderer.default_texture.dirty = true;
+   font_renderer.tex.dirty = true;
 
    font.atlas.data = (font_uniforms_t*)font_renderer.ubo.mem.ptr;
-   font.atlas.data->tex_size.width = font_renderer.default_texture.width;
-   font.atlas.data->tex_size.height = font_renderer.default_texture.height;
+   font.atlas.data->tex_size.width = font_renderer.tex.width;
+   font.atlas.data->tex_size.height = font_renderer.tex.height;
    font_renderer.ubo.dirty = true;
 }
 
@@ -241,7 +241,7 @@ static void ft_font_render_glyph(unsigned charcode, int slot_id)
    CHECK_ERR(FT_Load_Char(font.ftface, charcode, FT_LOAD_RENDER | (font.monochrome ? FT_LOAD_MONOCHROME : 0)));
    FT_Bitmap* bitmap = &font.ftface->glyph->bitmap;
    u8* src = bitmap->buffer;
-   device_memory_t* mem = &font_renderer.default_texture.staging.mem;
+   device_memory_t* mem = &font_renderer.tex.staging.mem;
    u8* dst = mem->u8 + mem->layout.offset + (slot_id & 0xF) * font.atlas.slot_width +
                   (((slot_id >> 4) * font.atlas.slot_height)) * mem->layout.rowPitch;
    assert((dst - mem->u8 + mem->layout.rowPitch * (bitmap->rows + 1) < mem->layout.size));
@@ -265,7 +265,7 @@ static void ft_font_render_glyph(unsigned charcode, int slot_id)
       dst += mem->layout.rowPitch;
    }
 
-   font_renderer.default_texture.dirty = true;
+   font_renderer.tex.dirty = true;
 
    font.atlas.data->glyph_metrics[slot_id].x = font.ftface->glyph->metrics.horiBearingX >> 6;
    font.atlas.data->glyph_metrics[slot_id].y = -font.ftface->glyph->metrics.horiBearingY >> 6;

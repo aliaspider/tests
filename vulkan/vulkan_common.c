@@ -1213,18 +1213,18 @@ void vk_update_descriptor_sets(vk_context_t *vk, vk_renderer_t *dst)
    VkDescriptorImageInfo image_info[] =
    {
       {
-         .sampler = dst->default_texture.info.sampler,
-         .imageView = dst->default_texture.info.imageView,
+         .sampler = dst->tex.info.sampler,
+         .imageView = dst->tex.info.imageView,
          .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
       },
       {
-         .sampler = dst->default_texture.info.sampler,
-         .imageView = dst->default_texture.info.imageView,
+         .sampler = dst->tex.info.sampler,
+         .imageView = dst->tex.info.imageView,
          .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
       }
    };
 
-   if (dst->default_texture.image)
+   if (dst->tex.image)
    {
       VkWriteDescriptorSet set =
       {
@@ -1259,10 +1259,10 @@ void vk_update_descriptor_sets(vk_context_t *vk, vk_renderer_t *dst)
 
 void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info, vk_renderer_t *dst)
 {
-   if (dst->default_texture.image)
-      dst->default_texture.is_reference = true;
-   else if (dst->default_texture.format != VK_FORMAT_UNDEFINED)
-      vk_texture_init(vk, &dst->default_texture);
+   if (dst->tex.image)
+      dst->tex.is_reference = true;
+   else if (dst->tex.format != VK_FORMAT_UNDEFINED)
+      vk_texture_init(vk, &dst->tex);
 
    if (dst->ssbo.info.range)
    {
@@ -1407,7 +1407,7 @@ void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer)
    vk_buffer_free(device, &renderer->vbo);
    vk_buffer_free(device, &renderer->ubo);
    vk_buffer_free(device, &renderer->ssbo);
-   vk_texture_free(device, &renderer->default_texture);
+   vk_texture_free(device, &renderer->tex);
 
    memset(&renderer->vk_renderer_data_start, 0, sizeof(*renderer) - offsetof(vk_renderer_t, vk_renderer_data_start));
 }
@@ -1415,8 +1415,8 @@ void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer)
 
 void vk_renderer_update(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *renderer)
 {
-   if (renderer->default_texture.dirty && !renderer->default_texture.uploaded)
-      vk_texture_upload(device, cmd, &renderer->default_texture);
+   if (renderer->tex.dirty && !renderer->tex.uploaded)
+      vk_texture_upload(device, cmd, &renderer->tex);
 
    int vertex_count = (renderer->vbo.info.range - renderer->vbo.info.offset) / renderer->vertex_stride;
 
@@ -1478,9 +1478,9 @@ void vk_renderer_exec(VkCommandBuffer cmd, vk_renderer_t *renderer)
       {
          uint32_t dynamic_offset = 0;
 
-         if (renderer->default_texture.desc)
+         if (renderer->tex.desc)
          {
-            VkDescriptorSet descs [] = {renderer->desc, renderer->default_texture.desc};
+            VkDescriptorSet descs [] = {renderer->desc, renderer->tex.desc};
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, countof(descs), descs, 1,
                &dynamic_offset);
          }
@@ -1501,8 +1501,8 @@ void vk_renderer_exec(VkCommandBuffer cmd, vk_renderer_t *renderer)
 
 void vk_renderer_finish(VkDevice device, vk_renderer_t *renderer)
 {
-   if (renderer->default_texture.dirty && !renderer->default_texture.flushed)
-      vk_texture_flush(device, &renderer->default_texture);
+   if (renderer->tex.dirty && !renderer->tex.flushed)
+      vk_texture_flush(device, &renderer->tex);
 
    if (renderer->vbo.dirty)
       vk_buffer_flush(device, &renderer->vbo);
@@ -1515,8 +1515,8 @@ void vk_renderer_finish(VkDevice device, vk_renderer_t *renderer)
 
    renderer->vbo.info.offset = 0;
    renderer->vbo.info.range = 0;
-   renderer->default_texture.flushed = false;
-   renderer->default_texture.uploaded = false;
+   renderer->tex.flushed = false;
+   renderer->tex.uploaded = false;
 }
 
 const char *vk_result_to_str(VkResult res)

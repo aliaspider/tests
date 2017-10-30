@@ -110,16 +110,16 @@ void sprite_test(screen_t *screen)
          .coords.values = {20.0, 20.0, 132.0, 32.0},
          .color.values = {0.0, 1.0, 1.0, 0.50},
       };
-      vk_sprite_add(&sprite, &frame_renderer.default_texture);
+      vk_sprite_add(&sprite, &frame_renderer.tex);
    }
    {
       sprite_t sprite =
       {
-         .pos.values = {10.0, 190.0, font_renderer.default_texture.width, font_renderer.default_texture.height},
-         .coords.values = {0.0, 0.0, font_renderer.default_texture.width, font_renderer.default_texture.height},
+         .pos.values = {10.0, 190.0, font_renderer.tex.width, font_renderer.tex.height},
+         .coords.values = {0.0, 0.0, font_renderer.tex.width, font_renderer.tex.height},
          .color.values = {1.0, 1.0, 0.0, 1.0},
       };
-      vk_sprite_add(&sprite, &font_renderer.default_texture);
+      vk_sprite_add(&sprite, &font_renderer.tex);
    }
 }
 
@@ -229,7 +229,7 @@ void video_render()
    VkCommandBuffer cmds[MAX_SCREENS];
    VkSwapchainKHR swapchains[MAX_SCREENS];
 
-   frame_renderer.default_texture.dirty = true;
+   frame_renderer.tex.dirty = true;
 
 //   vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, UINT64_MAX);
    VK_CHECK(vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, 100000000));
@@ -241,11 +241,11 @@ void video_render()
       vkWaitForFences(vk.device, 1, &render_targets[i].chain_fence, VK_TRUE, UINT64_MAX);
       vkResetFences(vk.device, 1, &render_targets[i].chain_fence);
 
-      if (frame_renderer.default_texture.filter != video.filter)
+      if (frame_renderer.tex.filter != video.filter)
       {
-         frame_renderer.default_texture.filter = video.filter ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
-         frame_renderer.default_texture.info.sampler = video.filter ? vk.samplers.linear : vk.samplers.nearest;
-         vk_texture_update_descriptor_sets(&vk, &frame_renderer.default_texture);
+         frame_renderer.tex.filter = video.filter ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
+         frame_renderer.tex.info.sampler = video.filter ? vk.samplers.linear : vk.samplers.nearest;
+         vk_texture_update_descriptor_sets(&vk, &frame_renderer.tex);
       }
 
       if (video.vsync != render_targets[i].vsync)

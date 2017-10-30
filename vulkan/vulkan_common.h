@@ -218,7 +218,7 @@ struct vk_renderer_t
    void (*const update)(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *renderer);
    void (*const exec)(VkCommandBuffer cmd, vk_renderer_t *renderer);
    void (*const finish)(VkDevice device, vk_renderer_t *renderer);
-   vk_texture_t default_texture;
+   vk_texture_t tex;
    vk_buffer_t vbo;
    vk_buffer_t ubo;
    vk_buffer_t ssbo;
@@ -229,7 +229,7 @@ struct vk_renderer_t
    vk_texture_t *textures[VK_RENDERER_MAX_TEXTURES + 1];
 };
 
-#define vk_renderer_data_start default_texture
+#define vk_renderer_data_start tex
 
 void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info, vk_renderer_t *dst);
 void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer);
