@@ -755,18 +755,6 @@ void vk_render_targets_init(vk_context_t *vk, int count, screen_t *screens, vk_r
 
       vk_swapchain_init(vk, &render_targets[i]);
 
-
-      {
-         const VkCommandBufferAllocateInfo info =
-         {
-            VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-            .commandPool = vk->pools.cmd,
-            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-            .commandBufferCount = 1
-         };
-         vkAllocateCommandBuffers(vk->device, &info, &render_targets[i].cmd);
-      }
-
       VkCreateFence(vk->device, true, &render_targets[i].chain_fence);
 
 //   {
@@ -816,14 +804,14 @@ void vk_render_targets_destroy(vk_context_t *vk, int count, vk_render_target_t *
 
 
 }
-void vk_texture_update_descriptor_sets(vk_context_t *vk, vk_texture_t *dst)
+void vk_texture_update_descriptor_sets(vk_context_t *vk, vk_texture_t *out)
 
 {
    VkDescriptorImageInfo image_info[] =
    {
       {
-         .sampler = dst->info.sampler,
-         .imageView = dst->info.imageView,
+         .sampler = out->info.sampler,
+         .imageView = out->info.imageView,
          .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
       }
    };
@@ -831,7 +819,7 @@ void vk_texture_update_descriptor_sets(vk_context_t *vk, vk_texture_t *dst)
    const VkWriteDescriptorSet write_set =
    {
       VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-      .dstSet = dst->desc,
+      .dstSet = out->desc,
       .dstBinding = 0,
       .dstArrayElement = 0,
       .descriptorCount = 1,
@@ -842,10 +830,10 @@ void vk_texture_update_descriptor_sets(vk_context_t *vk, vk_texture_t *dst)
    vkUpdateDescriptorSets(vk->device, 1, &write_set, 0, NULL);
 }
 
-void vk_texture_init(vk_context_t *vk, vk_texture_t *dst)
+void vk_texture_init(vk_context_t *vk, vk_texture_t *out)
 {
-   dst->dirty = true;
-   dst->info.sampler = VK_NULL_HANDLE;
+   out->dirty = true;
+   out->info.sampler = VK_NULL_HANDLE;
 
    {
       VkImageCreateInfo info =
@@ -853,9 +841,9 @@ void vk_texture_init(vk_context_t *vk, vk_texture_t *dst)
          VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
          .flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
          .imageType = VK_IMAGE_TYPE_2D,
-         .format = dst->format,
-         .extent.width = dst->width,
-         .extent.height = dst->height,
+         .format = out->format,
+         .extent.width = out->width,
+         .extent.height = out->height,
          .extent.depth = 1,
          .mipLevels = 1,
          .arrayLayers = 1,
@@ -868,15 +856,15 @@ void vk_texture_init(vk_context_t *vk, vk_texture_t *dst)
          .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
       };
 
-      dst->info.imageLayout = info.initialLayout;
-      VK_CHECK(vkCreateImage(vk->device, &info, NULL, &dst->image));
+      out->info.imageLayout = info.initialLayout;
+      VK_CHECK(vkCreateImage(vk->device, &info, NULL, &out->image));
 
       info.tiling = VK_IMAGE_TILING_LINEAR;
       info.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
       info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-      dst->staging.format = info.format;
-      dst->staging.layout = info.initialLayout;
-      VK_CHECK(vkCreateImage(vk->device, &info, NULL, &dst->staging.image));
+      out->staging.format = info.format;
+      out->staging.layout = info.initialLayout;
+      VK_CHECK(vkCreateImage(vk->device, &info, NULL, &out->staging.image));
    }
 
    {
@@ -887,41 +875,41 @@ void vk_texture_init(vk_context_t *vk, vk_texture_t *dst)
          .arrayLayer = 0
       };
 //      vkGetImageSubresourceLayout(device, dst->image, &imageSubresource, &dst->mem.layout);
-      vkGetImageSubresourceLayout(vk->device, dst->staging.image, &imageSubresource, &dst->staging.mem.layout);
+      vkGetImageSubresourceLayout(vk->device, out->staging.image, &imageSubresource, &out->staging.mem.layout);
    }
 
    {
       memory_init_info_t info =
       {
          .req_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-         .image = dst->image
+         .image = out->image
       };
-      vk_device_memory_init(vk->device, vk->memoryTypes, &info, &dst->mem);
+      vk_device_memory_init(vk->device, vk->memoryTypes, &info, &out->mem);
    }
    {
       memory_init_info_t info =
       {
          .req_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-         .image = dst->staging.image
+         .image = out->staging.image
       };
-      vk_device_memory_init(vk->device, vk->memoryTypes, &info, &dst->staging.mem);
+      vk_device_memory_init(vk->device, vk->memoryTypes, &info, &out->staging.mem);
    }
 
    {
       VkImageViewCreateInfo info =
       {
          VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-         .image = dst->image,
+         .image = out->image,
          .viewType = VK_IMAGE_VIEW_TYPE_2D,
-         .format = dst->format,
+         .format = out->format,
          .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
          .subresourceRange.levelCount = 1,
          .subresourceRange.layerCount = 1
       };
-      VK_CHECK(vkCreateImageView(vk->device, &info, NULL, &dst->info.imageView));
+      VK_CHECK(vkCreateImageView(vk->device, &info, NULL, &out->info.imageView));
    }
 
-   dst->info.sampler = dst->filter == VK_FILTER_LINEAR ? vk->samplers.linear : vk->samplers.nearest;
+   out->info.sampler = out->filter == VK_FILTER_LINEAR ? vk->samplers.linear : vk->samplers.nearest;
 
    {
       const VkDescriptorSetAllocateInfo info =
@@ -930,10 +918,10 @@ void vk_texture_init(vk_context_t *vk, vk_texture_t *dst)
          .descriptorPool = vk->pools.desc,
          .descriptorSetCount = 1, &vk->set_layouts.texture
       };
-      VK_CHECK(vkAllocateDescriptorSets(vk->device, &info, &dst->desc));
+      VK_CHECK(vkAllocateDescriptorSets(vk->device, &info, &out->desc));
    }
 
-   vk_texture_update_descriptor_sets(vk, dst);
+   vk_texture_update_descriptor_sets(vk, out);
 
 }
 
@@ -1031,7 +1019,7 @@ void vk_texture_upload(VkDevice device, VkCommandBuffer cmd, vk_texture_t *textu
 
 
 void vk_device_memory_init(VkDevice device, const VkMemoryType *memory_types, const memory_init_info_t *init_info,
-   device_memory_t *dst)
+   device_memory_t *out)
 {
 
    VkMemoryRequirements reqs;
@@ -1041,8 +1029,8 @@ void vk_device_memory_init(VkDevice device, const VkMemoryType *memory_types, co
    else
       vkGetImageMemoryRequirements(device, init_info->image, &reqs);
 
-   dst->size = reqs.size;
-   dst->alignment = reqs.alignment;
+   out->size = reqs.size;
+   out->alignment = reqs.alignment;
 
    const VkMemoryType *type = memory_types;
    {
@@ -1058,27 +1046,27 @@ void vk_device_memory_init(VkDevice device, const VkMemoryType *memory_types, co
       }
    }
 
-   dst->flags = type->propertyFlags;
+   out->flags = type->propertyFlags;
 
    {
       const VkMemoryAllocateInfo info =
       {
          VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-         .allocationSize = dst->size,
+         .allocationSize = out->size,
          .memoryTypeIndex = type - memory_types
       };
-      VK_CHECK(vkAllocateMemory(device, &info, NULL, &dst->handle));
+      VK_CHECK(vkAllocateMemory(device, &info, NULL, &out->handle));
    }
 
    if (init_info->req_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
-      vkMapMemory(device, dst->handle, 0, dst->size, 0, &dst->ptr);
+      vkMapMemory(device, out->handle, 0, out->size, 0, &out->ptr);
    else
-      dst->ptr = NULL;
+      out->ptr = NULL;
 
    if (init_info->buffer)
-      vkBindBufferMemory(device, init_info->buffer, dst->handle, 0);
+      vkBindBufferMemory(device, init_info->buffer, out->handle, 0);
    else
-      vkBindImageMemory(device, init_info->image, dst->handle, 0);
+      vkBindImageMemory(device, init_info->image, out->handle, 0);
 }
 
 void vk_device_memory_free(VkDevice device, device_memory_t *memory)
@@ -1127,31 +1115,31 @@ void device_memory_invalidate(VkDevice device, const device_memory_t *memory)
    }
 }
 
-void vk_buffer_init(VkDevice device, const VkMemoryType *memory_types, const void *data, vk_buffer_t *dst)
+void vk_buffer_init(VkDevice device, const VkMemoryType *memory_types, const void *data, vk_buffer_t *out)
 {
    {
       const VkBufferCreateInfo info =
       {
          VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-         .size = dst->info.range,
-         .usage = dst->usage,
+         .size = out->info.range,
+         .usage = out->usage,
       };
-      vkCreateBuffer(device, &info, NULL, &dst->info.buffer);
+      vkCreateBuffer(device, &info, NULL, &out->info.buffer);
    }
 
    {
       memory_init_info_t info =
       {
-         .req_flags = dst->mem.flags,
-         .buffer = dst->info.buffer
+         .req_flags = out->mem.flags,
+         .buffer = out->info.buffer
       };
-      vk_device_memory_init(device, memory_types, &info, &dst->mem);
+      vk_device_memory_init(device, memory_types, &info, &out->mem);
    }
 
-   if (data && dst->mem.ptr)
+   if (data && out->mem.ptr)
    {
-      memcpy(dst->mem.ptr, data, dst->info.range);
-      vk_device_memory_flush(device, &dst->mem);
+      memcpy(out->mem.ptr, data, out->info.range);
+      vk_device_memory_flush(device, &out->mem);
    }
 }
 
@@ -1189,23 +1177,23 @@ static inline VkShaderModule vk_shader_code_init(VkDevice device, const vk_shade
    return shader;
 }
 
-void vk_update_descriptor_sets(vk_context_t *vk, vk_renderer_t *dst)
+static void vk_update_descriptor_sets(vk_context_t *vk, vk_renderer_t *out)
 {
    VkWriteDescriptorSet write_set[3];
    int write_set_count = 0;
 
-   if (dst->ubo.info.buffer)
+   if (out->ubo.info.buffer)
    {
 //      dst->ubo.info.range =VK_WHOLE_SIZE;
       VkWriteDescriptorSet set =
       {
          VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-         .dstSet = dst->desc,
+         .dstSet = out->desc,
          .dstBinding = 0,
          .dstArrayElement = 0,
          .descriptorCount = 1,
          .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-         .pBufferInfo = &dst->ubo.info
+         .pBufferInfo = &out->ubo.info
       };
       write_set[write_set_count++] = set;
    }
@@ -1213,23 +1201,23 @@ void vk_update_descriptor_sets(vk_context_t *vk, vk_renderer_t *dst)
    VkDescriptorImageInfo image_info[] =
    {
       {
-         .sampler = dst->tex.info.sampler,
-         .imageView = dst->tex.info.imageView,
+         .sampler = out->tex.info.sampler,
+         .imageView = out->tex.info.imageView,
          .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
       },
       {
-         .sampler = dst->tex.info.sampler,
-         .imageView = dst->tex.info.imageView,
+         .sampler = out->tex.info.sampler,
+         .imageView = out->tex.info.imageView,
          .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
       }
    };
 
-   if (dst->tex.image)
+   if (out->tex.image)
    {
       VkWriteDescriptorSet set =
       {
          VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-         .dstSet = dst->desc,
+         .dstSet = out->desc,
          .dstBinding = 1,
          .dstArrayElement = 0,
          .descriptorCount = countof(image_info),
@@ -1239,17 +1227,17 @@ void vk_update_descriptor_sets(vk_context_t *vk, vk_renderer_t *dst)
       write_set[write_set_count++] = set;
    }
 
-   if (dst->ssbo.info.buffer)
+   if (out->ssbo.info.buffer)
    {
       VkWriteDescriptorSet set =
       {
          VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-         .dstSet = dst->desc,
+         .dstSet = out->desc,
          .dstBinding = 2,
          .dstArrayElement = 0,
          .descriptorCount = 1,
          .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-         .pBufferInfo = &dst->ssbo.info
+         .pBufferInfo = &out->ssbo.info
       };
       write_set[write_set_count++] = set;
    }
@@ -1257,31 +1245,31 @@ void vk_update_descriptor_sets(vk_context_t *vk, vk_renderer_t *dst)
    vkUpdateDescriptorSets(vk->device, write_set_count, write_set, 0, NULL);
 }
 
-void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info, vk_renderer_t *dst)
+void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info, vk_renderer_t *out)
 {
-   if (dst->tex.image)
-      dst->tex.is_reference = true;
-   else if (dst->tex.format != VK_FORMAT_UNDEFINED)
-      vk_texture_init(vk, &dst->tex);
+   if (out->tex.image)
+      out->tex.is_reference = true;
+   else if (out->tex.format != VK_FORMAT_UNDEFINED)
+      vk_texture_init(vk, &out->tex);
 
-   if (dst->ssbo.info.range)
+   if (out->ssbo.info.range)
    {
-      dst->ssbo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-      dst->ssbo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-      vk_buffer_init(vk->device, vk->memoryTypes, NULL, &dst->ssbo);
+      out->ssbo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+      out->ssbo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+      vk_buffer_init(vk->device, vk->memoryTypes, NULL, &out->ssbo);
    }
 
-   if (dst->ubo.info.range)
+   if (out->ubo.info.range)
    {
-      dst->ubo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-      dst->ubo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-      vk_buffer_init(vk->device, vk->memoryTypes, NULL, &dst->ubo);
+      out->ubo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+      out->ubo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+      vk_buffer_init(vk->device, vk->memoryTypes, NULL, &out->ubo);
    }
 
-   dst->vbo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-   dst->vbo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-   vk_buffer_init(vk->device, vk->memoryTypes, NULL, &dst->vbo);
-   dst->vbo.info.range = 0;
+   out->vbo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+   out->vbo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+   vk_buffer_init(vk->device, vk->memoryTypes, NULL, &out->vbo);
+   out->vbo.info.range = 0;
 
    {
       const VkDescriptorSetAllocateInfo info =
@@ -1290,13 +1278,13 @@ void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info
          .descriptorPool = vk->pools.desc,
          .descriptorSetCount = 1, &vk->set_layouts.full
       };
-      vkAllocateDescriptorSets(vk->device, &info, &dst->desc);
+      vkAllocateDescriptorSets(vk->device, &info, &out->desc);
    }
 
-   vk_update_descriptor_sets(vk, dst);
+   vk_update_descriptor_sets(vk, out);
 
 
-   dst->layout = vk->pipeline_layout;
+   out->layout = vk->pipeline_layout;
 
    {
       const VkPipelineShaderStageCreateInfo shaders_info[] =
@@ -1323,7 +1311,7 @@ void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info
 
       const VkVertexInputBindingDescription vertex_description =
       {
-         0, dst->vertex_stride, VK_VERTEX_INPUT_RATE_VERTEX
+         0, out->vertex_stride, VK_VERTEX_INPUT_RATE_VERTEX
       };
 
       const VkPipelineVertexInputStateCreateInfo vertex_input_state =
@@ -1385,12 +1373,12 @@ void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info
             .pMultisampleState = &multisample_state,
             .pColorBlendState = &colorblend_state,
             .pDynamicState = &dynamic_state_info,
-            .layout = dst->layout,
+            .layout = out->layout,
             .renderPass = vk->renderpass,
             .subpass = 0
          }
       };
-      vkCreateGraphicsPipelines(vk->device, VK_NULL_HANDLE, 1, info, NULL, &dst->pipe);
+      vkCreateGraphicsPipelines(vk->device, VK_NULL_HANDLE, 1, info, NULL, &out->pipe);
 
       vkDestroyShaderModule(vk->device, shaders_info[0].module, NULL);
       vkDestroyShaderModule(vk->device, shaders_info[1].module, NULL);

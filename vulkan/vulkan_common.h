@@ -72,7 +72,6 @@ typedef struct
    uint32_t swapchain_count;
    VkImageView views[MAX_SWAPCHAIN_IMAGES];
    VkFramebuffer framebuffers[MAX_SWAPCHAIN_IMAGES];
-   VkCommandBuffer cmd;
    VkFence chain_fence;
    vk_drawcmd_list_t *draw_list;
    bool vsync;
@@ -140,7 +139,7 @@ typedef struct
    VkImage image;
 } memory_init_info_t;
 void vk_device_memory_init(VkDevice device, const VkMemoryType *memory_types, const memory_init_info_t *init_info,
-                           device_memory_t *dst);
+                           device_memory_t *out);
 void vk_device_memory_free(VkDevice device, device_memory_t *memory);
 void vk_device_memory_flush(VkDevice device, const device_memory_t *memory);
 
@@ -168,9 +167,9 @@ typedef struct
    bool uploaded;
 } vk_texture_t;
 
-void vk_texture_init(vk_context_t *vk, vk_texture_t *dst);
+void vk_texture_init(vk_context_t *vk, vk_texture_t *out);
 void vk_texture_free(VkDevice device, vk_texture_t *texture);
-void vk_texture_update_descriptor_sets(vk_context_t *vk, vk_texture_t *dst);
+void vk_texture_update_descriptor_sets(vk_context_t *vk, vk_texture_t *out);
 void vk_texture_upload(VkDevice device, VkCommandBuffer cmd, vk_texture_t *texture);
 void vk_texture_flush(VkDevice device, vk_texture_t *texture);
 
@@ -182,7 +181,7 @@ typedef struct
    bool dirty;
 } vk_buffer_t;
 
-void vk_buffer_init(VkDevice device, const VkMemoryType *memory_types, const void *data, vk_buffer_t *dst);
+void vk_buffer_init(VkDevice device, const VkMemoryType *memory_types, const void *data, vk_buffer_t *out);
 void vk_buffer_flush(VkDevice device, vk_buffer_t *buffer);
 void vk_buffer_invalidate(VkDevice device, vk_buffer_t *buffer);
 void vk_buffer_free(VkDevice device, vk_buffer_t *buffer);
@@ -231,7 +230,7 @@ struct vk_renderer_t
 
 #define vk_renderer_data_start tex
 
-void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info, vk_renderer_t *dst);
+void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info, vk_renderer_t *out);
 void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer);
 void vk_renderer_update(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *renderer);
 void vk_renderer_exec(VkCommandBuffer cmd, vk_renderer_t *renderer);
@@ -301,6 +300,19 @@ typedef union vec4
 
 #define DEBUG_VEC4(v) do{debug_log("%-40s : (%f,%f,%f,%f)\n", #v, v.x, v.y, v.z, v.w); fflush(stdout);}while(0)
 
+static inline VkResult VkAllocateCommandBuffer(VkDevice device, VkCommandPool commandPool, VkCommandBuffer* out)
+{
+   const VkCommandBufferAllocateInfo info =
+   {
+      VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+      .commandPool = commandPool,
+      .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+      .commandBufferCount = 1
+   };
+   return vkAllocateCommandBuffers(device, &info, out);
+}
+
+
 static inline VkResult VkBeginCommandBuffer(VkCommandBuffer CommandBuffer, VkCommandBufferUsageFlags flags,
       const VkCommandBufferInheritanceInfo *pInheritanceInfo)
 {
@@ -313,14 +325,14 @@ static inline VkResult VkBeginCommandBuffer(VkCommandBuffer CommandBuffer, VkCom
    return vkBeginCommandBuffer(CommandBuffer, &info);
 }
 
-static inline VkResult VkCreateFence(VkDevice device, bool signaled, VkFence *dst)
+static inline VkResult VkCreateFence(VkDevice device, bool signaled, VkFence *out)
 {
    VkFenceCreateInfo info =
    {
       VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
       .flags = signaled ? VK_FENCE_CREATE_SIGNALED_BIT : 0,
    };
-   return vkCreateFence(device, &info, NULL, dst);
+   return vkCreateFence(device, &info, NULL, out);
 }
 static inline VkResult VkQueueSubmit(VkQueue queue, uint32_t commandBufferCount, const VkCommandBuffer *pCommandBuffers,
                                      VkFence fence)

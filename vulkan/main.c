@@ -16,6 +16,7 @@
 
 static vk_context_t vk;
 static vk_render_target_t RTarget[MAX_SCREENS];
+static VkCommandBuffer cmd;
 
 static vk_renderer_t *renderers[] =
 {
@@ -221,12 +222,14 @@ void video_init()
    vk_texture_init(&vk, &test_image);
    memset(test_image.staging.mem.u8 + test_image.staging.mem.layout.offset, 0x80,
           test_image.staging.mem.size - test_image.staging.mem.layout.offset);
+
+
+   VkAllocateCommandBuffer(vk.device, vk.pools.cmd, &cmd);
 }
 
 void video_render()
 {
    uint32_t image_indices[MAX_SCREENS];
-   VkCommandBuffer cmds[MAX_SCREENS];
    VkSwapchainKHR swapchains[MAX_SCREENS];
 
    R_frame.tex.dirty = true;
@@ -234,6 +237,8 @@ void video_render()
 //   vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, UINT64_MAX);
    VK_CHECK(vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, 100000000));
    vkResetFences(vk.device, 1, &vk.queue_fence);
+
+   VkBeginCommandBuffer(cmd, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, NULL);
 
    for (int i = 0; i < video.screen_count; i++)
    {
@@ -265,40 +270,39 @@ void video_render()
 //      vkWaitForFences(vk.device, 1, &display_fence, VK_TRUE, UINT64_MAX);
 //      vkResetFences(vk.device, 1, &display_fence);
 
-      VkBeginCommandBuffer(RTarget[i].cmd, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, NULL);
 
       for (vk_drawcmd_list_t *draw_cmd = RTarget[i].draw_list; draw_cmd; draw_cmd = draw_cmd->next)
          draw_cmd->draw(RTarget[i].screen);
 
       for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
-         (*renderer)->update(vk.device, RTarget[i].cmd, *renderer);
+         (*renderer)->update(vk.device, cmd, *renderer);
 
       /* renderpass */
       {
          const VkClearValue clearValue = {{{0.0f, 0.1f, 1.0f, 0.0f}}};
          float pc[2] = {RTarget[i].viewport.width, RTarget[i].viewport.height};
-         VkCmdBeginRenderPass(RTarget[i].cmd, vk.renderpass, RTarget[i].framebuffers[image_indices[i]],
+         VkCmdBeginRenderPass(cmd, vk.renderpass, RTarget[i].framebuffers[image_indices[i]],
                               RTarget[i].scissor, &clearValue);
-         vkCmdPushConstants(RTarget[i].cmd, vk.pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(pc), pc);
+         vkCmdPushConstants(cmd, vk.pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(pc), pc);
 
-         vkCmdSetViewport(RTarget[i].cmd, 0, 1, &RTarget[i].viewport);
-         vkCmdSetScissor(RTarget[i].cmd, 0, 1, &RTarget[i].scissor);
+         vkCmdSetViewport(cmd, 0, 1, &RTarget[i].viewport);
+         vkCmdSetScissor(cmd, 0, 1, &RTarget[i].scissor);
 
          for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
-            (*renderer)->exec(RTarget[i].cmd, *renderer);
+            (*renderer)->exec(cmd, *renderer);
 
-         vkCmdEndRenderPass(RTarget[i].cmd);
+         vkCmdEndRenderPass(cmd);
       }
 
-      vkEndCommandBuffer(RTarget[i].cmd);
-      cmds[i] = RTarget[i].cmd;
       swapchains[i] = RTarget[i].swapchain;
    }
+
+   vkEndCommandBuffer(cmd);
 
    for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
       (*renderer)->finish(vk.device, *renderer);
 
-   VkQueueSubmit(vk.queue, video.screen_count, cmds, vk.queue_fence);
+   VkQueueSubmit(vk.queue, 1, &cmd, vk.queue_fence);
    VkQueuePresent(vk.queue, video.screen_count, swapchains, image_indices);
 
 
