@@ -18,14 +18,14 @@
 typedef struct
 {
    int dummy;
-} font_shader_storage_t;
+} shader_storage_t;
 
 typedef struct
 {
    vec2 tex_size;
    vec4 glyph_metrics[256];
    float advance[256];
-} font_uniforms_t;
+} uniforms_t;
 
 typedef struct
 {
@@ -57,7 +57,7 @@ static struct
    bool monochrome;
    struct
    {
-      font_uniforms_t *data;
+      uniforms_t *data;
       int slot_width;
       int slot_height;
       atlas_slot_t slot_map[256];
@@ -130,8 +130,8 @@ static void vk_font_init(vk_context_t *vk)
       R_font.tex.height = font.atlas.slot_height << 4;
       R_font.tex.format = VK_FORMAT_R8_UNORM;
 
-      R_font.ssbo.info.range = sizeof(font_shader_storage_t);
-      R_font.ubo.info.range = sizeof(font_uniforms_t);
+      R_font.ssbo.info.range = sizeof(shader_storage_t);
+      R_font.ubo.info.range = sizeof(uniforms_t);
       R_font.vbo.info.range = 4096 * sizeof(vertex_t);
       R_font.vertex_stride = sizeof(vertex_t);
 
@@ -145,7 +145,7 @@ static void vk_font_init(vk_context_t *vk)
 
    R_font.tex.dirty = true;
 
-   font.atlas.data = (font_uniforms_t *)R_font.ubo.mem.ptr;
+   font.atlas.data = (uniforms_t *)R_font.ubo.mem.ptr;
    font.atlas.data->tex_size.width = R_font.tex.width;
    font.atlas.data->tex_size.height = R_font.tex.height;
    R_font.ubo.dirty = true;
