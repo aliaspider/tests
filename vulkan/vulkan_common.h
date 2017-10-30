@@ -361,5 +361,7 @@ static inline void VkCmdBeginRenderPass(VkCommandBuffer commandBuffer, VkRenderP
    vkCmdBeginRenderPass(commandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
 }
 
-extern const VkPipelineColorBlendAttachmentState vk_blend_state_on;
-extern const VkPipelineColorBlendAttachmentState vk_blend_state_off;
+#define VK_COLOR_COMPONENT_ALL   (VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT)
+#define VK_SRC_ALPHA             VK_BLEND_FACTOR_SRC_ALPHA
+#define VK_ONE_MINUS_SRC_ALPHA   VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA
+#define VK_ADD                   VK_BLEND_OP_ADD

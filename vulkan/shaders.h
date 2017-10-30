@@ -1,11 +1,11 @@
 
-const uint32_t vs_code [] =
+static const uint32_t vs_code [] =
 #include xstr(SHADER_FILE.vert.inc)
    ;
-const uint32_t ps_code [] =
+static const uint32_t ps_code [] =
 #include xstr(SHADER_FILE.frag.inc)
    ;
-const uint32_t gs_code [] =
+static const uint32_t gs_code [] =
 #include xstr(SHADER_FILE.geom.inc)
    ;
 

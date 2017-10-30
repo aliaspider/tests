@@ -22,19 +22,25 @@ static void vk_slider_init(vk_context_t *vk)
 #define SHADER_FILE slider
 #include "shaders.h"
 
-   const VkVertexInputAttributeDescription attrib_desc[] =
+   static const VkVertexInputAttributeDescription attrib_desc[] =
    {
       {0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(vertex_t, x)},
       {1, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(vertex_t, pos)},
    };
 
-   const vk_renderer_init_info_t info =
+   static const VkPipelineColorBlendAttachmentState blend_state =
+   {
+      .blendEnable = VK_FALSE,
+      .colorWriteMask = VK_COLOR_COMPONENT_ALL
+   };
+
+   static const vk_renderer_init_info_t info =
    {
       SHADER_INFO,
       .attrib_count = countof(attrib_desc),
       .attrib_desc = attrib_desc,
       .topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
-      .color_blend_attachement_state = &vk_blend_state_off,
+      .color_blend_attachement_state = &blend_state,
    };
 
    R_slider.vbo.info.range = 256 * sizeof(vertex_t);

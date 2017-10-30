@@ -102,20 +102,28 @@ static void vk_font_init(vk_context_t *vk)
 #define SHADER_FILE font
 #include "shaders.h"
 
-      const VkVertexInputAttributeDescription attrib_desc[] =
+      static const VkVertexInputAttributeDescription attrib_desc[] =
       {
          {0, 0, VK_FORMAT_R8_UINT, offsetof(font_vertex_t, slot_id)},
          {1, 0, VK_FORMAT_R8G8B8_UNORM, offsetof(font_vertex_t, color)},
          {2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(font_vertex_t, position)}
       };
 
-      const vk_renderer_init_info_t info =
+      static const VkPipelineColorBlendAttachmentState blend_state =
+      {
+         .blendEnable = VK_TRUE,
+         .srcColorBlendFactor = VK_SRC_ALPHA, VK_ONE_MINUS_SRC_ALPHA, VK_ADD,
+         .srcAlphaBlendFactor = VK_SRC_ALPHA, VK_ONE_MINUS_SRC_ALPHA, VK_ADD,
+         .colorWriteMask = VK_COLOR_COMPONENT_ALL
+      };
+
+      static const vk_renderer_init_info_t info =
       {
          SHADER_INFO,
          .attrib_count = countof(attrib_desc),
          .attrib_desc = attrib_desc,
          .topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
-         .color_blend_attachement_state = &vk_blend_state_on,
+         .color_blend_attachement_state = &blend_state,
       };
 
       R_font.tex.width = font.atlas.slot_width << 4;
