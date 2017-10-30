@@ -38,7 +38,7 @@ typedef struct
    {
       float x, y;
    } position;
-} font_vertex_t;
+} vertex_t;
 
 typedef struct atlas_slot
 {
@@ -104,9 +104,9 @@ static void vk_font_init(vk_context_t *vk)
 
       static const VkVertexInputAttributeDescription attrib_desc[] =
       {
-         {.location = 0, .binding = 0, VK_FORMAT_R8_UINT, offsetof(font_vertex_t, slot_id)},
-         {.location = 1, .binding = 0, VK_FORMAT_R8G8B8_UNORM, offsetof(font_vertex_t, color)},
-         {.location = 2, .binding = 0, VK_FORMAT_R32G32_SFLOAT, offsetof(font_vertex_t, position)}
+         {.location = 0, .binding = 0, VK_FORMAT_R8_UINT, offsetof(vertex_t, slot_id)},
+         {.location = 1, .binding = 0, VK_FORMAT_R8G8B8_UNORM, offsetof(vertex_t, color)},
+         {.location = 2, .binding = 0, VK_FORMAT_R32G32_SFLOAT, offsetof(vertex_t, position)}
       };
 
       static const VkPipelineColorBlendAttachmentState blend_state =
@@ -132,8 +132,8 @@ static void vk_font_init(vk_context_t *vk)
 
       R_font.ssbo.info.range = sizeof(font_shader_storage_t);
       R_font.ubo.info.range = sizeof(font_uniforms_t);
-      R_font.vbo.info.range = 4096 * sizeof(font_vertex_t);
-      R_font.vertex_stride = sizeof(font_vertex_t);
+      R_font.vbo.info.range = 4096 * sizeof(vertex_t);
+      R_font.vertex_stride = sizeof(vertex_t);
 
       vk_renderer_init(vk, &info, &R_font);
    }
@@ -163,11 +163,10 @@ void vk_font_destroy(VkDevice device, vk_renderer_t *this)
 
 static int vulkan_font_get_new_slot(void)
 {
-   int i;
    unsigned oldest = 0;
    atlas_slot_t *const slot_map = font.atlas.slot_map;
 
-   for (i = 1; i < 256; i++)
+   for (int i = 1; i < 256; i++)
    {
       unsigned usage_counter = font.atlas.usage_counter;
 
@@ -222,8 +221,6 @@ static colorR8G8B8_t console_colors[CONSOLE_COLORS_MAX] =
 
 static void ft_font_render_glyph(unsigned charcode, int slot_id)
 {
-   int row;
-
    CHECK_ERR(FT_Load_Char(font.ftface, charcode, FT_LOAD_RENDER | (font.monochrome ? FT_LOAD_MONOCHROME : 0)));
    FT_Bitmap *bitmap = &font.ftface->glyph->bitmap;
    u8 *src = bitmap->buffer;
@@ -232,7 +229,7 @@ static void ft_font_render_glyph(unsigned charcode, int slot_id)
              (((slot_id >> 4) * font.atlas.slot_height)) * mem->layout.rowPitch;
    assert((dst - mem->u8 + mem->layout.rowPitch * (bitmap->rows + 1) < mem->layout.size));
 
-   for (row = 0; row < bitmap->rows; row++)
+   for (int row = 0; row < bitmap->rows; row++)
    {
       if (font.monochrome)
       {
@@ -309,12 +306,12 @@ void vk_font_draw_text(const char *text, font_render_options_t *options)
    if (options->lines)
       string_list_push(options->lines, text);
 
-   font_vertex_t *out = NULL;
+   vertex_t *out = NULL;
 
    if (!options->dry_run)
-      out = (font_vertex_t *)(R_font.vbo.mem.u8 + R_font.vbo.info.range);
+      out = (vertex_t *)(R_font.vbo.mem.u8 + R_font.vbo.info.range);
 
-   font_vertex_t vertex;
+   vertex_t vertex;
    vertex.color = *(typeof(vertex.color) *)&options->color;
    vertex.position.x = options->x;
    vertex.position.y = options->y + font.ascender;
@@ -400,7 +397,7 @@ void vk_font_draw_text(const char *text, font_render_options_t *options)
 
             if (out)
             {
-               font_vertex_t *ptr = out + last_space_vertex + 1;
+               vertex_t *ptr = out + last_space_vertex + 1;
 
                while (ptr < out + pos)
                {
@@ -435,12 +432,12 @@ void vk_font_draw_text(const char *text, font_render_options_t *options)
 
    if (options->cache)
    {
-      options->cache_size = pos * sizeof(font_vertex_t);
+      options->cache_size = pos * sizeof(vertex_t);
       *options->cache = malloc(options->cache_size);
       memcpy(*options->cache, R_font.vbo.mem.u8 + R_font.vbo.info.range, options->cache_size);
    }
 
-   R_font.vbo.info.range += pos * sizeof(font_vertex_t);
+   R_font.vbo.info.range += pos * sizeof(vertex_t);
    R_font.vbo.dirty = true;
    assert(R_font.vbo.info.range <= R_font.vbo.mem.size);
 }
