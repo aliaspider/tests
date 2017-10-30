@@ -3,7 +3,7 @@
 #include <math.h>
 
 #include "vulkan_common.h"
-//#include "common.h"
+#include "common.h"
 #include "slider.h"
 
 typedef struct
@@ -18,16 +18,9 @@ typedef struct
 
 static void vk_slider_init(vk_context_t *vk)
 {
-   const uint32_t vs_code [] =
-#include "slider.vert.inc"
-      ;
-   const uint32_t ps_code [] =
-#include "slider.frag.inc"
-      ;
 
-   const uint32_t gs_code [] =
-#include "slider.geom.inc"
-      ;
+#define SHADER_FILE slider
+#include "shaders.h"
 
    const VkVertexInputAttributeDescription attrib_desc[] =
    {

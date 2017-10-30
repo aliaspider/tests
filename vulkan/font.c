@@ -44,7 +44,7 @@ typedef struct atlas_slot
 {
    unsigned charcode;
    unsigned last_used;
-   struct atlas_slot* next;
+   struct atlas_slot *next;
 } atlas_slot_t;
 
 static struct
@@ -57,23 +57,23 @@ static struct
    bool monochrome;
    struct
    {
-      font_uniforms_t* data;
+      font_uniforms_t *data;
       int slot_width;
       int slot_height;
       atlas_slot_t slot_map[256];
-      atlas_slot_t* uc_map[256];
+      atlas_slot_t *uc_map[256];
       unsigned usage_counter;
    } atlas;
 } font;
 
-static void vk_font_init(vk_context_t* vk)
+static void vk_font_init(vk_context_t *vk)
 {
 
    {
 #ifdef WIN32
-      const char* font_path = "C:/Windows/Fonts/consola.ttf";
+      const char *font_path = "C:/Windows/Fonts/consola.ttf";
 #else
-      const char* font_path = "/usr/share/fonts/TTF/DejaVuSansMono.ttf";
+      const char *font_path = "/usr/share/fonts/TTF/DejaVuSansMono.ttf";
 //      const char *font_path = "/usr/share/fonts/TTF/NotoSerif-Regular.ttf";
 //      const char *font_path = "/usr/share/fonts/TTF/HanaMinA.ttf";
 //      const char* font_path = "/usr/share/fonts/TTF/LiberationMono-Regular.ttf";
@@ -95,16 +95,12 @@ static void vk_font_init(vk_context_t* vk)
    font.atlas.slot_width = font.max_advance;
    font.atlas.slot_height = font.line_height;
 
+
+
    {
-      const uint32_t vs_code [] =
-#include "font.vert.inc"
-         ;
-      const uint32_t ps_code [] =
-#include "font.frag.inc"
-         ;
-      const uint32_t gs_code [] =
-#include "font.geom.inc"
-         ;
+
+#define SHADER_FILE font
+#include "shaders.h"
 
       const VkVertexInputAttributeDescription attrib_desc[] =
       {
@@ -125,6 +121,7 @@ static void vk_font_init(vk_context_t* vk)
          .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
          VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
       };
+
 
       const vk_renderer_init_info_t info =
       {
@@ -153,19 +150,19 @@ static void vk_font_init(vk_context_t* vk)
    }
 
    {
-      device_memory_t* mem = &R_font.tex.staging.mem;
+      device_memory_t *mem = &R_font.tex.staging.mem;
       memset(mem->u8 + mem->layout.offset, 0x00, mem->layout.size - mem->layout.offset);
    }
 
    R_font.tex.dirty = true;
 
-   font.atlas.data = (font_uniforms_t*)R_font.ubo.mem.ptr;
+   font.atlas.data = (font_uniforms_t *)R_font.ubo.mem.ptr;
    font.atlas.data->tex_size.width = R_font.tex.width;
    font.atlas.data->tex_size.height = R_font.tex.height;
    R_font.ubo.dirty = true;
 }
 
-void vk_font_destroy(VkDevice device, vk_renderer_t* this)
+void vk_font_destroy(VkDevice device, vk_renderer_t *this)
 {
    FT_Done_Face(font.ftface);
    FT_Done_FreeType(font.ftlib);
@@ -179,7 +176,7 @@ static int vulkan_font_get_new_slot(void)
 {
    int i;
    unsigned oldest = 0;
-   atlas_slot_t* const slot_map = font.atlas.slot_map;
+   atlas_slot_t *const slot_map = font.atlas.slot_map;
 
    for (i = 1; i < 256; i++)
    {
@@ -191,13 +188,13 @@ static int vulkan_font_get_new_slot(void)
 
    int map_id = font.atlas.slot_map[oldest].charcode & 0xFF;
 
-   atlas_slot_t** const uc_map = font.atlas.uc_map;
+   atlas_slot_t **const uc_map = font.atlas.uc_map;
 
    if (uc_map[map_id] == &slot_map[oldest])
       uc_map[map_id] = slot_map[oldest].next;
    else if (uc_map[map_id])
    {
-      atlas_slot_t* ptr = uc_map[map_id];
+      atlas_slot_t *ptr = uc_map[map_id];
 
       while (ptr->next && ptr->next != &slot_map[oldest])
          ptr = ptr->next;
@@ -239,11 +236,11 @@ static void ft_font_render_glyph(unsigned charcode, int slot_id)
    int row;
 
    CHECK_ERR(FT_Load_Char(font.ftface, charcode, FT_LOAD_RENDER | (font.monochrome ? FT_LOAD_MONOCHROME : 0)));
-   FT_Bitmap* bitmap = &font.ftface->glyph->bitmap;
-   u8* src = bitmap->buffer;
-   device_memory_t* mem = &R_font.tex.staging.mem;
-   u8* dst = mem->u8 + mem->layout.offset + (slot_id & 0xF) * font.atlas.slot_width +
-                  (((slot_id >> 4) * font.atlas.slot_height)) * mem->layout.rowPitch;
+   FT_Bitmap *bitmap = &font.ftface->glyph->bitmap;
+   u8 *src = bitmap->buffer;
+   device_memory_t *mem = &R_font.tex.staging.mem;
+   u8 *dst = mem->u8 + mem->layout.offset + (slot_id & 0xF) * font.atlas.slot_width +
+             (((slot_id >> 4) * font.atlas.slot_height)) * mem->layout.rowPitch;
    assert((dst - mem->u8 + mem->layout.rowPitch * (bitmap->rows + 1) < mem->layout.size));
 
    for (row = 0; row < bitmap->rows; row++)
@@ -280,7 +277,7 @@ static int vulkan_font_get_slot_id(uint32_t charcode)
    unsigned map_id = charcode & 0xFF;
 
    {
-      atlas_slot_t* atlas_slot = font.atlas.uc_map[map_id];
+      atlas_slot_t *atlas_slot = font.atlas.uc_map[map_id];
 
       while (atlas_slot)
       {
@@ -305,7 +302,7 @@ static int vulkan_font_get_slot_id(uint32_t charcode)
    return slot_id;
 }
 
-void vk_font_draw_text(const char* text, font_render_options_t* options)
+void vk_font_draw_text(const char *text, font_render_options_t *options)
 {
    if (options->cache && *options->cache)
    {
@@ -314,8 +311,8 @@ void vk_font_draw_text(const char* text, font_render_options_t* options)
       return;
    }
 
-   const unsigned char* in = (const unsigned char*)text;
-   const unsigned char* last_space = NULL;
+   const unsigned char *in = (const unsigned char *)text;
+   const unsigned char *last_space = NULL;
    int last_space_vertex = 0;
    int last_space_x = 0;
    int pos = 0;
@@ -323,17 +320,17 @@ void vk_font_draw_text(const char* text, font_render_options_t* options)
    if (options->lines)
       string_list_push(options->lines, text);
 
-   font_vertex_t* out = NULL;
+   font_vertex_t *out = NULL;
 
    if (!options->dry_run)
-      out = (font_vertex_t*)(R_font.vbo.mem.u8 + R_font.vbo.info.range);
+      out = (font_vertex_t *)(R_font.vbo.mem.u8 + R_font.vbo.info.range);
 
    font_vertex_t vertex;
-   vertex.color = *(typeof(vertex.color)*)&options->color;
+   vertex.color = *(typeof(vertex.color) *)&options->color;
    vertex.position.x = options->x;
    vertex.position.y = options->y + font.ascender;
 
-   while (*in && (!out || ((u8*)out - R_font.vbo.mem.u8 < R_font.vbo.mem.size - sizeof(*out))))
+   while (*in && (!out || ((u8 *)out - R_font.vbo.mem.u8 < R_font.vbo.mem.size - sizeof(*out))))
    {
       if (vertex.position.y > options->max_height)
          out = NULL;
@@ -351,9 +348,9 @@ void vk_font_draw_text(const char* text, font_render_options_t* options)
             color_code = color_code * 10 + *(in++) - '0';
 
          if (color_code == CONSOLE_COLOR_RESET)
-            vertex.color = *(typeof(vertex.color)*)&options->color;
+            vertex.color = *(typeof(vertex.color) *)&options->color;
          else if (color_code < CONSOLE_COLORS_MAX)
-            vertex.color = *(typeof(vertex.color)*)&console_colors[color_code];
+            vertex.color = *(typeof(vertex.color) *)&console_colors[color_code];
 
          in++;
          continue;
@@ -365,7 +362,7 @@ void vk_font_draw_text(const char* text, font_render_options_t* options)
          vertex.position.y += font.line_height;
 
          if (*in && options->lines)
-            string_list_push(options->lines, (const char*)in);
+            string_list_push(options->lines, (const char *)in);
 
          continue;
       }
@@ -410,11 +407,11 @@ void vk_font_draw_text(const char* text, font_render_options_t* options)
             vertex.position.x -= last_space_x;
 
             if (options->lines)
-               string_list_push(options->lines, (const char*)last_space);
+               string_list_push(options->lines, (const char *)last_space);
 
             if (out)
             {
-               font_vertex_t* ptr = out + last_space_vertex + 1;
+               font_vertex_t *ptr = out + last_space_vertex + 1;
 
                while (ptr < out + pos)
                {
@@ -429,7 +426,7 @@ void vk_font_draw_text(const char* text, font_render_options_t* options)
          else
          {
             if (*in && options->lines)
-               string_list_push(options->lines, (const char*)in);
+               string_list_push(options->lines, (const char *)in);
 
             vertex.position.x = 0;
 

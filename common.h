@@ -5,6 +5,12 @@
 #include <inttypes.h>
 #include "interface.h"
 
+#define CNT_ARGS(...) CNT_ARGS_(__VA_ARGS__,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0)
+#define CNT_ARGS_(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,n,...) n
+
+#define xstr(s) str(s)
+#define str(s) #s
+
 #define fatal(...)   do{debug_log(__VA_ARGS__); fflush(stdout); assert(0);}while(0)
 
 #define CHECK_ERR(x) do{int res = x; if(res != 0) {printf("error at %s:%i:%s: 0x%08X(%i)\n", \

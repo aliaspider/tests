@@ -3,6 +3,7 @@
 #include <assert.h>
 
 #include "vulkan_common.h"
+#include "common.h"
 #include "frame.h"
 #include "video.h"
 #include "font.h"
@@ -19,7 +20,7 @@ typedef struct uniform_t
 } uniform_t;
 
 
-static void vk_frame_init(vk_context_t* vk)
+static void vk_frame_init(vk_context_t *vk)
 {
    VkFormat format;
 
@@ -39,16 +40,9 @@ static void vk_frame_init(vk_context_t* vk)
    }
 
    {
-      const uint32_t vs_code [] =
-#include "frame.vert.inc"
-         ;
-      const uint32_t ps_code [] =
-#include "frame.frag.inc"
-         ;
 
-      const uint32_t gs_code [] =
-#include "frame.geom.inc"
-         ;
+#define SHADER_FILE frame
+#include "shaders.h"
 
       const VkVertexInputAttributeDescription attrib_desc[] =
       {
@@ -88,15 +82,15 @@ static void vk_frame_init(vk_context_t* vk)
    }
 
    {
-      device_memory_t* mem = &R_frame.tex.staging.mem;
+      device_memory_t *mem = &R_frame.tex.staging.mem;
       memset(mem->u8 + mem->layout.offset, 0xFF, mem->layout.size - mem->layout.offset);
    }
 
    R_frame.tex.dirty = true;
    R_frame.tex.ignore_alpha = true;
 
-   ((uniform_t*)R_frame.ubo.mem.ptr)->tex_size.width = R_frame.tex.width;
-   ((uniform_t*)R_frame.ubo.mem.ptr)->tex_size.height = R_frame.tex.height;
+   ((uniform_t *)R_frame.ubo.mem.ptr)->tex_size.width = R_frame.tex.width;
+   ((uniform_t *)R_frame.ubo.mem.ptr)->tex_size.height = R_frame.tex.height;
    R_frame.ubo.dirty = true;
 
    video.frame.width = R_frame.tex.width;
@@ -108,7 +102,7 @@ static void vk_frame_init(vk_context_t* vk)
 
 void vk_frame_add(int x, int y, int width, int height)
 {
-   vertex_t* v = vk_get_vbo_memory(&R_frame.vbo, sizeof(vertex_t));
+   vertex_t *v = vk_get_vbo_memory(&R_frame.vbo, sizeof(vertex_t));
    v->position.x = x;
    v->position.y = y;
    v->size.width = width;

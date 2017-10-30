@@ -18,16 +18,9 @@ typedef union
 
 static void vk_sprite_renderer_init(vk_context_t *vk)
 {
-   const uint32_t vs_code [] =
-#include "sprite.vert.inc"
-      ;
-   const uint32_t ps_code [] =
-#include "sprite.frag.inc"
-      ;
 
-   const uint32_t gs_code [] =
-#include "sprite.geom.inc"
-      ;
+#define SHADER_FILE sprite
+#include "shaders.h"
 
    const VkVertexInputAttributeDescription attrib_desc[] =
    {
