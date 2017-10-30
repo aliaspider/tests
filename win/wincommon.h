@@ -20,13 +20,53 @@ typedef uint64_t u64;
 
 #define DEBUG_WINERR(x) do{printf("(0x%X, 0x%X, 0x%X) 0x%08X\n", HRESULT_SEVERITY(hr), HRESULT_FACILITY(hr), HRESULT_CODE(hr), hr);fflush(stdout);}while(0)
 
+#if defined(__DINPUT_INCLUDED__) || defined(DIRECTINPUT_HEADER_VERSION) || defined(__DSOUND_INCLUDED__) || defined(DS_OK)
+
+#define CNT_ARGS(...) CNT_ARGS_(__VA_ARGS__,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0)
+#define CNT_ARGS_(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,n,...) n
+
+#define DROP_TYPE(...) DROP_TYPE_(CNT_ARGS(__VA_ARGS__),__VA_ARGS__)
+#define DROP_TYPE_(n,...) DROP_TYPE__(n,__VA_ARGS__)
+#define DROP_TYPE__(n,...) DROP_TYPE_##n(__VA_ARGS__)
+#define DROP_TYPE_1()
+#define DROP_TYPE_2(ptype,pname) ,pname
+#define DROP_TYPE_4(ptype,pname,...) ,pname DROP_TYPE_2(__VA_ARGS__)
+#define DROP_TYPE_6(ptype,pname,...) ,pname DROP_TYPE_4(__VA_ARGS__)
+#define DROP_TYPE_8(ptype,pname,...) ,pname DROP_TYPE_6(__VA_ARGS__)
+#define DROP_TYPE_10(ptype,pname,...) ,pname DROP_TYPE_8(__VA_ARGS__)
+#define DROP_TYPE_12(ptype,pname,...) ,pname DROP_TYPE_10(__VA_ARGS__)
+#define DROP_TYPE_14(ptype,pname,...) ,pname DROP_TYPE_12(__VA_ARGS__)
+#define DROP_TYPE_16(ptype,pname,...) ,pname DROP_TYPE_14(__VA_ARGS__)
+
+#define MERGE_TYPE(...) MERGE_TYPE_(CNT_ARGS(__VA_ARGS__),__VA_ARGS__)
+#define MERGE_TYPE_(n,...) MERGE_TYPE__(n,__VA_ARGS__)
+#define MERGE_TYPE__(n,...) MERGE_TYPE_##n(__VA_ARGS__)
+#define MERGE_TYPE_1()
+#define MERGE_TYPE_2(ptype,pname) ,ptype pname
+#define MERGE_TYPE_4(ptype,pname,...) ,ptype pname MERGE_TYPE_2(__VA_ARGS__)
+#define MERGE_TYPE_6(ptype,pname,...) ,ptype pname MERGE_TYPE_4(__VA_ARGS__)
+#define MERGE_TYPE_8(ptype,pname,...) ,ptype pname MERGE_TYPE_6(__VA_ARGS__)
+#define MERGE_TYPE_10(ptype,pname,...) ,ptype pname MERGE_TYPE_8(__VA_ARGS__)
+#define MERGE_TYPE_12(ptype,pname,...) ,ptype pname MERGE_TYPE_10(__VA_ARGS__)
+#define MERGE_TYPE_14(ptype,pname,...) ,ptype pname MERGE_TYPE_12(__VA_ARGS__)
+#define MERGE_TYPE_16(ptype,pname,...) ,ptype pname MERGE_TYPE_14(__VA_ARGS__)
+
+#define CONCAT_(a,b) a##b
+#define CONCAT(a,b) CONCAT_(a,b)
+
 //#define WRAP(type,fn,...) static inline type CONCAT(PREFIX__,fn) (MERGE_TYPE(__VA_ARGS__)) {return DROP_TYPE(THIS_)->lpVtbl->fn(DROP_TYPE(__VA_ARGS__));}
-#define WRAP_(type,fn,...) static inline type CONCAT(PREFIX__,fn) (TYPE__ THIS__ MERGE_TYPE(__VA_ARGS__)) {return THIS__->lpVtbl->fn(THIS__ DROP_TYPE( __VA_ARGS__));}
+#define WRAP_(type,fn,...) static inline void CONCAT(PREFIX__,fn) (TYPE__ THIS__ MERGE_TYPE(__VA_ARGS__)) {CHECK_WINERR(THIS__->lpVtbl->fn(THIS__ DROP_TYPE( __VA_ARGS__)));}
 #define WRAP(...) WRAP_(HRESULT, __VA_ARGS__)
+
+#define WRAPNOCHECK_(type,fn,...) static inline type CONCAT(PREFIX__,fn) (TYPE__ THIS__ MERGE_TYPE(__VA_ARGS__)) {return THIS__->lpVtbl->fn(THIS__ DROP_TYPE( __VA_ARGS__));}
+#define WRAPNOCHECK(...) WRAPNOCHECK_(HRESULT, __VA_ARGS__)
+
 #define IUNKNOWN__ \
    WRAP_(HRESULT, QueryInterface,  REFIID, riid, void**, Object) \
    WRAP_(ULONG, AddRef) \
    WRAP_(ULONG, Release) \
+
+#endif
 
 #if defined(__DINPUT_INCLUDED__) || defined(DIRECTINPUT_HEADER_VERSION)
 #include <dinput.h>
@@ -62,9 +102,9 @@ WRAP(GetCapabilities, LPDIDEVCAPS, DIDevCaps)
 WRAP(EnumObjects, LPDIENUMDEVICEOBJECTSCALLBACK, Callback, void*, Ref, u32, Flags)
 WRAP(GetProperty, REFGUID, rguidProp, LPDIPROPHEADER, pdiph)
 WRAP(SetProperty, REFGUID, rguidProp, LPCDIPROPHEADER, pdiph)
-WRAP(Acquire)
+WRAPNOCHECK(Acquire)
 WRAP(Unacquire)
-WRAP(GetDeviceState, u32, Size, void*, Data)
+WRAPNOCHECK(GetDeviceState, u32, Size, void*, Data)
 WRAP(GetDeviceData, u32, Size, DIDEVICEOBJECTDATA*, DevObjData, u32*, InOut, u32, Flags)
 WRAP(SetDataFormat, LPCDIDATAFORMAT, format)
 WRAP(SetEventNotification, HANDLE, Event)

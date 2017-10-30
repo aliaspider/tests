@@ -16,8 +16,8 @@ static u8* write_ptr;
 
 void audio_init(void)
 {
-   CHECK_WINERR(DirectSoundCreate8(NULL, &dsound, NULL));
-   CHECK_WINERR(DS8_SetCooperativeLevel(dsound, video.screens[0].hwnd, DSSCL_PRIORITY));
+   DirectSoundCreate8(NULL, &dsound, NULL);
+   DS8_SetCooperativeLevel(dsound, video.screens[0].hwnd, DSSCL_PRIORITY);
 
    WAVEFORMATEX wfx =
    {
@@ -31,7 +31,7 @@ void audio_init(void)
 
    DSBUFFERDESC dsbdesc =
    {
-      .dwSize = sizeof(DSBUFFERDESC),
+      sizeof(DSBUFFERDESC),
       .dwFlags = DSBCAPS_CTRLPAN | DSBCAPS_CTRLVOLUME | DSBCAPS_CTRLFREQUENCY | DSBCAPS_GLOBALFOCUS,
       .dwBufferBytes = DS_BUFFER_SIZE,
       .lpwfxFormat = &wfx,
@@ -39,9 +39,9 @@ void audio_init(void)
 
    IDirectSoundBuffer* pDsb;
 
-   CHECK_WINERR(DS8_CreateSoundBuffer(dsound, &dsbdesc, &pDsb, NULL));
-   CHECK_WINERR((DSb_QueryInterface(pDsb, &IID_IDirectSoundBuffer8, (void**) &ds_buffer)));
-   CHECK_WINERR(DSb_Release(pDsb));
+   DS8_CreateSoundBuffer(dsound, &dsbdesc, &pDsb, NULL);
+   DSb_QueryInterface(pDsb, &IID_IDirectSoundBuffer8, (void**) &ds_buffer);
+   DSb_Release(pDsb);
 
    u32 size;
    DSb8_Lock(ds_buffer, 0, DS_BUFFER_SIZE, (void**)&buffer_start, &size, NULL, NULL, DSBLOCK_ENTIREBUFFER);
@@ -79,8 +79,7 @@ void audio_play(void* buffer, int samples)
 //      printf("sleep\n");
    }
 
-   CHECK_WINERR(DSb8_Lock(ds_buffer, (write_ptr - buffer_start) & (DS_BUFFER_SIZE - 1), 4 * samples, &ptr1, &size1, &ptr2,
-                          &size2, 0));
+   DSb8_Lock(ds_buffer, (write_ptr - buffer_start) & (DS_BUFFER_SIZE - 1), 4 * samples, &ptr1, &size1, &ptr2, &size2, 0);
 
 
    memcpy(ptr1, buffer, size1);

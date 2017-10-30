@@ -38,34 +38,34 @@ void input_init()
 {
    video.register_draw_command(1, print_mouse_state);
 
-   CHECK_WINERR(DirectInput8Create(platform.hInstance, DIRECTINPUT_VERSION, &IID_IDirectInput8, (void**)&dinput, NULL));
+   DirectInput8Create(platform.hInstance, DIRECTINPUT_VERSION, &IID_IDirectInput8, (void**)&dinput, NULL);
 
    for (int i = 0; i < video.screen_count; i++)
    {
-      CHECK_WINERR(DI8_CreateDevice(dinput, &GUID_SysKeyboard, &keyboards[i], NULL));
-      CHECK_WINERR(DI8_CreateDevice(dinput, &GUID_SysMouse, &mice[i], NULL));
+      DI8_CreateDevice(dinput, &GUID_SysKeyboard, &keyboards[i], NULL);
+      DI8_CreateDevice(dinput, &GUID_SysMouse, &mice[i], NULL);
       {
          DIDEVCAPS caps = {sizeof(caps)};
-         CHECK_WINERR(DIDEV8_GetCapabilities(keyboards[i], &caps));
-         CHECK_WINERR(DIDEV8_GetCapabilities(mice[i], &caps));
+         DIDEV8_GetCapabilities(keyboards[i], &caps);
+         DIDEV8_GetCapabilities(mice[i], &caps);
       }
 
-      CHECK_WINERR(DIDEV8_SetCooperativeLevel(keyboards[i], video.screens[i].hwnd, DISCL_NONEXCLUSIVE | DISCL_FOREGROUND));
+      DIDEV8_SetCooperativeLevel(keyboards[i], video.screens[i].hwnd, DISCL_NONEXCLUSIVE | DISCL_FOREGROUND);
 
-      CHECK_WINERR(DIDEV8_SetCooperativeLevel(mice[i], video.screens[i].hwnd, DISCL_NONEXCLUSIVE | DISCL_FOREGROUND));
+      DIDEV8_SetCooperativeLevel(mice[i], video.screens[i].hwnd, DISCL_NONEXCLUSIVE | DISCL_FOREGROUND);
 
-      CHECK_WINERR(DIDEV8_SetDataFormat(keyboards[i], &c_dfDIKeyboard));
+      DIDEV8_SetDataFormat(keyboards[i], &c_dfDIKeyboard);
 #if 0
-      CHECK_WINERR(DIDEV8_SetDataFormat(mice[i], &c_dfDIMouse));
+      DIDEV8_SetDataFormat(mice[i], &c_dfDIMouse);
 
       DIPROPDWORD props;
 //      props.dwData
 //      DIPROPAXISMODE_ABS
-//      CHECK_WINERR(DIDEV8_SetProperty(mice[i], DIPROP_AXISMODE , ));
+//      DIDEV8_SetProperty(mice[i], DIPROP_AXISMODE , );
 #else
       DIDATAFORMAT c_dfDIMouse_absaxis = c_dfDIMouse;
       c_dfDIMouse_absaxis.dwFlags = DIDF_ABSAXIS;
-      CHECK_WINERR(DIDEV8_SetDataFormat(mice[i], &c_dfDIMouse_absaxis));
+      DIDEV8_SetDataFormat(mice[i], &c_dfDIMouse_absaxis);
 #endif
 
    }
@@ -80,11 +80,11 @@ void input_destroy()
 {
    for (int i = 0; i < video.screen_count; i++)
    {
-      CHECK_WINERR(DIDEV8_Release(keyboards[i]));
-      CHECK_WINERR(DIDEV8_Release(mice[i]));
+      DIDEV8_Release(keyboards[i]);
+      DIDEV8_Release(mice[i]);
    }
 
-   CHECK_WINERR(DI8_Release(dinput));
+   DI8_Release(dinput);
 
 }
 
