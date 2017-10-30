@@ -12,62 +12,62 @@
 #define PREFIX__ DI8_
 IUNKNOWN__
 WRAP(CreateDevice, REFGUID, guid, LPDIRECTINPUTDEVICE8*, DirectInputDevice, IUnknown*, UnkOuter)
-WRAP(EnumDevices, u32, dwDevType, LPDIENUMDEVICESCALLBACK, lpCallback, void*, pvRef, u32, dwFlags)
+WRAP(EnumDevices, u32, DevType, LPDIENUMDEVICESCALLBACK, Callback, void*, Ref, u32, Flags)
 WRAP(GetDeviceStatus, REFGUID, rguidInstance)
-WRAP(RunControlPanel, HWND, hwndOwner, u32, dwFlags)
-WRAP(Initialize, HINSTANCE, hinst, u32, dwVersion)
-WRAP(FindDevice, REFGUID, guid, LPCSTR, pszName, LPGUID, pguidInstance)
-WRAP(EnumDevicesBySemantics, LPCSTR, ptszUserName, LPDIACTIONFORMAT, lpdiActionFormat, LPDIENUMDEVICESBYSEMANTICSCB,
-     lpCallback, void*, pvRef, u32, dwFlags)
-WRAP(ConfigureDevices, LPDICONFIGUREDEVICESCALLBACK, lpdiCallback, LPDICONFIGUREDEVICESPARAMS, lpdiCDParams, u32,
-     dwFlags, void*, pvRefData)
+WRAP(RunControlPanel, HWND, hwndOwner, u32, Flags)
+WRAP(Initialize, HINSTANCE, hinst, u32, Version)
+WRAP(FindDevice, REFGUID, guid, const TCHAR*, Name, LPGUID, pguidInstance)
+WRAP(EnumDevicesBySemantics, const TCHAR*, UserName, LPDIACTIONFORMAT, ActionFormat, LPDIENUMDEVICESBYSEMANTICSCB,
+     Callback, void*, Ref, u32, Flags)
+WRAP(ConfigureDevices, LPDICONFIGUREDEVICESCALLBACK, diCallback, LPDICONFIGUREDEVICESPARAMS, diCDParams, u32, Flags,
+     void*, RefData)
 #undef THIS__
 #undef TYPE__
 #undef PREFIX__
 
 #define THIS__ diDevice
-#define TYPE__ IDirectInputDevice8A*
+#define TYPE__ IDirectInputDevice8*
 #define PREFIX__ DIDEV8_
 IUNKNOWN__
-WRAP(GetCapabilities, LPDIDEVCAPS, lpDIDevCaps)
-WRAP(EnumObjects, LPDIENUMDEVICEOBJECTSCALLBACK, lpCallback, void*, pvRef, u32, dwFlags)
+WRAP(GetCapabilities, LPDIDEVCAPS, DIDevCaps)
+WRAP(EnumObjects, LPDIENUMDEVICEOBJECTSCALLBACK, Callback, void*, Ref, u32, Flags)
 WRAP(GetProperty, REFGUID, rguidProp, LPDIPROPHEADER, pdiph)
 WRAP(SetProperty, REFGUID, rguidProp, LPCDIPROPHEADER, pdiph)
 WRAP(Acquire)
 WRAP(Unacquire)
-WRAP(GetDeviceState, u32, cbData, void*, lpvData)
-WRAP(GetDeviceData, u32, cbObjectData, LPDIDEVICEOBJECTDATA, rgdod, u32*, pdwInOut, u32, dwFlags)
-WRAP(SetDataFormat, LPCDIDATAFORMAT, lpdf)
+WRAP(GetDeviceState, u32, Size, void*, Data)
+WRAP(GetDeviceData, u32, Size, DIDEVICEOBJECTDATA*, DevObjData, u32*, InOut, u32, Flags)
+WRAP(SetDataFormat, LPCDIDATAFORMAT, df)
 WRAP(SetEventNotification, HANDLE, hEvent)
-WRAP(SetCooperativeLevel, HWND, hwnd, u32, dwFlags)
-WRAP(GetObjectInfo, DIDEVICEOBJECTINSTANCE*, pdidoi, u32, dwObj, u32, dwHow)
-WRAP(GetDeviceInfo, DIDEVICEINSTANCE*, pdidi)
-WRAP(RunControlPanel, HWND, hwndOwner, u32, dwFlags)
-WRAP(Initialize, HINSTANCE, hinst, u32, dwVersion, REFGUID, guid)
-WRAP(CreateEffect, REFGUID, guid, LPCDIEFFECT, lpeff, LPDIRECTINPUTEFFECT*, ppdeff, IUnknown*, punkOuter)
-WRAP(EnumEffects, LPDIENUMEFFECTSCALLBACKA, lpCallback, void*, pvRef, u32, dwEffType)
-WRAP(GetEffectInfo, DIEFFECTINFO*, pdei, REFGUID, guid)
-WRAP(GetForceFeedbackState, u32*, pdwOut)
-WRAP(SendForceFeedbackCommand, u32, dwFlags)
-WRAP(EnumCreatedEffectObjects, LPDIENUMCREATEDEFFECTOBJECTSCALLBACK, lpCallback, void*, pvRef, u32, fl)
+WRAP(SetCooperativeLevel, HWND, hwnd, u32, Flags)
+WRAP(GetObjectInfo, DIDEVICEOBJECTINSTANCE*, DevObjInstance, u32, Obj, u32, How)
+WRAP(GetDeviceInfo, DIDEVICEINSTANCE*, DevInstance)
+WRAP(RunControlPanel, HWND, hwndOwner, u32, Flags)
+WRAP(Initialize, HINSTANCE, hinst, u32, Version, REFGUID, guid)
+WRAP(CreateEffect, REFGUID, guid, LPCDIEFFECT, eff, LPDIRECTINPUTEFFECT*, ppdeff, IUnknown*, punkOuter)
+WRAP(EnumEffects, LPDIENUMEFFECTSCALLBACKA, Callback, void*, Ref, u32, EffType)
+WRAP(GetEffectInfo, DIEFFECTINFO*, EffectInfo, REFGUID, guid)
+WRAP(GetForceFeedbackState, u32*, Out)
+WRAP(SendForceFeedbackCommand, u32, Flags)
+WRAP(EnumCreatedEffectObjects, LPDIENUMCREATEDEFFECTOBJECTSCALLBACK, Callback, void*, Ref, u32, fl)
 WRAP(Escape, LPDIEFFESCAPE, pesc)
 WRAP(Poll)
-WRAP(SendDeviceData, u32, cbObjectData, LPCDIDEVICEOBJECTDATA, rgdod, u32*, pdwInOut, u32, fl)
-WRAP(EnumEffectsInFile, LPCSTR, lpszFileName, LPDIENUMEFFECTSINFILECALLBACK, pec, void*, pvRef, u32, dwFlags)
-WRAP(WriteEffectToFile, LPCSTR, lpszFileName, u32, dwEntries, DIFILEEFFECT*, rgDiFileEft, u32, dwFlags)
-WRAP(BuildActionMap, DIACTIONFORMAT*, lpdiaf, LPCSTR, lpszUserName, u32, dwFlags)
-WRAP(SetActionMap, DIACTIONFORMAT*, lpdiaf, LPCSTR, lpszUserName, u32, dwFlags)
-WRAP(GetImageInfo, DIDEVICEIMAGEINFOHEADER*, lpdiDevImageInfoHeader)
+WRAP(SendDeviceData, u32, Size, const DIDEVICEOBJECTDATA*, DevObjData, u32*, pInOut, u32, fl)
+WRAP(EnumEffectsInFile, const TCHAR*, FileName, LPDIENUMEFFECTSINFILECALLBACK, pec, void*, Ref, u32, Flags)
+WRAP(WriteEffectToFile, const TCHAR*, FileName, u32, Entries, DIFILEEFFECT*, diFileEft, u32, Flags)
+WRAP(BuildActionMap, DIACTIONFORMAT*, ActionFormat, const TCHAR*, UserName, u32, Flags)
+WRAP(SetActionMap, DIACTIONFORMAT*, ActionFormat, const TCHAR*, UserName, u32, Flags)
+WRAP(GetImageInfo, DIDEVICEIMAGEINFOHEADER*, diDevImageInfoHeader)
 #undef THIS__
 #undef TYPE__
 #undef PREFIX__
-
 
 static IDirectInput8* dinput;
 static IDirectInputDevice8* keyboards[MAX_SCREENS];
 static IDirectInputDevice8* mice[MAX_SCREENS];
 static IDirectInputDevice8* keyboard;
 static IDirectInputDevice8* mouse;
+
 POINT origin_pos;
 DIMOUSESTATE origin_state;
 HWND active_window;
