@@ -55,11 +55,11 @@ typedef struct vk_context_t
 void vk_context_init(vk_context_t *vk);
 void vk_context_destroy(vk_context_t *vk);
 
-typedef struct vk_draw_command_list_t
+typedef struct vk_drawcmd_list_t
 {
    draw_command_t draw;
-   struct vk_draw_command_list_t *next;
-} vk_draw_command_list_t;
+   struct vk_drawcmd_list_t *next;
+} vk_drawcmd_list_t;
 
 typedef struct
 {
@@ -74,7 +74,7 @@ typedef struct
    VkFramebuffer framebuffers[MAX_SWAPCHAIN_IMAGES];
    VkCommandBuffer cmd;
    VkFence chain_fence;
-   vk_draw_command_list_t *draw_list;
+   vk_drawcmd_list_t *draw_list;
    bool vsync;
 } vk_render_target_t;
 
@@ -83,7 +83,7 @@ void vk_render_targets_destroy(vk_context_t *vk, int count, vk_render_target_t *
 void vk_swapchain_init(vk_context_t *vk, vk_render_target_t *render_target);
 void vk_swapchain_destroy(vk_context_t *vk, vk_render_target_t *render_target);
 
-static inline void vk_register_draw_command(vk_draw_command_list_t **list, draw_command_t fn)
+static inline void vk_register_draw_command(vk_drawcmd_list_t **list, draw_command_t fn)
 {
    while (*list)
       list = &(*list)->next;
@@ -94,16 +94,16 @@ static inline void vk_register_draw_command(vk_draw_command_list_t **list, draw_
    (*list)->next = NULL;
 }
 
-static inline void vk_remove_draw_command(vk_draw_command_list_t **list, draw_command_t fn)
+static inline void vk_remove_draw_command(vk_drawcmd_list_t **list, draw_command_t fn)
 {
    /* TODO */
-   vk_draw_command_list_t **prev = NULL;
+   vk_drawcmd_list_t **prev = NULL;
 
    while (*list)
    {
       if ((*list)->draw == fn)
       {
-         vk_draw_command_list_t *tmp = (*list)->next;
+         vk_drawcmd_list_t *tmp = (*list)->next;
          free(*list);
 
          if (prev)
@@ -140,7 +140,7 @@ typedef struct
    VkImage image;
 } memory_init_info_t;
 void vk_device_memory_init(VkDevice device, const VkMemoryType *memory_types, const memory_init_info_t *init_info,
-   device_memory_t *dst);
+                           device_memory_t *dst);
 void vk_device_memory_free(VkDevice device, device_memory_t *memory);
 void vk_device_memory_flush(VkDevice device, const device_memory_t *memory);
 
@@ -300,3 +300,63 @@ typedef union vec4
 } vec4 __attribute__((aligned((sizeof(union vec4)))));
 
 #define DEBUG_VEC4(v) do{debug_log("%-40s : (%f,%f,%f,%f)\n", #v, v.x, v.y, v.z, v.w); fflush(stdout);}while(0)
+
+static inline VkResult VkBeginCommandBuffer(VkCommandBuffer CommandBuffer, VkCommandBufferUsageFlags flags,
+      const VkCommandBufferInheritanceInfo *pInheritanceInfo)
+{
+   const VkCommandBufferBeginInfo info =
+   {
+      VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+      .flags = flags,
+      .pInheritanceInfo = pInheritanceInfo,
+   };
+   return vkBeginCommandBuffer(CommandBuffer, &info);
+}
+
+static inline VkResult VkCreateFence(VkDevice device, bool signaled, VkFence *dst)
+{
+   VkFenceCreateInfo info =
+   {
+      VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+      .flags = signaled ? VK_FENCE_CREATE_SIGNALED_BIT : 0,
+   };
+   return vkCreateFence(device, &info, NULL, dst);
+}
+static inline VkResult VkQueueSubmit(VkQueue queue, uint32_t commandBufferCount, const VkCommandBuffer *pCommandBuffers,
+                                     VkFence fence)
+{
+   const VkSubmitInfo info =
+   {
+      VK_STRUCTURE_TYPE_SUBMIT_INFO,
+      .commandBufferCount = commandBufferCount, pCommandBuffers
+   };
+   return vkQueueSubmit(queue, 1, &info, fence);
+}
+
+static inline VkResult VkQueuePresent(VkQueue queue, uint32_t swapchainCount, const VkSwapchainKHR *pSwapchains,
+                                      const uint32_t *pImageIndices)
+{
+   const VkPresentInfoKHR info =
+   {
+      VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+      .swapchainCount = swapchainCount,
+      .pSwapchains = pSwapchains,
+      .pImageIndices = pImageIndices
+   };
+   return vkQueuePresentKHR(queue, &info);
+}
+
+static inline void VkCmdBeginRenderPass(VkCommandBuffer commandBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer,
+                                 VkRect2D renderArea, const VkClearValue *pClearValue)
+{
+   const VkRenderPassBeginInfo info =
+   {
+      VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+      .renderPass = renderPass,
+      .framebuffer = framebuffer,
+      .renderArea = renderArea,
+      .clearValueCount = 1,
+      .pClearValues = pClearValue
+   };
+   vkCmdBeginRenderPass(commandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
+}

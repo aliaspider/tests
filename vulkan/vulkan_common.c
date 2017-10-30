@@ -290,8 +290,8 @@ static VkBool32 vulkan_debug_report_callback(VkDebugReportFlagsEXT flags,
    if (objectType == VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT && messageCode == 108)
       return VK_FALSE;
 
-   if ( false
-    || messageCode == 61
+   if (false
+      || messageCode == 61
 //   || messageCode == 68
 //      || messageCode == 38
 //      || messageCode == 438304791
@@ -605,14 +605,7 @@ void vk_context_init(vk_context_t *vk)
       vkCreateRenderPass(vk->device, &renderPassCreateInfo, NULL, &vk->renderpass);
    }
 
-   {
-      VkFenceCreateInfo info =
-      {
-         VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-         .flags = VK_FENCE_CREATE_SIGNALED_BIT
-      };
-      vkCreateFence(vk->device, &info, NULL, &vk->queue_fence);
-   }
+   VkCreateFence(vk->device, true, &vk->queue_fence);
 }
 
 void vk_context_destroy(vk_context_t *vk)
@@ -774,14 +767,7 @@ void vk_render_targets_init(vk_context_t *vk, int count, screen_t *screens, vk_r
          vkAllocateCommandBuffers(vk->device, &info, &render_targets[i].cmd);
       }
 
-      {
-         VkFenceCreateInfo info =
-         {
-            VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-            .flags = VK_FENCE_CREATE_SIGNALED_BIT
-         };
-         vkCreateFence(vk->device, &info, NULL, &render_targets[i].chain_fence);
-      }
+      VkCreateFence(vk->device, true, &render_targets[i].chain_fence);
 
 //   {
 //      VkDisplayEventInfoEXT displayEventInfo =
@@ -1484,19 +1470,23 @@ void vk_renderer_exec(VkCommandBuffer cmd, vk_renderer_t *renderer)
 //         uint32_t dynamic_offset = 0;
          uint32_t dynamic_offset = (i + 1) * VK_UBO_ALIGNMENT;
          VkDescriptorSet descs [] = {renderer->desc, renderer->textures[i]->desc};
-         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, countof(descs), descs, 1, &dynamic_offset);
+         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, countof(descs), descs, 1,
+            &dynamic_offset);
          renderer->textures[i] = NULL;
       }
       else
       {
          uint32_t dynamic_offset = 0;
-         if(renderer->default_texture.desc)
+
+         if (renderer->default_texture.desc)
          {
             VkDescriptorSet descs [] = {renderer->desc, renderer->default_texture.desc};
-            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, countof(descs), descs, 1, &dynamic_offset);
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, countof(descs), descs, 1,
+               &dynamic_offset);
          }
          else
-            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, 1, &renderer->desc, 1, &dynamic_offset);
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, 1, &renderer->desc, 1,
+               &dynamic_offset);
       }
 
 //         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, 1, &renderer->default_texture.desc,0, NULL);

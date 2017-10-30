@@ -17,7 +17,7 @@
 static vk_context_t vk;
 static vk_render_target_t render_targets[MAX_SCREENS];
 
-static vk_renderer_t* renderers[] =
+static vk_renderer_t *renderers[] =
 {
    &frame_renderer,
    &sprite_renderer,
@@ -27,8 +27,8 @@ static vk_renderer_t* renderers[] =
 };
 
 
-void console_draw(screen_t* screen);
-void fps_draw(screen_t* screen)
+void console_draw(screen_t *screen);
+void fps_draw(screen_t *screen)
 {
    font_render_options_t options =
    {
@@ -38,7 +38,7 @@ void fps_draw(screen_t* screen)
    vk_font_draw_text(video.fps, &options);
 }
 
-void screen_id_draw(screen_t* screen)
+void screen_id_draw(screen_t *screen)
 {
    char buffer[16];
    snprintf(buffer, sizeof(buffer), "SCREEN: \e[%im%i", RED, (int)(screen - video.screens));
@@ -53,7 +53,7 @@ void screen_id_draw(screen_t* screen)
    vk_font_draw_text(buffer, &options);
 }
 
-void frame_draw(screen_t* screen)
+void frame_draw(screen_t *screen)
 {
    static bool is_menu = false;
 
@@ -68,14 +68,14 @@ void frame_draw(screen_t* screen)
       vk_frame_add(0, 0, screen->width, screen->height);
 }
 
-void frame_draw_small(screen_t* screen)
+void frame_draw_small(screen_t *screen)
 {
    vk_frame_add(screen->width - 256 - 20, 22, 256, 224);
 }
 
 vk_texture_t test_image;
 
-void sprite_test(screen_t* screen)
+void sprite_test(screen_t *screen)
 {
    static int calls = 0;
    test_image.staging.mem.u8[calls++] = 0xFF;
@@ -125,16 +125,16 @@ void sprite_test(screen_t* screen)
 
 typedef struct
 {
-   char* msg;
+   char *msg;
    int frames;
    unsigned screen_mask;
    font_render_options_t options;
 } msg_buffer_t;
 msg_buffer_t msg_buffer[64];
 
-static void display_message_handler(screen_t* screen)
+static void display_message_handler(screen_t *screen)
 {
-   msg_buffer_t* ptr = msg_buffer;
+   msg_buffer_t *ptr = msg_buffer;
 
    while (ptr->msg && ptr - msg_buffer < countof(msg_buffer))
    {
@@ -161,9 +161,9 @@ static void display_message_handler(screen_t* screen)
    }
 }
 
-void display_message(int frames, int x, int y, unsigned screen_mask, const char* fmt, ...)
+void display_message(int frames, int x, int y, unsigned screen_mask, const char *fmt, ...)
 {
-   msg_buffer_t* ptr = msg_buffer;
+   msg_buffer_t *ptr = msg_buffer;
 
    while (ptr->msg && ptr - msg_buffer < countof(msg_buffer))
       ptr++;
@@ -195,7 +195,7 @@ void video_init()
 
    vk_render_targets_init(&vk, video.screen_count, video.screens, render_targets);
 
-   for (vk_renderer_t** renderer = renderers; *renderer; renderer++)
+   for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
       (*renderer)->init(&vk);
 
    vk_register_draw_command(&render_targets[0].draw_list, frame_draw);
@@ -235,9 +235,7 @@ void video_render()
    VK_CHECK(vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, 100000000));
    vkResetFences(vk.device, 1, &vk.queue_fence);
 
-   int i;
-
-   for (i = 0; i < video.screen_count; i++)
+   for (int i = 0; i < video.screen_count; i++)
    {
 
       vkWaitForFences(vk.device, 1, &render_targets[i].chain_fence, VK_TRUE, UINT64_MAX);
@@ -264,58 +262,29 @@ void video_render()
          vk_swapchain_init(&vk, &render_targets[i]);
       }
 
-      //   vkWaitForFences(vk.device, 1, &display_fence, VK_TRUE, UINT64_MAX);
-      //   vkResetFences(vk.device, 1, &display_fence);
+//      vkWaitForFences(vk.device, 1, &display_fence, VK_TRUE, UINT64_MAX);
+//      vkResetFences(vk.device, 1, &display_fence);
 
-      {
-         const VkCommandBufferBeginInfo info =
-         {
-            VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-            .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
-         };
-         vkBeginCommandBuffer(render_targets[i].cmd, &info);
-      }
+      VkBeginCommandBuffer(render_targets[i].cmd, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, NULL);
 
-      {
-         vk_draw_command_list_t* draw_command = render_targets[i].draw_list;
+      for (vk_drawcmd_list_t *draw_cmd = render_targets[i].draw_list; draw_cmd; draw_cmd = draw_cmd->next)
+         draw_cmd->draw(render_targets[i].screen);
 
-         while (draw_command)
-         {
-            draw_command->draw(render_targets[i].screen);
-            draw_command = draw_command->next;
-         }
-      }
-
-      for (vk_renderer_t** renderer = renderers; *renderer; renderer++)
+      for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
          (*renderer)->update(vk.device, render_targets[i].cmd, *renderer);
 
       /* renderpass */
       {
-         {
-//         const VkClearValue clearValue = {{{0.0f, 0.1f, 1.0f, 0.0f}}};
-            VkClearValue clearValue = {.color.float32 = {0.0f, 0.1f, 1.0f, 0.0f}};
+         const VkClearValue clearValue = {{{0.0f, 0.1f, 1.0f, 0.0f}}};
+         float pc[2] = {render_targets[i].viewport.width, render_targets[i].viewport.height};
+         VkCmdBeginRenderPass(render_targets[i].cmd, vk.renderpass, render_targets[i].framebuffers[image_indices[i]],
+                              render_targets[i].scissor, &clearValue);
+         vkCmdPushConstants(render_targets[i].cmd, vk.pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(pc), pc);
 
-            const VkRenderPassBeginInfo info =
-            {
-               VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-               .renderPass = vk.renderpass,
-               .framebuffer = render_targets[i].framebuffers[image_indices[i]],
-               .renderArea = render_targets[i].scissor,
-               .clearValueCount = 1,
-               .pClearValues = &clearValue
-            };
-            vkCmdBeginRenderPass(render_targets[i].cmd, &info, VK_SUBPASS_CONTENTS_INLINE);
-         }
-
-         {
-            float push_constants[2] = {render_targets[i].viewport.width, render_targets[i].viewport.height};
-            vkCmdPushConstants(render_targets[i].cmd, vk.pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(push_constants),
-                               push_constants);
-         }
          vkCmdSetViewport(render_targets[i].cmd, 0, 1, &render_targets[i].viewport);
          vkCmdSetScissor(render_targets[i].cmd, 0, 1, &render_targets[i].scissor);
 
-         for (vk_renderer_t** renderer = renderers; *renderer; renderer++)
+         for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
             (*renderer)->exec(render_targets[i].cmd, *renderer);
 
          vkCmdEndRenderPass(render_targets[i].cmd);
@@ -326,28 +295,12 @@ void video_render()
       swapchains[i] = render_targets[i].swapchain;
    }
 
-   for (vk_renderer_t** renderer = renderers; *renderer; renderer++)
+   for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
       (*renderer)->finish(vk.device, *renderer);
 
-   {
-      const VkSubmitInfo info =
-      {
-         VK_STRUCTURE_TYPE_SUBMIT_INFO,
-         .commandBufferCount = video.screen_count, cmds
-      };
-      vkQueueSubmit(vk.queue, 1, &info, vk.queue_fence);
-   }
+   VkQueueSubmit(vk.queue, video.screen_count, cmds, vk.queue_fence);
+   VkQueuePresent(vk.queue, video.screen_count, swapchains, image_indices);
 
-   {
-      const VkPresentInfoKHR info =
-      {
-         VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-         .swapchainCount = video.screen_count,
-         .pSwapchains = swapchains,
-         .pImageIndices = image_indices
-      };
-      vkQueuePresentKHR(vk.queue, &info);
-   }
 
 #if 0
    {
@@ -368,7 +321,7 @@ void video_destroy()
 
    vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, UINT64_MAX);
 
-   for (vk_renderer_t** renderer = renderers; *renderer; renderer++)
+   for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
       (*renderer)->destroy(vk.device, *renderer);
 
    vk_texture_free(vk.device, &test_image);
