@@ -76,46 +76,46 @@ static void vk_frame_init(vk_context_t* vk)
          .color_blend_attachement_state = &color_blend_attachement_state,
       };
 
-      frame_renderer.tex.width = module.output_width;
-      frame_renderer.tex.height = module.output_height;
-      frame_renderer.tex.format = format;
-      frame_renderer.tex.filter = video.filter ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
-      frame_renderer.vbo.info.range = sizeof(vertex_t) * 8;
-      frame_renderer.vertex_stride = sizeof(vertex_t);
-      frame_renderer.ubo.info.range = sizeof(uniform_t);
+      R_frame.tex.width = module.output_width;
+      R_frame.tex.height = module.output_height;
+      R_frame.tex.format = format;
+      R_frame.tex.filter = video.filter ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
+      R_frame.vbo.info.range = sizeof(vertex_t) * 8;
+      R_frame.vertex_stride = sizeof(vertex_t);
+      R_frame.ubo.info.range = sizeof(uniform_t);
 
-      vk_renderer_init(vk, &info, &frame_renderer);
+      vk_renderer_init(vk, &info, &R_frame);
    }
 
    {
-      device_memory_t* mem = &frame_renderer.tex.staging.mem;
+      device_memory_t* mem = &R_frame.tex.staging.mem;
       memset(mem->u8 + mem->layout.offset, 0xFF, mem->layout.size - mem->layout.offset);
    }
 
-   frame_renderer.tex.dirty = true;
-   frame_renderer.tex.ignore_alpha = true;
+   R_frame.tex.dirty = true;
+   R_frame.tex.ignore_alpha = true;
 
-   ((uniform_t*)frame_renderer.ubo.mem.ptr)->tex_size.width = frame_renderer.tex.width;
-   ((uniform_t*)frame_renderer.ubo.mem.ptr)->tex_size.height = frame_renderer.tex.height;
-   frame_renderer.ubo.dirty = true;
+   ((uniform_t*)R_frame.ubo.mem.ptr)->tex_size.width = R_frame.tex.width;
+   ((uniform_t*)R_frame.ubo.mem.ptr)->tex_size.height = R_frame.tex.height;
+   R_frame.ubo.dirty = true;
 
-   video.frame.width = frame_renderer.tex.width;
-   video.frame.height = frame_renderer.tex.height;
-   video.frame.pitch = frame_renderer.tex.staging.mem.layout.rowPitch / 4;
-   video.frame.data = frame_renderer.tex.staging.mem.u8 +
-                      frame_renderer.tex.staging.mem.layout.offset;
+   video.frame.width = R_frame.tex.width;
+   video.frame.height = R_frame.tex.height;
+   video.frame.pitch = R_frame.tex.staging.mem.layout.rowPitch / 4;
+   video.frame.data = R_frame.tex.staging.mem.u8 +
+                      R_frame.tex.staging.mem.layout.offset;
 }
 
 void vk_frame_add(int x, int y, int width, int height)
 {
-   vertex_t* v = vk_get_vbo_memory(&frame_renderer.vbo, sizeof(vertex_t));
+   vertex_t* v = vk_get_vbo_memory(&R_frame.vbo, sizeof(vertex_t));
    v->position.x = x;
    v->position.y = y;
    v->size.width = width;
    v->size.height = height;
 }
 
-vk_renderer_t frame_renderer =
+vk_renderer_t R_frame =
 {
    .init = vk_frame_init,
    .destroy = vk_renderer_destroy,

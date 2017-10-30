@@ -56,16 +56,16 @@ static void vk_slider_init(vk_context_t *vk)
       .color_blend_attachement_state = &color_blend_attachement_state,
    };
 
-   slider_renderer.vbo.info.range = 256 * sizeof(vertex_t);
-   slider_renderer.vertex_stride = sizeof(vertex_t);
+   R_slider.vbo.info.range = 256 * sizeof(vertex_t);
+   R_slider.vertex_stride = sizeof(vertex_t);
 
-   vk_renderer_init(vk, &info, &slider_renderer);
+   vk_renderer_init(vk, &info, &R_slider);
 }
 
 
 void vk_slider_add(int x, int y, int w, int h, float pos, float size)
 {
-   vertex_t *out = (vertex_t *)vk_get_vbo_memory(&slider_renderer.vbo, sizeof(vertex_t));
+   vertex_t *out = (vertex_t *)vk_get_vbo_memory(&R_slider.vbo, sizeof(vertex_t));
    out->x = x;
    out->y = y;
    out->w = w;
@@ -74,7 +74,7 @@ void vk_slider_add(int x, int y, int w, int h, float pos, float size)
    out->size = size;
 }
 
-vk_renderer_t slider_renderer =
+vk_renderer_t R_slider =
 {
    .init=vk_slider_init,
    .destroy=vk_renderer_destroy,

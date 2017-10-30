@@ -43,6 +43,6 @@ typedef enum
    CONSOLE_COLORS_MAX
 } console_colors_t;
 
-extern vk_renderer_t font_renderer;
+extern vk_renderer_t R_font;
 
 void vk_font_draw_text(const char *text, font_render_options_t *options);

@@ -19,10 +19,10 @@ static vk_render_target_t render_targets[MAX_SCREENS];
 
 static vk_renderer_t *renderers[] =
 {
-   &frame_renderer,
-   &sprite_renderer,
-   &font_renderer,
-   &slider_renderer,
+   &R_frame,
+   &R_sprite,
+   &R_font,
+   &R_slider,
    NULL
 };
 
@@ -110,16 +110,16 @@ void sprite_test(screen_t *screen)
          .coords.values = {20.0, 20.0, 132.0, 32.0},
          .color.values = {0.0, 1.0, 1.0, 0.50},
       };
-      vk_sprite_add(&sprite, &frame_renderer.tex);
+      vk_sprite_add(&sprite, &R_frame.tex);
    }
    {
       sprite_t sprite =
       {
-         .pos.values = {10.0, 190.0, font_renderer.tex.width, font_renderer.tex.height},
-         .coords.values = {0.0, 0.0, font_renderer.tex.width, font_renderer.tex.height},
+         .pos.values = {10.0, 190.0, R_font.tex.width, R_font.tex.height},
+         .coords.values = {0.0, 0.0, R_font.tex.width, R_font.tex.height},
          .color.values = {1.0, 1.0, 0.0, 1.0},
       };
-      vk_sprite_add(&sprite, &font_renderer.tex);
+      vk_sprite_add(&sprite, &R_font.tex);
    }
 }
 
@@ -229,7 +229,7 @@ void video_render()
    VkCommandBuffer cmds[MAX_SCREENS];
    VkSwapchainKHR swapchains[MAX_SCREENS];
 
-   frame_renderer.tex.dirty = true;
+   R_frame.tex.dirty = true;
 
 //   vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, UINT64_MAX);
    VK_CHECK(vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, 100000000));
@@ -241,11 +241,11 @@ void video_render()
       vkWaitForFences(vk.device, 1, &render_targets[i].chain_fence, VK_TRUE, UINT64_MAX);
       vkResetFences(vk.device, 1, &render_targets[i].chain_fence);
 
-      if (frame_renderer.tex.filter != video.filter)
+      if (R_frame.tex.filter != video.filter)
       {
-         frame_renderer.tex.filter = video.filter ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
-         frame_renderer.tex.info.sampler = video.filter ? vk.samplers.linear : vk.samplers.nearest;
-         vk_texture_update_descriptor_sets(&vk, &frame_renderer.tex);
+         R_frame.tex.filter = video.filter ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
+         R_frame.tex.info.sampler = video.filter ? vk.samplers.linear : vk.samplers.nearest;
+         vk_texture_update_descriptor_sets(&vk, &R_frame.tex);
       }
 
       if (video.vsync != render_targets[i].vsync)

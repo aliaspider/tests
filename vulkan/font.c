@@ -140,29 +140,29 @@ static void vk_font_init(vk_context_t* vk)
          .color_blend_attachement_state = &color_blend_attachement_state,
       };
 
-      font_renderer.tex.width = font.atlas.slot_width << 4;
-      font_renderer.tex.height = font.atlas.slot_height << 4;
-      font_renderer.tex.format = VK_FORMAT_R8_UNORM;
+      R_font.tex.width = font.atlas.slot_width << 4;
+      R_font.tex.height = font.atlas.slot_height << 4;
+      R_font.tex.format = VK_FORMAT_R8_UNORM;
 
-      font_renderer.ssbo.info.range = sizeof(font_shader_storage_t);
-      font_renderer.ubo.info.range = sizeof(font_uniforms_t);
-      font_renderer.vbo.info.range = 4096 * sizeof(font_vertex_t);
-      font_renderer.vertex_stride = sizeof(font_vertex_t);
+      R_font.ssbo.info.range = sizeof(font_shader_storage_t);
+      R_font.ubo.info.range = sizeof(font_uniforms_t);
+      R_font.vbo.info.range = 4096 * sizeof(font_vertex_t);
+      R_font.vertex_stride = sizeof(font_vertex_t);
 
-      vk_renderer_init(vk, &info, &font_renderer);
+      vk_renderer_init(vk, &info, &R_font);
    }
 
    {
-      device_memory_t* mem = &font_renderer.tex.staging.mem;
+      device_memory_t* mem = &R_font.tex.staging.mem;
       memset(mem->u8 + mem->layout.offset, 0x00, mem->layout.size - mem->layout.offset);
    }
 
-   font_renderer.tex.dirty = true;
+   R_font.tex.dirty = true;
 
-   font.atlas.data = (font_uniforms_t*)font_renderer.ubo.mem.ptr;
-   font.atlas.data->tex_size.width = font_renderer.tex.width;
-   font.atlas.data->tex_size.height = font_renderer.tex.height;
-   font_renderer.ubo.dirty = true;
+   font.atlas.data = (font_uniforms_t*)R_font.ubo.mem.ptr;
+   font.atlas.data->tex_size.width = R_font.tex.width;
+   font.atlas.data->tex_size.height = R_font.tex.height;
+   R_font.ubo.dirty = true;
 }
 
 void vk_font_destroy(VkDevice device, vk_renderer_t* this)
@@ -171,7 +171,7 @@ void vk_font_destroy(VkDevice device, vk_renderer_t* this)
    FT_Done_FreeType(font.ftlib);
    memset(&font, 0, sizeof(font));
 
-   vk_renderer_destroy(device, &font_renderer);
+   vk_renderer_destroy(device, &R_font);
 }
 
 
@@ -241,7 +241,7 @@ static void ft_font_render_glyph(unsigned charcode, int slot_id)
    CHECK_ERR(FT_Load_Char(font.ftface, charcode, FT_LOAD_RENDER | (font.monochrome ? FT_LOAD_MONOCHROME : 0)));
    FT_Bitmap* bitmap = &font.ftface->glyph->bitmap;
    u8* src = bitmap->buffer;
-   device_memory_t* mem = &font_renderer.tex.staging.mem;
+   device_memory_t* mem = &R_font.tex.staging.mem;
    u8* dst = mem->u8 + mem->layout.offset + (slot_id & 0xF) * font.atlas.slot_width +
                   (((slot_id >> 4) * font.atlas.slot_height)) * mem->layout.rowPitch;
    assert((dst - mem->u8 + mem->layout.rowPitch * (bitmap->rows + 1) < mem->layout.size));
@@ -265,14 +265,14 @@ static void ft_font_render_glyph(unsigned charcode, int slot_id)
       dst += mem->layout.rowPitch;
    }
 
-   font_renderer.tex.dirty = true;
+   R_font.tex.dirty = true;
 
    font.atlas.data->glyph_metrics[slot_id].x = font.ftface->glyph->metrics.horiBearingX >> 6;
    font.atlas.data->glyph_metrics[slot_id].y = -font.ftface->glyph->metrics.horiBearingY >> 6;
    font.atlas.data->glyph_metrics[slot_id].width = font.ftface->glyph->metrics.width >> 6;
    font.atlas.data->glyph_metrics[slot_id].height = font.ftface->glyph->metrics.height >> 6;
    font.atlas.data->advance[slot_id] = font.ftface->glyph->metrics.horiAdvance >> 6;
-   font_renderer.ubo.dirty = true;
+   R_font.ubo.dirty = true;
 }
 
 static int vulkan_font_get_slot_id(uint32_t charcode)
@@ -309,7 +309,7 @@ void vk_font_draw_text(const char* text, font_render_options_t* options)
 {
    if (options->cache && *options->cache)
    {
-      memcpy(vk_get_vbo_memory(&font_renderer.vbo, options->cache_size), *options->cache, options->cache_size);
+      memcpy(vk_get_vbo_memory(&R_font.vbo, options->cache_size), *options->cache, options->cache_size);
 //      fprintf(stdout, "cached draw\n"); fflush(stdout);
       return;
    }
@@ -326,14 +326,14 @@ void vk_font_draw_text(const char* text, font_render_options_t* options)
    font_vertex_t* out = NULL;
 
    if (!options->dry_run)
-      out = (font_vertex_t*)(font_renderer.vbo.mem.u8 + font_renderer.vbo.info.range);
+      out = (font_vertex_t*)(R_font.vbo.mem.u8 + R_font.vbo.info.range);
 
    font_vertex_t vertex;
    vertex.color = *(typeof(vertex.color)*)&options->color;
    vertex.position.x = options->x;
    vertex.position.y = options->y + font.ascender;
 
-   while (*in && (!out || ((u8*)out - font_renderer.vbo.mem.u8 < font_renderer.vbo.mem.size - sizeof(*out))))
+   while (*in && (!out || ((u8*)out - R_font.vbo.mem.u8 < R_font.vbo.mem.size - sizeof(*out))))
    {
       if (vertex.position.y > options->max_height)
          out = NULL;
@@ -451,15 +451,15 @@ void vk_font_draw_text(const char* text, font_render_options_t* options)
    {
       options->cache_size = pos * sizeof(font_vertex_t);
       *options->cache = malloc(options->cache_size);
-      memcpy(*options->cache, font_renderer.vbo.mem.u8 + font_renderer.vbo.info.range, options->cache_size);
+      memcpy(*options->cache, R_font.vbo.mem.u8 + R_font.vbo.info.range, options->cache_size);
    }
 
-   font_renderer.vbo.info.range += pos * sizeof(font_vertex_t);
-   font_renderer.vbo.dirty = true;
-   assert(font_renderer.vbo.info.range <= font_renderer.vbo.mem.size);
+   R_font.vbo.info.range += pos * sizeof(font_vertex_t);
+   R_font.vbo.dirty = true;
+   assert(R_font.vbo.info.range <= R_font.vbo.mem.size);
 }
 
-vk_renderer_t font_renderer =
+vk_renderer_t R_font =
 {
    .init = vk_font_init,
    .destroy = vk_font_destroy,

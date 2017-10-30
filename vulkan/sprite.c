@@ -63,29 +63,29 @@ static void vk_sprite_renderer_init(vk_context_t *vk)
       .color_blend_attachement_state = &color_blend_attachement_state,
    };
 
-   sprite_renderer.vbo.info.range = VK_RENDERER_MAX_TEXTURES * sizeof(sprite_t);
-   sprite_renderer.vertex_stride = sizeof(sprite_t);
-   sprite_renderer.ubo.info.range = (1 + VK_RENDERER_MAX_TEXTURES) * sizeof(uniform_t);
+   R_sprite.vbo.info.range = VK_RENDERER_MAX_TEXTURES * sizeof(sprite_t);
+   R_sprite.vertex_stride = sizeof(sprite_t);
+   R_sprite.ubo.info.range = (1 + VK_RENDERER_MAX_TEXTURES) * sizeof(uniform_t);
 
-   vk_renderer_init(vk, &info, &sprite_renderer);
+   vk_renderer_init(vk, &info, &R_sprite);
 }
 
 void vk_sprite_add(sprite_t *sprite, vk_texture_t *texture)
 {
-   int vertex_count = (sprite_renderer.vbo.info.range - sprite_renderer.vbo.info.offset) / sizeof(sprite_t);
+   int vertex_count = (R_sprite.vbo.info.range - R_sprite.vbo.info.offset) / sizeof(sprite_t);
 
    if(texture)
    {
-      sprite_renderer.textures[vertex_count] = texture;
-      ((uniform_t*)sprite_renderer.ubo.mem.ptr)[vertex_count + 1].format = texture->format;
-      ((uniform_t*)sprite_renderer.ubo.mem.ptr)[vertex_count + 1].ignore_alpha = texture->ignore_alpha;
-      sprite_renderer.ubo.dirty = true;
+      R_sprite.textures[vertex_count] = texture;
+      ((uniform_t*)R_sprite.ubo.mem.ptr)[vertex_count + 1].format = texture->format;
+      ((uniform_t*)R_sprite.ubo.mem.ptr)[vertex_count + 1].ignore_alpha = texture->ignore_alpha;
+      R_sprite.ubo.dirty = true;
    }
 
-   *(sprite_t *)vk_get_vbo_memory(&sprite_renderer.vbo, sizeof(sprite_t)) = *sprite;
+   *(sprite_t *)vk_get_vbo_memory(&R_sprite.vbo, sizeof(sprite_t)) = *sprite;
 }
 
-vk_renderer_t sprite_renderer =
+vk_renderer_t R_sprite =
 {
    .init = vk_sprite_renderer_init,
    .destroy = vk_renderer_destroy,
