@@ -54,45 +54,7 @@
 #define DEBUG_FTSHORT(x) do{debug_log("%-40s : %6hi  (%4hi)\n", #x, x >> 6, x); fflush(stdout);}while(0)
 
 #ifdef __WIN32__
-
-//char err_str[256];
-//FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, HRESULT_CODE(hr), 0, err_str, sizeof(err_str), NULL);
-//printf("%s\n", err_str);
-
-#define CHECK_WINERR(x) do{HRESULT hr = x; if(FAILED(hr)) {\
-   printf("error at %s:%i:%s: (%i, %i, %i) 0x%08X(%i)\n", \
-   __FILE__, __LINE__, __FUNCTION__, HRESULT_SEVERITY(hr), HRESULT_FACILITY(hr), HRESULT_CODE(hr), hr, hr);\
-   fflush(stdout);assert(0);}}while(0)
-
-#define DEBUG_WINERR(x) do{printf("(0x%X, 0x%X, 0x%X) 0x%08X\n", HRESULT_SEVERITY(hr), HRESULT_FACILITY(hr), HRESULT_CODE(hr), hr);fflush(stdout);}while(0)
-
-//#define WRAP(type,fn,...) static inline type CONCAT(PREFIX__,fn) (MERGE_TYPE(__VA_ARGS__)) {return DROP_TYPE(THIS_)->lpVtbl->fn(DROP_TYPE(__VA_ARGS__));}
-#define WRAP_(type,fn,...) static inline type CONCAT(PREFIX__,fn) (TYPE__ THIS__ MERGE_TYPE(__VA_ARGS__)) {return THIS__->lpVtbl->fn(THIS__ DROP_TYPE( __VA_ARGS__));}
-#define WRAP(...) WRAP_(HRESULT, __VA_ARGS__)
-#define IUNKNOWN__ \
-   WRAP_(HRESULT, QueryInterface,  REFIID, riid, void**, Object) \
-   WRAP_(ULONG, AddRef) \
-   WRAP_(ULONG, Release) \
-
-
-#endif
-
-const char* console_get(void);
-int console_get_len(void);
-extern int console_update_counter;
-
-void display_message(int frames, int x, int y, unsigned screen_mask, const char* fmt, ...);
-
-
-#ifdef __WIN32__
-typedef int8_t s8;
-typedef uint8_t u8;
-typedef int16_t s16;
-typedef uint16_t u16;
-typedef __LONG32 s32;
-typedef unsigned __LONG32 u32;
-typedef int64_t s64;
-typedef uint64_t u64;
+#include "win/wincommon.h"
 #else
 typedef int8_t s8;
 typedef uint8_t u8;
@@ -103,3 +65,10 @@ typedef uint32_t u32;
 typedef int64_t s64;
 typedef uint64_t u64;
 #endif
+
+const char* console_get(void);
+int console_get_len(void);
+extern int console_update_counter;
+
+void display_message(int frames, int x, int y, unsigned screen_mask, const char* fmt, ...);
+
