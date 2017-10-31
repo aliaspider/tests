@@ -860,13 +860,12 @@ void vk_texture_init(vk_context_t *vk, vk_texture_t *out)
    }
 
    {
-      VkImageSubresource imageSubresource =
+      static const VkImageSubresource imageSubresource =
       {
          .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
          .mipLevel = 0,
          .arrayLayer = 0
       };
-//      vkGetImageSubresourceLayout(device, dst->image, &imageSubresource, &dst->mem.layout);
       vkGetImageSubresourceLayout(vk->device, out->staging.image, &imageSubresource, &out->staging.mem.layout);
    }
 
