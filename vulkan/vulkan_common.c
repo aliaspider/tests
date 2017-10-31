@@ -980,8 +980,6 @@ void vk_texture_free(VkDevice device, vk_texture_t *texture)
 
 void vk_texture_upload(VkDevice device, VkCommandBuffer cmd, vk_texture_t *texture)
 {
-   vk_device_memory_flush(device, &texture->staging.mem);
-
    VkImageMemoryBarrier barrier =
    {
       VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -1051,8 +1049,6 @@ void vk_texture_upload(VkDevice device, VkCommandBuffer cmd, vk_texture_t *textu
    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
                         0, 0, NULL, 0, NULL, 1, &barrier);
-
-   texture->dirty = false;
 }
 
 
@@ -1188,12 +1184,6 @@ void vk_buffer_free(VkDevice device, vk_buffer_t *buffer)
    buffer->info.buffer = VK_NULL_HANDLE;
 }
 
-void vk_buffer_flush(VkDevice device, vk_buffer_t *buffer)
-{
-   vk_device_memory_flush(device, &buffer->mem);
-   buffer->dirty = false;
-}
-
 void vk_buffer_invalidate(VkDevice device, vk_buffer_t *buffer)
 {
    device_memory_invalidate(device, &buffer->mem);
@@ -1320,9 +1310,6 @@ void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info
 
    vk_update_descriptor_sets(vk, out);
 
-
-   out->layout = vk->pipeline_layout;
-
    {
       const VkPipelineShaderStageCreateInfo shaders_info[] =
       {
@@ -1410,7 +1397,7 @@ void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info
             .pMultisampleState = &multisample_state,
             .pColorBlendState = &colorblend_state,
             .pDynamicState = &dynamic_state_info,
-            .layout = out->layout,
+            .layout = vk->pipeline_layout,
             .renderPass = vk->renderpass,
             .subpass = 0
          }
@@ -1437,7 +1424,7 @@ void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer)
    memset(&renderer->vk_renderer_data_start, 0, sizeof(*renderer) - offsetof(vk_renderer_t, vk_renderer_data_start));
 }
 
-void vk_renderer_exec_simple(VkCommandBuffer cmd, vk_renderer_t *renderer)
+void vk_renderer_exec_simple(VkCommandBuffer cmd, VkPipelineLayout layout, vk_renderer_t *renderer)
 {
    if (renderer->vbo.info.range - renderer->vbo.info.offset == 0)
       return;
@@ -1449,7 +1436,7 @@ void vk_renderer_exec_simple(VkCommandBuffer cmd, vk_renderer_t *renderer)
 //      vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, countof(desc), desc, 1,
 //                              &dynamic_offset);
 //   }
-   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 1, countof(desc), desc, 0, NULL);
+   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1, countof(desc), desc, 0, NULL);
    vkCmdBindVertexBuffers(cmd, 0, 1, &renderer->vbo.info.buffer, &renderer->vbo.info.offset);
 
    int count = (renderer->vbo.info.range - renderer->vbo.info.offset) / renderer->vertex_stride;
@@ -1459,7 +1446,7 @@ void vk_renderer_exec_simple(VkCommandBuffer cmd, vk_renderer_t *renderer)
    renderer->vbo.info.offset = renderer->vbo.info.range;
 }
 
-void vk_renderer_exec(VkCommandBuffer cmd, vk_renderer_t *renderer)
+void vk_renderer_exec(VkCommandBuffer cmd, VkPipelineLayout layout, vk_renderer_t *renderer)
 {
    if (renderer->vbo.info.range - renderer->vbo.info.offset == 0)
       return;
@@ -1468,7 +1455,7 @@ void vk_renderer_exec(VkCommandBuffer cmd, vk_renderer_t *renderer)
 //   uint32_t dynamic_offset = 0;
 //   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, 1, &renderer->desc, 1,
 //                           &dynamic_offset);
-   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 1, 1, &renderer->desc, 0, NULL);
+   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1, 1, &renderer->desc, 0, NULL);
    vkCmdBindVertexBuffers(cmd, 0, 1, &renderer->vbo.info.buffer, &renderer->vbo.info.offset);
 
    int count = (renderer->vbo.info.range - renderer->vbo.info.offset) / renderer->vertex_stride;
@@ -1493,12 +1480,11 @@ void vk_renderer_exec(VkCommandBuffer cmd, vk_renderer_t *renderer)
 
       if (renderer->textures[i])
       {
-         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 2, 1, &renderer->textures[i]->desc, 0,
-                                 NULL);
+         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 2, 1, &renderer->textures[i]->desc, 0, NULL);
          renderer->textures[i] = NULL;
       }
       else if (renderer->tex.desc)
-         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 2, 1, &renderer->tex.desc, 0, NULL);
+         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 2, 1, &renderer->tex.desc, 0, NULL);
 
       vkCmdDraw(cmd, i + 1 - first_vertex, 1, first_vertex, 0);
       first_vertex = i + 1;
@@ -1509,11 +1495,8 @@ void vk_renderer_exec(VkCommandBuffer cmd, vk_renderer_t *renderer)
 
 void vk_renderer_flush(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *renderer)
 {
-   if (renderer->tex.dirty)
-      vk_texture_upload(device, cmd, &renderer->tex);
-
-   if (renderer->tex.ubo.dirty)
-      vk_buffer_flush(device, &renderer->tex.ubo);
+   vk_texture_flush(device, cmd, &renderer->tex);
+   vk_buffer_flush(device, &renderer->tex.ubo);
 
    int vertex_count = (renderer->vbo.info.range - renderer->vbo.info.offset) / renderer->vertex_stride;
 
@@ -1524,22 +1507,14 @@ void vk_renderer_flush(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *rend
          if (!renderer->textures[i])
             continue;
 
-         if (renderer->textures[i]->ubo.dirty)
-            vk_buffer_flush(device, &renderer->textures[i]->ubo);
-
-         if (renderer->textures[i]->dirty)
-            vk_texture_upload(device, cmd, renderer->textures[i]);
+         vk_buffer_flush(device, &renderer->textures[i]->ubo);
+         vk_texture_upload(device, cmd, renderer->textures[i]);
       }
    }
 
-   if (renderer->vbo.dirty)
-      vk_buffer_flush(device, &renderer->vbo);
-
-   if (renderer->ubo.dirty)
-      vk_buffer_flush(device, &renderer->ubo);
-
-   if (renderer->ssbo.dirty)
-      vk_buffer_flush(device, &renderer->ssbo);
+   vk_buffer_flush(device, &renderer->vbo);
+   vk_buffer_flush(device, &renderer->ubo);
+   vk_buffer_flush(device, &renderer->ssbo);
 
    renderer->vbo.info.offset = 0;
    renderer->vbo.info.range = 0;

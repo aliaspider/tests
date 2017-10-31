@@ -12,7 +12,7 @@
 #define MAX_SWAPCHAIN_IMAGES 8
 #define countof(a) (sizeof(a)/ sizeof(*a))
 
-#define VK_CHECK(vk_call) do{VkResult res = vk_call; if (res != VK_SUCCESS) {debug_log("%s:%i:%s:%s --> %s(%i)\n", __FILE__, __LINE__, __FUNCTION__, #vk_call, vk_result_to_str(res), res);fflush(stdout);exit(1);}}while(0)
+#define VK_CHECK(vk_call) do {VkResult res = vk_call; if (res != VK_SUCCESS) {debug_log("%s:%i:%s:%s --> %s(%i)\n", __FILE__, __LINE__, __FUNCTION__, #vk_call, vk_result_to_str(res), res); fflush(stdout); exit(1); }} while(0)
 const char *vk_result_to_str(VkResult res);
 
 typedef union
@@ -65,7 +65,7 @@ typedef union vec4
    float values[4];
 } vec4 __attribute__((aligned((sizeof(union vec4)))));
 
-#define DEBUG_VEC4(v) do{debug_log("%-40s : (%f,%f,%f,%f)\n", #v, v.x, v.y, v.z, v.w); fflush(stdout);}while(0)
+#define DEBUG_VEC4(v) do {debug_log("%-40s : (%f,%f,%f,%f)\n", #v, v.x, v.y, v.z, v.w); fflush(stdout); } while(0)
 
 typedef struct vk_context_t
 {
@@ -205,16 +205,24 @@ typedef struct
 } vk_buffer_t;
 
 void vk_buffer_init(VkDevice device, const VkMemoryType *memory_types, const void *data, vk_buffer_t *out);
-void vk_buffer_flush(VkDevice device, vk_buffer_t *buffer);
 void vk_buffer_invalidate(VkDevice device, vk_buffer_t *buffer);
 void vk_buffer_free(VkDevice device, vk_buffer_t *buffer);
+
+static inline void vk_buffer_flush(VkDevice device, vk_buffer_t *buffer)
+{
+   if (!buffer->dirty)
+      return;
+
+   vk_device_memory_flush(device, &buffer->mem);
+   buffer->dirty = false;
+}
 
 typedef struct
 {
    vec2 size;
    int format;
    int ignore_alpha;
-}texture_uniform_t;
+} texture_uniform_t;
 
 typedef struct
 {
@@ -231,7 +239,7 @@ typedef struct
    VkFilter filter;
    VkDescriptorImageInfo info;
    vk_buffer_t ubo;
-   texture_uniform_t* uniforms;
+   texture_uniform_t *uniforms;
    VkDescriptorSet desc;
    int width;
    int height;
@@ -244,6 +252,17 @@ void vk_texture_init(vk_context_t *vk, vk_texture_t *out);
 void vk_texture_free(VkDevice device, vk_texture_t *texture);
 void vk_texture_update_descriptor_sets(vk_context_t *vk, vk_texture_t *out);
 void vk_texture_upload(VkDevice device, VkCommandBuffer cmd, vk_texture_t *texture);
+
+static inline void vk_texture_flush(VkDevice device, VkCommandBuffer cmd, vk_texture_t *texture)
+{
+   if (!texture->dirty)
+      return;
+
+   vk_device_memory_flush(device, &texture->staging.mem);
+   vk_texture_upload(device, cmd, texture);
+
+   texture->dirty = false;
+}
 
 typedef struct
 {
@@ -273,7 +292,7 @@ struct vk_renderer_t
 {
    void (*const init)(vk_context_t *vk);
    void (*const destroy)(VkDevice device, vk_renderer_t *renderer);
-   void (*const exec)(VkCommandBuffer cmd, vk_renderer_t *renderer);
+   void (*const exec)(VkCommandBuffer cmd, VkPipelineLayout layout, vk_renderer_t *renderer);
    void (*const flush)(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *renderer);
    vk_texture_t tex;
    vk_buffer_t vbo;
@@ -281,7 +300,6 @@ struct vk_renderer_t
    vk_buffer_t ssbo;
    VkDescriptorSet desc;
    VkPipeline pipe;
-   VkPipelineLayout layout;
    uint32_t vertex_stride;
    vk_texture_t *textures[VK_RENDERER_MAX_TEXTURES + 1];
 };
@@ -291,8 +309,8 @@ struct vk_renderer_t
 void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info, vk_renderer_t *out);
 void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer);
 void vk_renderer_flush(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *renderer);
-void vk_renderer_exec(VkCommandBuffer cmd, vk_renderer_t *renderer);
-void vk_renderer_exec_simple(VkCommandBuffer cmd, vk_renderer_t *renderer);
+void vk_renderer_exec(VkCommandBuffer cmd, VkPipelineLayout layout, vk_renderer_t *renderer);
+void vk_renderer_exec_simple(VkCommandBuffer cmd, VkPipelineLayout layout, vk_renderer_t *renderer);
 
 #define VK_UBO_ALIGNMENT 0x100
 
@@ -305,7 +323,7 @@ static inline void *vk_get_vbo_memory(vk_buffer_t *vbo, VkDeviceSize size)
    return ptr;
 }
 
-static inline VkResult VkAllocateCommandBuffer(VkDevice device, VkCommandPool commandPool, VkCommandBuffer* out)
+static inline VkResult VkAllocateCommandBuffer(VkDevice device, VkCommandPool commandPool, VkCommandBuffer *out)
 {
    const VkCommandBufferAllocateInfo info =
    {
@@ -363,8 +381,9 @@ static inline VkResult VkQueuePresent(VkQueue queue, uint32_t swapchainCount, co
    return vkQueuePresentKHR(queue, &info);
 }
 
-static inline void VkCmdBeginRenderPass(VkCommandBuffer commandBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer,
-                                 VkRect2D renderArea, const VkClearValue *pClearValue)
+static inline void VkCmdBeginRenderPass(VkCommandBuffer commandBuffer, VkRenderPass renderPass,
+                                        VkFramebuffer framebuffer,
+                                        VkRect2D renderArea, const VkClearValue *pClearValue)
 {
    const VkRenderPassBeginInfo info =
    {

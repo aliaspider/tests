@@ -283,7 +283,7 @@ void video_render()
          vkCmdSetScissor(cmd[1], 0, 1, &RTarget[i].scissor);
 
          for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
-            (*renderer)->exec(cmd[1], *renderer);
+            (*renderer)->exec(cmd[1], vk.pipeline_layout, *renderer);
 
          vkCmdEndRenderPass(cmd[1]);
       }
