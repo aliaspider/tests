@@ -209,7 +209,7 @@ static void ft_monofont_render_glyph(unsigned charcode, int slot_id)
    int x = (slot_id & 0xF) * font.glyph_width + (font.ftface->glyph->metrics.horiBearingX >> 6);
    int y = (slot_id >> 4) * font.glyph_height + font.ascender - (font.ftface->glyph->metrics.horiBearingY >> 6);
    u8 *dst = mem->u8 + mem->layout.offset + x + y * mem->layout.rowPitch;
-   assert((dst - mem->u8 + mem->layout.rowPitch * (bitmap->rows + 1) < mem->layout.size));
+   assert((dst - mem->u8 + mem->layout.rowPitch * bitmap->rows  < mem->layout.size));
 
    for (int row = 0; row < bitmap->rows; row++)
    {
