@@ -111,7 +111,7 @@ static void vk_monofont_init(vk_context_t *vk)
       R_monofont.tex.format = VK_FORMAT_R8_UNORM;
 
       R_monofont.ubo.info.range = sizeof(uniforms_t);
-      R_monofont.vbo.info.range = 4096 * sizeof(vertex_t);
+      R_monofont.vbo.info.range = video.screen_count * 200 * 100 * sizeof(vertex_t);
       R_monofont.vertex_stride = sizeof(vertex_t);
 
       vk_renderer_init(vk, &info, &R_monofont);
@@ -120,6 +120,11 @@ static void vk_monofont_init(vk_context_t *vk)
    {
       device_memory_t *mem = &R_monofont.tex.staging.mem;
       memset(mem->u8 + mem->layout.offset, 0x10, mem->layout.size - mem->layout.offset);
+   }
+   {
+      device_memory_t *mem = &R_monofont.vbo.mem;
+      memset(mem->u8 + mem->layout.offset, 0x0, mem->layout.size - mem->layout.offset);
+      R_monofont.vbo.dirty = true;
    }
 
 //   R_monofont.tex.dirty = true;
@@ -263,19 +268,53 @@ static int vulkan_monofont_get_slot_id(uint32_t charcode)
    return slot_id;
 }
 
-void vk_monofont_draw_text(const char *text, int x, int y, uint32_t color, screen_t* screen)
+static struct
 {
+   int width;
+   int height;
+   int rows;
+   int cols;
+   int count;
+   int offset;
+   int range;
+   vertex_t *vbo;
+} screen_data[MAX_SCREENS];
 
+static inline void update_screen_data(int id)
+{
+   if (video.screens[id].width == screen_data[id].width && video.screens[id].height == screen_data[id].height)
+      return;
+
+   vertex_t *vbo = (vertex_t *)R_monofont.vbo.mem.ptr;
+
+   for (int i = 0; i < video.screen_count; i++)
+   {
+      if(i >= id)
+      {
+         screen_data[i].width = video.screens[i].width;
+         screen_data[i].height = video.screens[i].height;
+         screen_data[i].cols = video.screens[i].width / font.glyph_width;
+         screen_data[i].rows = video.screens[i].height / font.glyph_height;
+         screen_data[i].count = screen_data[i].rows * screen_data[i].cols;
+         screen_data[i].vbo = vbo;
+         screen_data[i].offset = (uint8_t *)vbo - R_monofont.vbo.mem.u8;
+         memset(screen_data[i].vbo, 0x00, screen_data[i].count * sizeof(vertex_t));
+      }
+      vbo += screen_data[i].count;
+      screen_data[i].range = (uint8_t *)vbo - R_monofont.vbo.mem.u8;
+   }
+}
+void vk_monofont_draw_text(const char *text, int x, int y, uint32_t color, screen_t *screen)
+{
+   int screen_id = screen - video.screens;
    const unsigned char *in = (const unsigned char *)text;
-   int screenwidth = 40;
 
-   vertex_t *out = (vertex_t *)(R_monofont.vbo.mem.u8 + R_monofont.vbo.info.range);
-   vertex_t vertex;
-   vertex.color = *(typeof(vertex.color) *)&color;
-//   vertex.position.x = options->x;
-//   vertex.position.y = options->y + font.ascender;
+   update_screen_data(screen_id);
+   vertex_t *out = screen_data[screen_id].vbo;
+   out += x + y * screen_data[screen_id].cols;
+   uint32_t current_color = color;
 
-   while (*in && (!out || ((u8 *)out - R_monofont.vbo.mem.u8 < R_monofont.vbo.mem.size - sizeof(*out))))
+   while (*in && ((u8 *)out - R_monofont.vbo.mem.u8 + sizeof(*out) < R_monofont.vbo.mem.size))
    {
       uint32_t charcode = *(in++);
 
@@ -287,9 +326,9 @@ void vk_monofont_draw_text(const char *text, int x, int y, uint32_t color, scree
             color_code = color_code * 10 + *(in++) - '0';
 
          if (color_code == CONSOLE_COLOR_RESET)
-            vertex.color = color;
+            current_color = color;
          else if (color_code < CONSOLE_COLORS_MAX)
-            vertex.color = console_colors[color_code];
+            current_color = console_colors[color_code];
 
          in++;
          continue;
@@ -297,7 +336,7 @@ void vk_monofont_draw_text(const char *text, int x, int y, uint32_t color, scree
 
       if (charcode == '\n')
       {
-         out += (out - (vertex_t*)(R_monofont.vbo.mem.u8 + R_monofont.vbo.info.range)) % screenwidth;
+         out += screen_data[screen_id].cols - ((out - screen_data[screen_id].vbo) % screen_data[screen_id].cols);
          continue;
       }
 
@@ -306,6 +345,13 @@ void vk_monofont_draw_text(const char *text, int x, int y, uint32_t color, scree
          out += 4;
          continue;
       }
+
+//      if (charcode == ' ')
+//      {
+//         out->slot_id = vulkan_monofont_get_slot_id(0);
+//         out ++;
+//         continue;
+//      }
 
       if ((charcode & 0xC0) == 0xC0)
       {
@@ -323,12 +369,13 @@ void vk_monofont_draw_text(const char *text, int x, int y, uint32_t color, scree
 
       int slot_id = vulkan_monofont_get_slot_id(charcode);
 
-      *out = vertex;
-      (out++)->slot_id = slot_id;
+      out->slot_id = slot_id;
+      out->color = current_color;
+      out++;
    }
 
-
-   R_monofont.vbo.info.range = (uint8_t*)out - R_monofont.vbo.mem.u8;
+   R_monofont.vbo.info.offset = screen_data[screen_id].offset;
+   R_monofont.vbo.info.range = screen_data[screen_id].range;
    R_monofont.vbo.dirty = true;
    assert(R_monofont.vbo.info.range <= R_monofont.vbo.mem.size);
 }

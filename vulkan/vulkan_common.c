@@ -1428,7 +1428,7 @@ void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer)
 
 void vk_renderer_exec_simple(VkCommandBuffer cmd, VkPipelineLayout layout, vk_renderer_t *renderer)
 {
-   if (renderer->vbo.info.range - renderer->vbo.info.offset == 0)
+   if (renderer->vbo.info.range == renderer->vbo.info.offset)
       return;
 
    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipe);
@@ -1450,7 +1450,7 @@ void vk_renderer_exec_simple(VkCommandBuffer cmd, VkPipelineLayout layout, vk_re
 
 void vk_renderer_exec(VkCommandBuffer cmd, VkPipelineLayout layout, vk_renderer_t *renderer)
 {
-   if (renderer->vbo.info.range - renderer->vbo.info.offset == 0)
+   if (renderer->vbo.info.range <= renderer->vbo.info.offset)
       return;
 
    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipe);

@@ -41,7 +41,9 @@ void main()
 
    gl_Position.zw = vec2(0.0f, 1.0f);
    vColor = color[0];
-   vec2 pos = vec2(float(gl_PrimitiveIDIn) * glyph_size.x , 0.0) - (0.5 * pc.vp_size);
+   vec2 pos = - (0.5 * pc.vp_size);
+   pos.x += glyph_size.x * mod(float(gl_PrimitiveIDIn), floor(pc.vp_size.x / glyph_size.x));
+   pos.y += glyph_size.y * floor(float(gl_PrimitiveIDIn)/ floor(pc.vp_size.x / glyph_size.x));
    vec2 coords = vec2(float(col), float(row)) * tex_size / 16.0;
 #if 1
    gl_Position.xy = (pos + vec2(glyph_size.x, 0.0)) * 2.0 / pc.vp_size;

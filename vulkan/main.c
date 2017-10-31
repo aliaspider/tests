@@ -125,16 +125,16 @@ void sprite_test(screen_t *screen)
 
 void monofont_test(screen_t *screen)
 {
-   {
-      sprite_t sprite =
-      {
-         .pos.values = {10.0, (screen->height - R_monofont.tex.height) / 2, R_monofont.tex.width, R_monofont.tex.height},
-         .coords.values = {0.0, 0.0, R_monofont.tex.width, R_monofont.tex.height},
-         .color.values = {1.0, 1.0, 0.0, 1.0},
-      };
-      vk_sprite_add(&sprite, &R_monofont.tex);
-   }
-   vk_monofont_draw_text("testing monofont", 4, 10, 0xFFFFFFFF, screen);
+//   {
+//      sprite_t sprite =
+//      {
+//         .pos.values = {10.0, (screen->height - R_monofont.tex.height) / 2, R_monofont.tex.width, R_monofont.tex.height},
+//         .coords.values = {0.0, 0.0, R_monofont.tex.width, R_monofont.tex.height},
+//         .color.values = {1.0, 1.0, 0.0, 1.0},
+//      };
+//      vk_sprite_add(&sprite, &R_monofont.tex);
+//   }
+   vk_monofont_draw_text(console_get(), 0, 3, 0xFFFFFFFF, screen);
 }
 
 typedef struct
