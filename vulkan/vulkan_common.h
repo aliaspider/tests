@@ -238,15 +238,12 @@ typedef struct
    bool ignore_alpha;
    bool dirty;
    bool is_reference;
-   bool flushed;
-   bool uploaded;
 } vk_texture_t;
 
 void vk_texture_init(vk_context_t *vk, vk_texture_t *out);
 void vk_texture_free(VkDevice device, vk_texture_t *texture);
 void vk_texture_update_descriptor_sets(vk_context_t *vk, vk_texture_t *out);
 void vk_texture_upload(VkDevice device, VkCommandBuffer cmd, vk_texture_t *texture);
-void vk_texture_flush(VkDevice device, vk_texture_t *texture);
 
 typedef struct
 {

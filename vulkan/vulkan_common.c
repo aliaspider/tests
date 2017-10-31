@@ -977,17 +977,11 @@ void vk_texture_free(VkDevice device, vk_texture_t *texture)
    texture->image = VK_NULL_HANDLE;
 }
 
-void vk_texture_flush(VkDevice device, vk_texture_t *texture)
-{
-   vk_device_memory_flush(device, &texture->staging.mem);
-   texture->flushed = true;
-
-   if (texture->flushed && texture->uploaded)
-      texture->dirty = false;
-}
 
 void vk_texture_upload(VkDevice device, VkCommandBuffer cmd, vk_texture_t *texture)
 {
+   vk_device_memory_flush(device, &texture->staging.mem);
+
    VkImageMemoryBarrier barrier =
    {
       VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -1058,10 +1052,7 @@ void vk_texture_upload(VkDevice device, VkCommandBuffer cmd, vk_texture_t *textu
    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
                         0, 0, NULL, 0, NULL, 1, &barrier);
 
-   texture->uploaded = true;
-
-   if (texture->flushed && texture->uploaded)
-      texture->dirty = false;
+   texture->dirty = false;
 }
 
 
@@ -1449,7 +1440,7 @@ void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer)
 
 void vk_renderer_update(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *renderer)
 {
-   if (renderer->tex.dirty && !renderer->tex.uploaded)
+   if (renderer->tex.dirty)
       vk_texture_upload(device, cmd, &renderer->tex);
 
    int vertex_count = (renderer->vbo.info.range - renderer->vbo.info.offset) / renderer->vertex_stride;
@@ -1464,10 +1455,7 @@ void vk_renderer_update(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *ren
          if (renderer->textures[i]->ubo.dirty)
             vk_buffer_flush(device, &renderer->textures[i]->ubo);
 
-         if (renderer->textures[i]->dirty && !renderer->textures[i]->flushed)
-            vk_texture_flush(device, renderer->textures[i]);
-
-         if (renderer->textures[i]->dirty && !renderer->textures[i]->uploaded)
+         if (renderer->textures[i]->dirty)
             vk_texture_upload(device, cmd, renderer->textures[i]);
       }
    }
@@ -1547,9 +1535,6 @@ void vk_renderer_exec(VkCommandBuffer cmd, vk_renderer_t *renderer)
 
 void vk_renderer_finish(VkDevice device, vk_renderer_t *renderer)
 {
-   if (renderer->tex.dirty && !renderer->tex.flushed)
-      vk_texture_flush(device, &renderer->tex);
-
    if (renderer->vbo.dirty)
       vk_buffer_flush(device, &renderer->vbo);
 
@@ -1561,8 +1546,6 @@ void vk_renderer_finish(VkDevice device, vk_renderer_t *renderer)
 
    renderer->vbo.info.offset = 0;
    renderer->vbo.info.range = 0;
-   renderer->tex.flushed = false;
-   renderer->tex.uploaded = false;
 }
 
 const char *vk_result_to_str(VkResult res)

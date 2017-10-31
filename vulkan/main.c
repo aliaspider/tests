@@ -84,8 +84,6 @@ void sprite_test(screen_t *screen)
    if (calls > test_image.staging.mem.size / 2)
       calls = 0;
 
-   test_image.flushed = false;
-   test_image.uploaded = false;
    test_image.dirty = true;
    {
       sprite_t sprite =
