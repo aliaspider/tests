@@ -275,21 +275,21 @@ static int vulkan_monofont_get_slot_id(uint32_t charcode)
    return slot_id;
 }
 
-static inline void update_screen_data(int id)
+static inline void update_screen_data(screen_t* screen)
 {
-   if (video.screens[id].width == screen_data[id].width && video.screens[id].height == screen_data[id].height)
+   if (screen->width == screen_data[screen->id].width && screen->height == screen_data[screen->id].height)
       return;
 
    vertex_t *vbo = (vertex_t *)R_monofont.vbo.mem.ptr;
 
    for (int i = 0; i < video.screen_count; i++)
    {
-      if (i >= id)
+      if (i >= screen->id)
       {
-         screen_data[i].width = video.screens[i].width;
-         screen_data[i].height = video.screens[i].height;
-         screen_data[i].cols = video.screens[i].width / font.glyph_width;
-         screen_data[i].rows = video.screens[i].height / font.glyph_height;
+         screen_data[i].width = screen->width;
+         screen_data[i].height = screen->height;
+         screen_data[i].cols = screen->width / font.glyph_width;
+         screen_data[i].rows = screen->height / font.glyph_height;
          screen_data[i].count = screen_data[i].rows * screen_data[i].cols;
          screen_data[i].vbo = vbo;
          screen_data[i].offset = (uint8_t *)vbo - R_monofont.vbo.mem.u8;
@@ -304,19 +304,18 @@ static inline void update_screen_data(int id)
 }
 void vk_monofont_draw_text(const char *text, int x, int y, uint32_t color, screen_t *screen)
 {
-   int screen_id = screen - video.screens;
    const unsigned char *in = (const unsigned char *)text;
 
-   update_screen_data(screen_id);
-   R_monofont.vbo.info.offset = screen_data[screen_id].offset;
-   R_monofont.vbo.info.range = screen_data[screen_id].range;
+   update_screen_data(screen);
+   R_monofont.vbo.info.offset = screen_data[screen->id].offset;
+   R_monofont.vbo.info.range = screen_data[screen->id].range;
    assert(R_monofont.vbo.info.range <= R_monofont.vbo.mem.size);
 
-   vertex_t *out = screen_data[screen_id].vbo;
-   out += x + y * screen_data[screen_id].cols;
+   vertex_t *out = screen_data[screen->id].vbo;
+   out += x + y * screen_data[screen->id].cols;
    uint32_t current_color = color;
 
-   while (*in && out - screen_data[screen_id].vbo < screen_data[screen_id].count)
+   while (*in && out - screen_data[screen->id].vbo < screen_data[screen->id].count)
    {
       uint32_t charcode = *(in++);
 
@@ -338,8 +337,8 @@ void vk_monofont_draw_text(const char *text, int x, int y, uint32_t color, scree
 
       if (charcode == '\n')
       {
-         vertex_t *next_line = screen_data[screen_id].vbo + screen_data[screen_id].cols *
-                               (1 + ((out - screen_data[screen_id].vbo) / screen_data[screen_id].cols));
+         vertex_t *next_line = screen_data[screen->id].vbo + screen_data[screen->id].cols *
+                               (1 + ((out - screen_data[screen->id].vbo) / screen_data[screen->id].cols));
 
          while (out < next_line)
             (out++)->slot_id = 0;
@@ -381,7 +380,7 @@ void vk_monofont_draw_text(const char *text, int x, int y, uint32_t color, scree
       out++;
    }
 
-   assert(out - 1 - screen_data[screen_id].vbo < screen_data[screen_id].count);
+   assert(out - 1 - screen_data[screen->id].vbo < screen_data[screen->id].count);
 
 
    R_monofont.vbo.dirty = true;

@@ -43,7 +43,7 @@ void fps_draw(screen_t *screen)
 void screen_id_draw(screen_t *screen)
 {
    char buffer[16];
-   snprintf(buffer, sizeof(buffer), "SCREEN: \e[%im%i", RED, (int)(screen - video.screens));
+   snprintf(buffer, sizeof(buffer), "SCREEN: \e[%im%i", RED, screen->id);
 
    font_render_options_t options =
    {
@@ -165,7 +165,7 @@ static void display_message_handler(screen_t *screen)
 
    while (ptr->msg && ptr - msg_buffer < countof(msg_buffer))
    {
-      if (ptr->screen_mask & (1 << (screen - video.screens)))
+      if (ptr->screen_mask & (1 << screen->id))
       {
          ptr->options.max_width = screen->width;
          ptr->options.max_height = screen->height;

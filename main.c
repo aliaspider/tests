@@ -48,6 +48,9 @@ int main(int argc, char** argv)
 //   video.vsync = true;
    video.filter = true;
 
+   for(int i = 0; i < video.screen_count; i++)
+      video.screens[i].id = i;
+
    platform_init();
 
    {

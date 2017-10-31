@@ -11,6 +11,7 @@
 #define MAX_SCREENS 4
 typedef struct
 {
+   int id;
    int x;
    int y;
    int width;
