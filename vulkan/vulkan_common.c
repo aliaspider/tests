@@ -647,6 +647,7 @@ void vk_context_destroy(vk_context_t *vk)
    vkDestroyDescriptorPool(vk->device, vk->pools.desc, NULL);
    vkDestroySampler(vk->device, vk->samplers.nearest, NULL);
    vkDestroySampler(vk->device, vk->samplers.linear, NULL);
+   vkDestroyDescriptorSetLayout(vk->device, vk->set_layouts.base, NULL);
    vkDestroyDescriptorSetLayout(vk->device, vk->set_layouts.renderer, NULL);
    vkDestroyDescriptorSetLayout(vk->device, vk->set_layouts.texture, NULL);
    vkDestroyPipelineLayout(vk->device, vk->pipeline_layout, NULL);
@@ -973,6 +974,7 @@ void vk_texture_free(VkDevice device, vk_texture_t *texture)
    vkDestroyImage(device, texture->staging.image, NULL);
    vk_device_memory_free(device, &texture->mem);
    vk_device_memory_free(device, &texture->staging.mem);
+   vk_buffer_free(device, &texture->ubo);
    texture->info.imageView = VK_NULL_HANDLE;
    texture->image = VK_NULL_HANDLE;
 }
