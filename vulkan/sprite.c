@@ -6,16 +6,6 @@
 #include "common.h"
 #include "sprite.h"
 
-typedef union
-{
-   struct
-   {
-      int format;
-      int ignore_alpha;
-   };
-   u8 align[VK_UBO_ALIGNMENT];
-}uniform_t;
-
 static void vk_sprite_renderer_init(vk_context_t *vk)
 {
 
@@ -48,7 +38,6 @@ static void vk_sprite_renderer_init(vk_context_t *vk)
 
    R_sprite.vbo.info.range = VK_RENDERER_MAX_TEXTURES * sizeof(sprite_t);
    R_sprite.vertex_stride = sizeof(sprite_t);
-   R_sprite.ubo.info.range = (1 + VK_RENDERER_MAX_TEXTURES) * sizeof(uniform_t);
 
    vk_renderer_init(vk, &info, &R_sprite);
 }

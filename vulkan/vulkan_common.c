@@ -1448,6 +1448,28 @@ void vk_renderer_update(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *ren
 
 }
 
+
+void vk_renderer_exec_simple(VkCommandBuffer cmd, vk_renderer_t *renderer)
+{
+   if (renderer->vbo.info.range - renderer->vbo.info.offset == 0)
+      return;
+
+   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipe);
+   {
+      uint32_t dynamic_offset = 0;
+      VkDescriptorSet desc[] = {renderer->desc, renderer->tex.desc};
+      vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, countof(desc), desc, 1,
+                              &dynamic_offset);
+   }
+   vkCmdBindVertexBuffers(cmd, 0, 1, &renderer->vbo.info.buffer, &renderer->vbo.info.offset);
+
+   int count = (renderer->vbo.info.range - renderer->vbo.info.offset) / renderer->vertex_stride;
+
+   vkCmdDraw(cmd, count, 1, 0, 0);
+
+   renderer->vbo.info.offset = renderer->vbo.info.range;
+}
+
 void vk_renderer_exec(VkCommandBuffer cmd, vk_renderer_t *renderer)
 {
    if (renderer->vbo.info.range - renderer->vbo.info.offset == 0)
@@ -1455,7 +1477,8 @@ void vk_renderer_exec(VkCommandBuffer cmd, vk_renderer_t *renderer)
 
    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipe);
    uint32_t dynamic_offset = 0;
-   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, 1, &renderer->desc, 1, &dynamic_offset);
+   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, 1, &renderer->desc, 1,
+                           &dynamic_offset);
    vkCmdBindVertexBuffers(cmd, 0, 1, &renderer->vbo.info.buffer, &renderer->vbo.info.offset);
 
    int count = (renderer->vbo.info.range - renderer->vbo.info.offset) / renderer->vertex_stride;
@@ -1478,9 +1501,10 @@ void vk_renderer_exec(VkCommandBuffer cmd, vk_renderer_t *renderer)
       }
 
 
-      if (i < VK_RENDERER_MAX_TEXTURES && renderer->textures[i])
+      if (renderer->textures[i])
       {
-         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 1, 1, &renderer->textures[i]->desc, 0, NULL);
+         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 1, 1, &renderer->textures[i]->desc, 0,
+                                 NULL);
          renderer->textures[i] = NULL;
       }
       else if (renderer->tex.desc)
