@@ -60,9 +60,6 @@ void vk_sprite_add(sprite_t *sprite, vk_texture_t *texture)
    if(texture)
    {
       R_sprite.textures[vertex_count] = texture;
-      ((uniform_t*)R_sprite.ubo.mem.ptr)[vertex_count + 1].format = texture->format;
-      ((uniform_t*)R_sprite.ubo.mem.ptr)[vertex_count + 1].ignore_alpha = texture->ignore_alpha;
-      R_sprite.ubo.dirty = true;
    }
 
    *(sprite_t *)vk_get_vbo_memory(&R_sprite.vbo, sizeof(sprite_t)) = *sprite;

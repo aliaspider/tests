@@ -202,13 +202,13 @@ void video_init()
       (*renderer)->init(&vk);
 
    vk_register_draw_command(&RTarget[0].draw_list, frame_draw);
-//   vk_register_draw_command(&render_targets[0].draw_list, sprite_test);
+   vk_register_draw_command(&RTarget[0].draw_list, sprite_test);
    vk_register_draw_command(&RTarget[0].draw_list, fps_draw);
    vk_register_draw_command(&RTarget[0].draw_list, screen_id_draw);
    vk_register_draw_command(&RTarget[0].draw_list, display_message_handler);
 
    vk_register_draw_command(&RTarget[1].draw_list, frame_draw_small);
-//   vk_register_draw_command(&render_targets[1].draw_list, sprite_test);
+   vk_register_draw_command(&RTarget[1].draw_list, sprite_test);
    vk_register_draw_command(&RTarget[1].draw_list, fps_draw);
    vk_register_draw_command(&RTarget[1].draw_list, screen_id_draw);
    vk_register_draw_command(&RTarget[1].draw_list, console_draw);

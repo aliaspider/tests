@@ -40,7 +40,7 @@ typedef struct vk_context_t
    } pools;
    struct
    {
-      VkDescriptorSetLayout full;
+      VkDescriptorSetLayout base;
       VkDescriptorSetLayout texture;
    } set_layouts;
    VkPipelineLayout pipeline_layout;
@@ -145,6 +145,25 @@ void vk_device_memory_flush(VkDevice device, const device_memory_t *memory);
 
 typedef struct
 {
+   VkDescriptorBufferInfo info;
+   device_memory_t mem;
+   VkBufferUsageFlags usage;
+   bool dirty;
+} vk_buffer_t;
+
+void vk_buffer_init(VkDevice device, const VkMemoryType *memory_types, const void *data, vk_buffer_t *out);
+void vk_buffer_flush(VkDevice device, vk_buffer_t *buffer);
+void vk_buffer_invalidate(VkDevice device, vk_buffer_t *buffer);
+void vk_buffer_free(VkDevice device, vk_buffer_t *buffer);
+
+typedef struct
+{
+   int format;
+   int ignore_alpha;
+}texture_uniform_t;
+
+typedef struct
+{
    struct
    {
       device_memory_t mem;
@@ -157,6 +176,8 @@ typedef struct
    VkFormat format;
    VkFilter filter;
    VkDescriptorImageInfo info;
+   vk_buffer_t ubo;
+   texture_uniform_t* uniforms;
    VkDescriptorSet desc;
    int width;
    int height;
@@ -172,19 +193,6 @@ void vk_texture_free(VkDevice device, vk_texture_t *texture);
 void vk_texture_update_descriptor_sets(vk_context_t *vk, vk_texture_t *out);
 void vk_texture_upload(VkDevice device, VkCommandBuffer cmd, vk_texture_t *texture);
 void vk_texture_flush(VkDevice device, vk_texture_t *texture);
-
-typedef struct
-{
-   VkDescriptorBufferInfo info;
-   device_memory_t mem;
-   VkBufferUsageFlags usage;
-   bool dirty;
-} vk_buffer_t;
-
-void vk_buffer_init(VkDevice device, const VkMemoryType *memory_types, const void *data, vk_buffer_t *out);
-void vk_buffer_flush(VkDevice device, vk_buffer_t *buffer);
-void vk_buffer_invalidate(VkDevice device, vk_buffer_t *buffer);
-void vk_buffer_free(VkDevice device, vk_buffer_t *buffer);
 
 typedef struct
 {

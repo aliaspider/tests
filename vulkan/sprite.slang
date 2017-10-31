@@ -80,7 +80,7 @@ layout(location = 0) out vec4 FragColor;
 
 layout(set = 1, binding = 0, location = 0) uniform highp sampler2D uTex;
 
-layout(set = 0, binding = 0, std140) uniform UBO
+layout(set = 1, binding = 1, std140) uniform UBO
 {
    int format;
    int ignore_alpha;

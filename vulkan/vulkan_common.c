@@ -527,7 +527,7 @@ void vk_context_init(vk_context_t *vk)
          .bindingCount = countof(bindings), bindings
 
       };
-      vkCreateDescriptorSetLayout(vk->device, &info, NULL, &vk->set_layouts.full);
+      vkCreateDescriptorSetLayout(vk->device, &info, NULL, &vk->set_layouts.base);
    }
 
    {
@@ -536,6 +536,12 @@ void vk_context_init(vk_context_t *vk)
          {
             .binding = 0,
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+         },
+         {
+            .binding = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
          },
@@ -616,7 +622,7 @@ void vk_context_destroy(vk_context_t *vk)
    vkDestroyDescriptorPool(vk->device, vk->pools.desc, NULL);
    vkDestroySampler(vk->device, vk->samplers.nearest, NULL);
    vkDestroySampler(vk->device, vk->samplers.linear, NULL);
-   vkDestroyDescriptorSetLayout(vk->device, vk->set_layouts.full, NULL);
+   vkDestroyDescriptorSetLayout(vk->device, vk->set_layouts.base, NULL);
    vkDestroyDescriptorSetLayout(vk->device, vk->set_layouts.texture, NULL);
    vkDestroyPipelineLayout(vk->device, vk->pipeline_layout, NULL);
    vkDestroyRenderPass(vk->device, vk->renderpass, NULL);
@@ -808,18 +814,29 @@ void vk_render_targets_destroy(vk_context_t *vk, int count, vk_render_target_t *
 void vk_texture_update_descriptor_sets(vk_context_t *vk, vk_texture_t *out)
 
 {
-   const VkWriteDescriptorSet write_set =
+   const VkWriteDescriptorSet write_set[] =
    {
-      VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-      .dstSet = out->desc,
-      .dstBinding = 0,
-      .dstArrayElement = 0,
-      .descriptorCount = 1,
-      .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-      .pImageInfo = &out->info
+      {
+         VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+         .dstSet = out->desc,
+         .dstBinding = 0,
+         .dstArrayElement = 0,
+         .descriptorCount = 1,
+         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+         .pImageInfo = &out->info
+      },
+      {
+         VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+         .dstSet = out->desc,
+         .dstBinding = 1,
+         .dstArrayElement = 0,
+         .descriptorCount = 1,
+         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+         .pBufferInfo = &out->ubo.info,
+      }
    };
 
-   vkUpdateDescriptorSets(vk->device, 1, &write_set, 0, NULL);
+   vkUpdateDescriptorSets(vk->device, countof(write_set), write_set, 0, NULL);
 }
 
 void vk_texture_init(vk_context_t *vk, vk_texture_t *out)
@@ -898,6 +915,15 @@ void vk_texture_init(vk_context_t *vk, vk_texture_t *out)
       };
       VK_CHECK(vkCreateImageView(vk->device, &info, NULL, &out->info.imageView));
    }
+
+   out->ubo.info.range = 256;
+   out->ubo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+   out->ubo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+   vk_buffer_init(vk->device, vk->memoryTypes, NULL, &out->ubo);
+   out->uniforms = out->ubo.mem.ptr;
+   out->uniforms->format = out->format;
+   out->uniforms->ignore_alpha = out->ignore_alpha;
+   out->ubo.dirty = true;
 
    {
       const VkDescriptorSetAllocateInfo info =
@@ -1003,7 +1029,7 @@ void vk_texture_upload(VkDevice device, VkCommandBuffer cmd, vk_texture_t *textu
    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                        0, 0, NULL, 0, NULL, 1,&barrier);
+                        0, 0, NULL, 0, NULL, 1, &barrier);
 
    texture->uploaded = true;
 
@@ -1270,7 +1296,7 @@ void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info
       {
          VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
          .descriptorPool = vk->pools.desc,
-         .descriptorSetCount = 1, &vk->set_layouts.full
+         .descriptorSetCount = 1, &vk->set_layouts.base
       };
       vkAllocateDescriptorSets(vk->device, &info, &out->desc);
    }
@@ -1409,6 +1435,9 @@ void vk_renderer_update(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *ren
          if (!renderer->textures[i])
             continue;
 
+         if (renderer->textures[i]->ubo.dirty)
+            vk_buffer_flush(device, &renderer->textures[i]->ubo);
+
          if (renderer->textures[i]->dirty && !renderer->textures[i]->flushed)
             vk_texture_flush(device, renderer->textures[i]);
 
@@ -1425,6 +1454,8 @@ void vk_renderer_exec(VkCommandBuffer cmd, vk_renderer_t *renderer)
       return;
 
    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipe);
+   uint32_t dynamic_offset = 0;
+   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, 1, &renderer->desc, 1, &dynamic_offset);
    vkCmdBindVertexBuffers(cmd, 0, 1, &renderer->vbo.info.buffer, &renderer->vbo.info.offset);
 
    int count = (renderer->vbo.info.range - renderer->vbo.info.offset) / renderer->vertex_stride;
@@ -1449,30 +1480,11 @@ void vk_renderer_exec(VkCommandBuffer cmd, vk_renderer_t *renderer)
 
       if (i < VK_RENDERER_MAX_TEXTURES && renderer->textures[i])
       {
-//         uint32_t dynamic_offset = 0;
-         uint32_t dynamic_offset = (i + 1) * VK_UBO_ALIGNMENT;
-         VkDescriptorSet descs [] = {renderer->desc, renderer->textures[i]->desc};
-         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, countof(descs), descs, 1,
-                                 &dynamic_offset);
+         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 1, 1, &renderer->textures[i]->desc, 0, NULL);
          renderer->textures[i] = NULL;
       }
-      else
-      {
-         uint32_t dynamic_offset = 0;
-
-         if (renderer->tex.desc)
-         {
-            VkDescriptorSet descs [] = {renderer->desc, renderer->tex.desc};
-            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, countof(descs), descs, 1,
-                                    &dynamic_offset);
-         }
-         else
-            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, 1, &renderer->desc, 1,
-                                    &dynamic_offset);
-      }
-
-//         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, 1, &renderer->default_texture.desc,0, NULL);
-
+      else if (renderer->tex.desc)
+         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 1, 1, &renderer->tex.desc, 0, NULL);
 
       vkCmdDraw(cmd, i + 1 - first_vertex, 1, first_vertex, 0);
       first_vertex = i + 1;

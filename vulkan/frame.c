@@ -69,6 +69,7 @@ static void vk_frame_init(vk_context_t *vk)
       R_frame.tex.height = module.output_height;
       R_frame.tex.format = format;
       R_frame.tex.filter = video.filter ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
+      R_frame.tex.ignore_alpha = true;
       R_frame.vbo.info.range = sizeof(vertex_t) * 8;
       R_frame.vertex_stride = sizeof(vertex_t);
       R_frame.ubo.info.range = sizeof(uniform_t);
@@ -82,7 +83,6 @@ static void vk_frame_init(vk_context_t *vk)
    }
 
    R_frame.tex.dirty = true;
-   R_frame.tex.ignore_alpha = true;
 
    ((uniform_t *)R_frame.ubo.mem.ptr)->tex_size.width = R_frame.tex.width;
    ((uniform_t *)R_frame.ubo.mem.ptr)->tex_size.height = R_frame.tex.height;
