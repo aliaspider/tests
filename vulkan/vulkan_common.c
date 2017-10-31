@@ -465,6 +465,7 @@ void vk_context_init(vk_context_t *vk)
       static const VkDescriptorPoolSize sizes[] =
       {
          {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 32},
+         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 32},
          {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 32},
          {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 32}
       };
@@ -833,7 +834,9 @@ void vk_texture_update_descriptor_sets(vk_context_t *vk, vk_texture_t *out)
 void vk_texture_init(vk_context_t *vk, vk_texture_t *out)
 {
    out->dirty = true;
-   out->info.sampler = VK_NULL_HANDLE;
+   out->info.sampler = out->filter == VK_FILTER_LINEAR ? vk->samplers.linear : vk->samplers.nearest;
+   out->info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+   out->staging.format = out->format;
 
    {
       VkImageCreateInfo info =
@@ -856,14 +859,12 @@ void vk_texture_init(vk_context_t *vk, vk_texture_t *out)
          .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
       };
 
-      out->info.imageLayout = info.initialLayout;
       VK_CHECK(vkCreateImage(vk->device, &info, NULL, &out->image));
 
       info.tiling = VK_IMAGE_TILING_LINEAR;
       info.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
       info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-      out->staging.format = info.format;
-      out->staging.layout = info.initialLayout;
+      out->staging.layout = VK_IMAGE_LAYOUT_PREINITIALIZED;
       VK_CHECK(vkCreateImage(vk->device, &info, NULL, &out->staging.image));
    }
 
@@ -908,8 +909,6 @@ void vk_texture_init(vk_context_t *vk, vk_texture_t *out)
       };
       VK_CHECK(vkCreateImageView(vk->device, &info, NULL, &out->info.imageView));
    }
-
-   out->info.sampler = out->filter == VK_FILTER_LINEAR ? vk->samplers.linear : vk->samplers.nearest;
 
    {
       const VkDescriptorSetAllocateInfo info =
@@ -961,15 +960,18 @@ void vk_texture_upload(VkDevice device, VkCommandBuffer cmd, vk_texture_t *textu
       .subresourceRange.levelCount = 1,
       .subresourceRange.layerCount = 1
    };
-   texture->staging.layout = barrier.newLayout;
-   vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, &barrier);
+
+   if(texture->staging.layout == VK_IMAGE_LAYOUT_PREINITIALIZED)
+   {
+      vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, &barrier);
+      texture->staging.layout = VK_IMAGE_LAYOUT_GENERAL;
+   }
 
    barrier.srcAccessMask = 0;
    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
    barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
    barrier.image  = texture->image;
-   texture->info.imageLayout = barrier.newLayout;
    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1,
       &barrier);
 
@@ -985,7 +987,7 @@ void vk_texture_upload(VkDevice device, VkCommandBuffer cmd, vk_texture_t *textu
          .extent.height = texture->height,
          .extent.depth = 1
       };
-      vkCmdCopyImage(cmd, texture->staging.image, texture->staging.layout, texture->image, texture->info.imageLayout, 1,
+      vkCmdCopyImage(cmd, texture->staging.image, VK_IMAGE_LAYOUT_GENERAL, texture->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
          &copy);
    }
    else
@@ -999,15 +1001,14 @@ void vk_texture_upload(VkDevice device, VkCommandBuffer cmd, vk_texture_t *textu
          .srcOffsets = {{0, 0, 0}, {texture->width, texture->height, 1}},
          .dstOffsets = {{0, 0, 0}, {texture->width, texture->height, 1}}
       };
-      vkCmdBlitImage(cmd, texture->staging.image, texture->staging.layout, texture->image, texture->info.imageLayout, 1,
+      vkCmdBlitImage(cmd, texture->staging.image, VK_IMAGE_LAYOUT_GENERAL, texture->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
          &blit, VK_FILTER_NEAREST);
    }
 
    barrier.srcAccessMask = barrier.dstAccessMask;
    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-   barrier.oldLayout = barrier.newLayout;
+   barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-   texture->info.imageLayout = barrier.newLayout;
    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, NULL, 0, NULL, 1,
       &barrier);
 

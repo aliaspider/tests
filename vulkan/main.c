@@ -194,6 +194,8 @@ void video_init()
 
    vk_context_init(&vk);
 
+   VkAllocateCommandBuffer(vk.device, vk.pools.cmd, &cmd);
+
    vk_render_targets_init(&vk, video.screen_count, video.screens, RTarget);
 
    for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
@@ -222,9 +224,6 @@ void video_init()
    vk_texture_init(&vk, &test_image);
    memset(test_image.staging.mem.u8 + test_image.staging.mem.layout.offset, 0x80,
           test_image.staging.mem.size - test_image.staging.mem.layout.offset);
-
-
-   VkAllocateCommandBuffer(vk.device, vk.pools.cmd, &cmd);
 }
 
 void video_render()
@@ -242,7 +241,6 @@ void video_render()
 
    for (int i = 0; i < video.screen_count; i++)
    {
-
       vkWaitForFences(vk.device, 1, &RTarget[i].chain_fence, VK_TRUE, UINT64_MAX);
       vkResetFences(vk.device, 1, &RTarget[i].chain_fence);
 
