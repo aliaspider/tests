@@ -206,10 +206,9 @@ static void ft_monofont_render_glyph(unsigned charcode, int slot_id)
    FT_Bitmap *bitmap = &font.ftface->glyph->bitmap;
    u8 *src = bitmap->buffer;
    device_memory_t *mem = &R_monofont.tex.staging.mem;
-   int x = font.ftface->glyph->metrics.horiBearingX >> 6;
-   int y = font.ascender - (font.ftface->glyph->metrics.horiBearingY >> 6);
-   u8 *dst = mem->u8 + mem->layout.offset + (slot_id & 0xF) * font.glyph_width + x +
-             (((slot_id >> 4) * font.glyph_height) + y) * mem->layout.rowPitch;
+   int x = (slot_id & 0xF) * font.glyph_width + (font.ftface->glyph->metrics.horiBearingX >> 6);
+   int y = (slot_id >> 4) * font.glyph_height + font.ascender - (font.ftface->glyph->metrics.horiBearingY >> 6);
+   u8 *dst = mem->u8 + mem->layout.offset + x + y * mem->layout.rowPitch;
    assert((dst - mem->u8 + mem->layout.rowPitch * (bitmap->rows + 1) < mem->layout.size));
 
    for (int row = 0; row < bitmap->rows; row++)
