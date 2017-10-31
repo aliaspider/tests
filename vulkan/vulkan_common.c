@@ -808,15 +808,6 @@ void vk_render_targets_destroy(vk_context_t *vk, int count, vk_render_target_t *
 void vk_texture_update_descriptor_sets(vk_context_t *vk, vk_texture_t *out)
 
 {
-   VkDescriptorImageInfo image_info[] =
-   {
-      {
-         .sampler = out->info.sampler,
-         .imageView = out->info.imageView,
-         .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-      }
-   };
-
    const VkWriteDescriptorSet write_set =
    {
       VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -825,7 +816,7 @@ void vk_texture_update_descriptor_sets(vk_context_t *vk, vk_texture_t *out)
       .dstArrayElement = 0,
       .descriptorCount = 1,
       .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-      .pImageInfo = image_info
+      .pImageInfo = &out->info
    };
 
    vkUpdateDescriptorSets(vk->device, 1, &write_set, 0, NULL);
