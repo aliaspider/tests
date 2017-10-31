@@ -60,7 +60,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(
 }
 
 VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback,
-   const VkAllocationCallbacks *pAllocator)
+      const VkAllocationCallbacks *pAllocator)
 {
    return vkDestroyDebugReportCallbackEXTp(instance, callback, pAllocator);
 }
@@ -176,7 +176,7 @@ static void vk_get_gpu_props(VkPhysicalDevice gpu)
 
    VkExtensionProperties pDeviceExtensionProperties[deviceExtensionPropertiesCount];
    vkEnumerateDeviceExtensionProperties(gpu, NULL, &deviceExtensionPropertiesCount,
-      pDeviceExtensionProperties);
+                                        pDeviceExtensionProperties);
 
    int e;
 
@@ -194,7 +194,7 @@ static void vk_get_gpu_props(VkPhysicalDevice gpu)
 
       for (i = 0; i < displayProperties_count; i++)
          debug_log("0x%08" PRIXPTR " : %s\n", (uintptr_t)displayProperties[i].display,
-            displayProperties[i].displayName);
+                   displayProperties[i].displayName);
 
    }
    vkGetPhysicalDeviceDisplayPlanePropertiesKHR(vk->gpu, &displayProperties_count, NULL);
@@ -203,7 +203,7 @@ static void vk_get_gpu_props(VkPhysicalDevice gpu)
 
    for (i = 0; i < displayProperties_count; i++)
       debug_log("0x%08" PRIXPTR " : %i\n", (uintptr_t)displayPlaneProperties[i].currentDisplay,
-         displayPlaneProperties[i].currentStackIndex);
+                displayPlaneProperties[i].currentStackIndex);
 
 //   uint32_t displayCount = 4;
 //   VK_CHECK(vkGetDisplayPlaneSupportedDisplaysKHR(vk->gpu, 1, &displayCount, &dst->display));
@@ -222,7 +222,7 @@ static void vk_get_gpu_props(VkPhysicalDevice gpu)
    debug_log("displayModeProperties.parameters.refreshRate : %u\n", displayModeProperties[0].parameters.refreshRate);
    debug_log("displayModeProperties.visibleRegion.width : %u\n", displayModeProperties[0].parameters.visibleRegion.width);
    debug_log("displayModeProperties.visibleRegion.height : %u\n",
-      displayModeProperties[0].parameters.visibleRegion.height);
+             displayModeProperties[0].parameters.visibleRegion.height);
 #endif
 
 
@@ -278,11 +278,11 @@ static uint32_t vk_get_queue_family_index(VkPhysicalDevice gpu, VkQueueFlags req
 }
 
 static VkBool32 vulkan_debug_report_callback(VkDebugReportFlagsEXT flags,
-   VkDebugReportObjectTypeEXT objectType,
-   uint64_t object, size_t location,
-   int32_t messageCode,
-   const char *pLayerPrefix,
-   const char *pMessage, void *pUserData)
+      VkDebugReportObjectTypeEXT objectType,
+      uint64_t object, size_t location,
+      int32_t messageCode,
+      const char *pLayerPrefix,
+      const char *pMessage, void *pUserData)
 {
    static const char *debugFlags_str[] = {"INFORMATION", "WARNING", "PERFORMANCE", "ERROR", "DEBUG"};
 
@@ -291,12 +291,12 @@ static VkBool32 vulkan_debug_report_callback(VkDebugReportFlagsEXT flags,
       return VK_FALSE;
 
    if (false
-      || messageCode == 61
+         || messageCode == 61
 //   || messageCode == 68
 //      || messageCode == 38
 //      || messageCode == 438304791
 //      || messageCode == 9
-   )
+      )
       return VK_FALSE;
 
    int i;
@@ -409,7 +409,7 @@ void vk_context_init(vk_context_t *vk)
    vk->queue_family_index = vk_get_queue_family_index(vk->gpu, VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_TRANSFER_BIT);
 
    {
-      const float  one = 1.0;
+      static const float one = 1.0;
       static const char *device_ext[] =
       {
          VK_KHR_SWAPCHAIN_EXTENSION_NAME,
@@ -675,7 +675,7 @@ void vk_swapchain_init(vk_context_t *vk, vk_render_target_t *render_target)
 
       VkImage swapchainImages[render_target->swapchain_count];
       vkGetSwapchainImagesKHR(vk->device, render_target->swapchain, &render_target->swapchain_count,
-         swapchainImages);
+                              swapchainImages);
 
       int i;
 
@@ -945,14 +945,16 @@ void vk_texture_upload(VkDevice device, VkCommandBuffer cmd, vk_texture_t *textu
       .subresourceRange.layerCount = 1
    };
 
-   if(texture->staging.layout == VK_IMAGE_LAYOUT_PREINITIALIZED)
+   if (texture->staging.layout == VK_IMAGE_LAYOUT_PREINITIALIZED)
    {
       barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
       barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-      barrier.oldLayout = VK_IMAGE_LAYOUT_PREINITIALIZED,
-      barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL,
+      barrier.oldLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+      barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
       barrier.image  = texture->staging.image;
-      vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, &barrier);
+      vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                           0, 0, NULL, 0, NULL, 1, &barrier);
+
       texture->staging.layout = VK_IMAGE_LAYOUT_GENERAL;
    }
 
@@ -961,8 +963,8 @@ void vk_texture_upload(VkDevice device, VkCommandBuffer cmd, vk_texture_t *textu
    barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
    barrier.image  = texture->image;
-   vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1,
-      &barrier);
+   vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                        0, 0, NULL, 0, NULL, 1, &barrier);
 
    if (texture->format == texture->staging.format)
    {
@@ -976,8 +978,9 @@ void vk_texture_upload(VkDevice device, VkCommandBuffer cmd, vk_texture_t *textu
          .extent.height = texture->height,
          .extent.depth = 1
       };
-      vkCmdCopyImage(cmd, texture->staging.image, VK_IMAGE_LAYOUT_GENERAL, texture->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
-         &copy);
+      vkCmdCopyImage(cmd, texture->staging.image, VK_IMAGE_LAYOUT_GENERAL,
+                     texture->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                     1, &copy);
    }
    else
    {
@@ -990,16 +993,17 @@ void vk_texture_upload(VkDevice device, VkCommandBuffer cmd, vk_texture_t *textu
          .srcOffsets = {{0, 0, 0}, {texture->width, texture->height, 1}},
          .dstOffsets = {{0, 0, 0}, {texture->width, texture->height, 1}}
       };
-      vkCmdBlitImage(cmd, texture->staging.image, VK_IMAGE_LAYOUT_GENERAL, texture->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
-         &blit, VK_FILTER_NEAREST);
+      vkCmdBlitImage(cmd, texture->staging.image, VK_IMAGE_LAYOUT_GENERAL,
+                     texture->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                     1, &blit, VK_FILTER_NEAREST);
    }
 
    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-   vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, NULL, 0, NULL, 1,
-      &barrier);
+   vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                        0, 0, NULL, 0, NULL, 1,&barrier);
 
    texture->uploaded = true;
 
@@ -1009,7 +1013,7 @@ void vk_texture_upload(VkDevice device, VkCommandBuffer cmd, vk_texture_t *textu
 
 
 void vk_device_memory_init(VkDevice device, const VkMemoryType *memory_types, const memory_init_info_t *init_info,
-   device_memory_t *out)
+                           device_memory_t *out)
 {
 
    VkMemoryRequirements reqs;
@@ -1449,7 +1453,7 @@ void vk_renderer_exec(VkCommandBuffer cmd, vk_renderer_t *renderer)
          uint32_t dynamic_offset = (i + 1) * VK_UBO_ALIGNMENT;
          VkDescriptorSet descs [] = {renderer->desc, renderer->textures[i]->desc};
          vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, countof(descs), descs, 1,
-            &dynamic_offset);
+                                 &dynamic_offset);
          renderer->textures[i] = NULL;
       }
       else
@@ -1460,11 +1464,11 @@ void vk_renderer_exec(VkCommandBuffer cmd, vk_renderer_t *renderer)
          {
             VkDescriptorSet descs [] = {renderer->desc, renderer->tex.desc};
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, countof(descs), descs, 1,
-               &dynamic_offset);
+                                    &dynamic_offset);
          }
          else
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, 1, &renderer->desc, 1,
-               &dynamic_offset);
+                                    &dynamic_offset);
       }
 
 //         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, 1, &renderer->default_texture.desc,0, NULL);
