@@ -78,9 +78,9 @@ layout(location = 1) in vec2 vTexCoord;
 layout(location = 2) in vec4 color;
 layout(location = 0) out vec4 FragColor;
 
-layout(set = 1, binding = 0, location = 0) uniform highp sampler2D uTex;
+layout(set = 2, binding = 0, location = 0) uniform highp sampler2D uTex;
 
-layout(set = 1, binding = 1, std140) uniform UBO
+layout(set = 2, binding = 1, std140) uniform UBO
 {
    vec2 size;
    int format;

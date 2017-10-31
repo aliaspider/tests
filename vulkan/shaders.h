@@ -9,7 +9,12 @@ static const uint32_t ps_code [] =
 static const uint32_t gs_code [] =
 #include xstr(SHADER_FILE.geom.inc)
    ;
+#undef SHADER_FILE
+#else
+#error SHADER_FILE not defined
+#endif
 
+#ifndef SHADER_INFO
 #define SHADER_INFO \
 .shaders.vs.code = vs_code, \
 .shaders.vs.code_size = sizeof(vs_code), \
@@ -18,4 +23,3 @@ static const uint32_t gs_code [] =
 .shaders.gs.code = gs_code, \
 .shaders.gs.code_size = sizeof(gs_code)
 #endif
-

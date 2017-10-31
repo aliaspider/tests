@@ -44,5 +44,7 @@ typedef enum
 } console_colors_t;
 
 extern vk_renderer_t R_font;
+extern vk_renderer_t R_monofont;
 
 void vk_font_draw_text(const char *text, font_render_options_t *options);
+void vk_monofont_draw_text(const char *text, int x, int y, uint32_t color, screen_t *screen);

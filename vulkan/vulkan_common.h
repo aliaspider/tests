@@ -32,7 +32,7 @@ typedef union
       float width;
       float height;
    };
-   float values[4];
+   float values[2];
 } vec2;
 
 typedef union vec4

@@ -23,6 +23,7 @@ static vk_renderer_t *renderers[] =
    &R_frame,
    &R_sprite,
    &R_font,
+   &R_monofont,
    &R_slider,
    NULL
 };
@@ -122,6 +123,20 @@ void sprite_test(screen_t *screen)
    }
 }
 
+void monofont_test(screen_t *screen)
+{
+   {
+      sprite_t sprite =
+      {
+         .pos.values = {10.0, (screen->height - R_monofont.tex.height) / 2, R_monofont.tex.width, R_monofont.tex.height},
+         .coords.values = {0.0, 0.0, R_monofont.tex.width, R_monofont.tex.height},
+         .color.values = {1.0, 1.0, 0.0, 1.0},
+      };
+      vk_sprite_add(&sprite, &R_monofont.tex);
+   }
+   vk_monofont_draw_text("testing monofont", 4, 10, 0xFFFFFFFF, screen);
+}
+
 typedef struct
 {
    char *msg;
@@ -205,13 +220,15 @@ void video_init()
    vk_register_draw_command(&RTarget[0].draw_list, fps_draw);
    vk_register_draw_command(&RTarget[0].draw_list, screen_id_draw);
    vk_register_draw_command(&RTarget[0].draw_list, display_message_handler);
+   vk_register_draw_command(&RTarget[0].draw_list, monofont_test);
 
-   vk_register_draw_command(&RTarget[1].draw_list, frame_draw_small);
+//   vk_register_draw_command(&RTarget[1].draw_list, frame_draw_small);
 //   vk_register_draw_command(&RTarget[1].draw_list, sprite_test);
    vk_register_draw_command(&RTarget[1].draw_list, fps_draw);
    vk_register_draw_command(&RTarget[1].draw_list, screen_id_draw);
-   vk_register_draw_command(&RTarget[1].draw_list, console_draw);
-   vk_register_draw_command(&RTarget[1].draw_list, display_message_handler);
+//   vk_register_draw_command(&RTarget[1].draw_list, console_draw);
+//   vk_register_draw_command(&RTarget[1].draw_list, display_message_handler);
+   vk_register_draw_command(&RTarget[1].draw_list, monofont_test);
 
 //   vk_register_draw_command(&render_targets[2].draw_list, frame_draw);
 //   vk_register_draw_command(&render_targets[2].draw_list, fps_draw);
