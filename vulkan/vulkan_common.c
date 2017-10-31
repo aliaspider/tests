@@ -1437,32 +1437,6 @@ void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer)
    memset(&renderer->vk_renderer_data_start, 0, sizeof(*renderer) - offsetof(vk_renderer_t, vk_renderer_data_start));
 }
 
-
-void vk_renderer_update(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *renderer)
-{
-   if (renderer->tex.dirty)
-      vk_texture_upload(device, cmd, &renderer->tex);
-
-   int vertex_count = (renderer->vbo.info.range - renderer->vbo.info.offset) / renderer->vertex_stride;
-
-   if (vertex_count < VK_RENDERER_MAX_TEXTURES)
-   {
-      for (int i = 0; i < vertex_count; i++)
-      {
-         if (!renderer->textures[i])
-            continue;
-
-         if (renderer->textures[i]->ubo.dirty)
-            vk_buffer_flush(device, &renderer->textures[i]->ubo);
-
-         if (renderer->textures[i]->dirty)
-            vk_texture_upload(device, cmd, renderer->textures[i]);
-      }
-   }
-
-}
-
-
 void vk_renderer_exec_simple(VkCommandBuffer cmd, vk_renderer_t *renderer)
 {
    if (renderer->vbo.info.range - renderer->vbo.info.offset == 0)
@@ -1533,8 +1507,31 @@ void vk_renderer_exec(VkCommandBuffer cmd, vk_renderer_t *renderer)
    renderer->vbo.info.offset = renderer->vbo.info.range;
 }
 
-void vk_renderer_finish(VkDevice device, vk_renderer_t *renderer)
+void vk_renderer_flush(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *renderer)
 {
+   if (renderer->tex.dirty)
+      vk_texture_upload(device, cmd, &renderer->tex);
+
+   if (renderer->tex.ubo.dirty)
+      vk_buffer_flush(device, &renderer->tex.ubo);
+
+   int vertex_count = (renderer->vbo.info.range - renderer->vbo.info.offset) / renderer->vertex_stride;
+
+   if (vertex_count < VK_RENDERER_MAX_TEXTURES)
+   {
+      for (int i = 0; i < vertex_count; i++)
+      {
+         if (!renderer->textures[i])
+            continue;
+
+         if (renderer->textures[i]->ubo.dirty)
+            vk_buffer_flush(device, &renderer->textures[i]->ubo);
+
+         if (renderer->textures[i]->dirty)
+            vk_texture_upload(device, cmd, renderer->textures[i]);
+      }
+   }
+
    if (renderer->vbo.dirty)
       vk_buffer_flush(device, &renderer->vbo);
 

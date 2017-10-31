@@ -273,9 +273,8 @@ struct vk_renderer_t
 {
    void (*const init)(vk_context_t *vk);
    void (*const destroy)(VkDevice device, vk_renderer_t *renderer);
-   void (*const update)(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *renderer);
    void (*const exec)(VkCommandBuffer cmd, vk_renderer_t *renderer);
-   void (*const finish)(VkDevice device, vk_renderer_t *renderer);
+   void (*const flush)(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *renderer);
    vk_texture_t tex;
    vk_buffer_t vbo;
    vk_buffer_t ubo;
@@ -291,10 +290,9 @@ struct vk_renderer_t
 
 void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info, vk_renderer_t *out);
 void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer);
-void vk_renderer_update(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *renderer);
+void vk_renderer_flush(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *renderer);
 void vk_renderer_exec(VkCommandBuffer cmd, vk_renderer_t *renderer);
 void vk_renderer_exec_simple(VkCommandBuffer cmd, vk_renderer_t *renderer);
-void vk_renderer_finish(VkDevice device, vk_renderer_t *renderer);
 
 #define VK_UBO_ALIGNMENT 0x100
 
