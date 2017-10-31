@@ -824,7 +824,6 @@ void vk_texture_update_descriptor_sets(vk_context_t *vk, vk_texture_t *out)
 
 void vk_texture_init(vk_context_t *vk, vk_texture_t *out)
 {
-   out->dirty = true;
    out->info.sampler = out->filter == VK_FILTER_LINEAR ? vk->samplers.linear : vk->samplers.nearest;
    out->info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
    out->staging.format = out->format;
