@@ -8,6 +8,13 @@ layout(location = 2) in vec2 position;
 layout(location = 0) out uint id_out;
 layout(location = 1) out vec3 color_out;
 layout(location = 2) out vec2 position_out;
+
+void main()
+{
+   id_out = id;
+   color_out = color;
+   position_out = position;
+}
 #endif
 
 #ifdef GEOMETRY_SHADER
@@ -24,37 +31,19 @@ layout(push_constant) uniform PC
    vec2 vp_size;
 }pc;
 
-layout(set = 0, binding = 0, std140) uniform UBO
+layout(set = 1, binding = 1, std140) uniform UBO
 {   
    vec2 tex_size;
    vec4 glyph_metrics[256]; // (x, y, w, h)
    float advance[256];
 };
-layout(set = 0, binding = 2, std140) buffer g_buffer
+layout(set = 1, binding = 2, std140) buffer g_buffer
 {
    coherent int posx;
    coherent int posy;
    coherent int lastid;
 };
-#endif
 
-#ifdef FRAGMENT_SHADER
-layout(location = 0) in vec2 vTexCoord;
-layout(location = 1) in vec3 vColor;
-layout(location = 0) out vec4 FragColor;
-layout(set = 0, binding = 1, location = 0) uniform highp sampler2D uTex;
-#endif
-
-#ifdef VERTEX_SHADER
-void main()
-{
-   id_out = id;
-   color_out = color;
-   position_out = position;
-}
-#endif
-
-#ifdef GEOMETRY_SHADER
 void main()
 {
    uint c = id[0] & 0xFFu;
@@ -103,6 +92,11 @@ void main()
 #endif
 
 #ifdef FRAGMENT_SHADER
+layout(location = 0) in vec2 vTexCoord;
+layout(location = 1) in vec3 vColor;
+layout(location = 0) out vec4 FragColor;
+layout(set = 1, binding = 0) uniform highp sampler2D uTex;
+
 void main()
 {
    FragColor = vec4(vColor, texture(uTex, vTexCoord).r);

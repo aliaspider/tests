@@ -15,6 +15,58 @@
 #define VK_CHECK(vk_call) do{VkResult res = vk_call; if (res != VK_SUCCESS) {debug_log("%s:%i:%s:%s --> %s(%i)\n", __FILE__, __LINE__, __FUNCTION__, #vk_call, vk_result_to_str(res), res);fflush(stdout);exit(1);}}while(0)
 const char *vk_result_to_str(VkResult res);
 
+typedef union
+{
+   struct
+   {
+      float r;
+      float g;
+   };
+   struct
+   {
+      float x;
+      float y;
+   };
+   struct
+   {
+      float width;
+      float height;
+   };
+   float values[4];
+} vec2;
+
+typedef union vec4
+{
+   struct
+   {
+      float r;
+      float g;
+      float b;
+      float a;
+   };
+   struct
+   {
+      float x;
+      float y;
+      union
+      {
+         struct
+         {
+            float z;
+            float w;
+         };
+         struct
+         {
+            float width;
+            float height;
+         };
+      };
+   };
+   float values[4];
+} vec4 __attribute__((aligned((sizeof(union vec4)))));
+
+#define DEBUG_VEC4(v) do{debug_log("%-40s : (%f,%f,%f,%f)\n", #v, v.x, v.y, v.z, v.w); fflush(stdout);}while(0)
+
 typedef struct vk_context_t
 {
    VkInstance instance;
@@ -41,6 +93,7 @@ typedef struct vk_context_t
    struct
    {
       VkDescriptorSetLayout base;
+      VkDescriptorSetLayout renderer;
       VkDescriptorSetLayout texture;
    } set_layouts;
    VkPipelineLayout pipeline_layout;
@@ -158,6 +211,7 @@ void vk_buffer_free(VkDevice device, vk_buffer_t *buffer);
 
 typedef struct
 {
+   vec2 size;
    int format;
    int ignore_alpha;
 }texture_uniform_t;
@@ -255,58 +309,6 @@ static inline void *vk_get_vbo_memory(vk_buffer_t *vbo, VkDeviceSize size)
    assert(vbo->info.range <= vbo->mem.size);
    return ptr;
 }
-
-typedef union
-{
-   struct
-   {
-      float r;
-      float g;
-   };
-   struct
-   {
-      float x;
-      float y;
-   };
-   struct
-   {
-      float width;
-      float height;
-   };
-   float values[4];
-} vec2;
-
-typedef union vec4
-{
-   struct
-   {
-      float r;
-      float g;
-      float b;
-      float a;
-   };
-   struct
-   {
-      float x;
-      float y;
-      union
-      {
-         struct
-         {
-            float z;
-            float w;
-         };
-         struct
-         {
-            float width;
-            float height;
-         };
-      };
-   };
-   float values[4];
-} vec4 __attribute__((aligned((sizeof(union vec4)))));
-
-#define DEBUG_VEC4(v) do{debug_log("%-40s : (%f,%f,%f,%f)\n", #v, v.x, v.y, v.z, v.w); fflush(stdout);}while(0)
 
 static inline VkResult VkAllocateCommandBuffer(VkDevice device, VkCommandPool commandPool, VkCommandBuffer* out)
 {

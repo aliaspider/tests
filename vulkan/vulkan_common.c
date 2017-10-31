@@ -496,7 +496,6 @@ void vk_context_init(vk_context_t *vk)
       vkCreateSampler(vk->device, &info, NULL, &vk->samplers.linear);
    }
 
-
    {
       const VkDescriptorSetLayoutBinding bindings[] =
       {
@@ -508,10 +507,36 @@ void vk_context_init(vk_context_t *vk)
          },
          {
             .binding = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT,
+         }
+      };
+
+      VkDescriptorSetLayoutCreateInfo info =
+      {
+         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+         .bindingCount = countof(bindings), bindings
+
+      };
+      vkCreateDescriptorSetLayout(vk->device, &info, NULL, &vk->set_layouts.base);
+   }
+
+   {
+      const VkDescriptorSetLayoutBinding bindings[] =
+      {
+         {
+            .binding = 0,
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             .descriptorCount = 2,
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
             .pImmutableSamplers = (VkSampler *) &vk->samplers
+         },
+         {
+            .binding = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
          },
          {
             .binding = 2,
@@ -527,7 +552,7 @@ void vk_context_init(vk_context_t *vk)
          .bindingCount = countof(bindings), bindings
 
       };
-      vkCreateDescriptorSetLayout(vk->device, &info, NULL, &vk->set_layouts.base);
+      vkCreateDescriptorSetLayout(vk->device, &info, NULL, &vk->set_layouts.renderer);
    }
 
    {
@@ -622,7 +647,7 @@ void vk_context_destroy(vk_context_t *vk)
    vkDestroyDescriptorPool(vk->device, vk->pools.desc, NULL);
    vkDestroySampler(vk->device, vk->samplers.nearest, NULL);
    vkDestroySampler(vk->device, vk->samplers.linear, NULL);
-   vkDestroyDescriptorSetLayout(vk->device, vk->set_layouts.base, NULL);
+   vkDestroyDescriptorSetLayout(vk->device, vk->set_layouts.renderer, NULL);
    vkDestroyDescriptorSetLayout(vk->device, vk->set_layouts.texture, NULL);
    vkDestroyPipelineLayout(vk->device, vk->pipeline_layout, NULL);
    vkDestroyRenderPass(vk->device, vk->renderpass, NULL);
@@ -921,6 +946,8 @@ void vk_texture_init(vk_context_t *vk, vk_texture_t *out)
    out->ubo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
    vk_buffer_init(vk->device, vk->memoryTypes, NULL, &out->ubo);
    out->uniforms = out->ubo.mem.ptr;
+   out->uniforms->size.width = out->width;
+   out->uniforms->size.height = out->height;
    out->uniforms->format = out->format;
    out->uniforms->ignore_alpha = out->ignore_alpha;
    out->ubo.dirty = true;
@@ -1202,22 +1229,6 @@ static void vk_update_descriptor_sets(vk_context_t *vk, vk_renderer_t *out)
    VkWriteDescriptorSet write_set[3];
    int write_set_count = 0;
 
-   if (out->ubo.info.buffer)
-   {
-//      dst->ubo.info.range =VK_WHOLE_SIZE;
-      VkWriteDescriptorSet set =
-      {
-         VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-         .dstSet = out->desc,
-         .dstBinding = 0,
-         .dstArrayElement = 0,
-         .descriptorCount = 1,
-         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-         .pBufferInfo = &out->ubo.info
-      };
-      write_set[write_set_count++] = set;
-   }
-
    VkDescriptorImageInfo image_info[] =
    {
       {
@@ -1238,11 +1249,26 @@ static void vk_update_descriptor_sets(vk_context_t *vk, vk_renderer_t *out)
       {
          VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
          .dstSet = out->desc,
-         .dstBinding = 1,
+         .dstBinding = 0,
          .dstArrayElement = 0,
          .descriptorCount = countof(image_info),
          .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
          .pImageInfo = image_info
+      };
+      write_set[write_set_count++] = set;
+   }
+
+   if (out->ubo.info.buffer)
+   {
+      VkWriteDescriptorSet set =
+      {
+         VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+         .dstSet = out->desc,
+         .dstBinding = 1,
+         .dstArrayElement = 0,
+         .descriptorCount = 1,
+         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+         .pBufferInfo = &out->ubo.info
       };
       write_set[write_set_count++] = set;
    }
@@ -1296,7 +1322,7 @@ void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info
       {
          VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
          .descriptorPool = vk->pools.desc,
-         .descriptorSetCount = 1, &vk->set_layouts.base
+         .descriptorSetCount = 1, &vk->set_layouts.renderer
       };
       vkAllocateDescriptorSets(vk->device, &info, &out->desc);
    }
@@ -1455,12 +1481,13 @@ void vk_renderer_exec_simple(VkCommandBuffer cmd, vk_renderer_t *renderer)
       return;
 
    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipe);
-   {
-      uint32_t dynamic_offset = 0;
+//   {
+//      uint32_t dynamic_offset = 0;
       VkDescriptorSet desc[] = {renderer->desc, renderer->tex.desc};
-      vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, countof(desc), desc, 1,
-                              &dynamic_offset);
-   }
+//      vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, countof(desc), desc, 1,
+//                              &dynamic_offset);
+//   }
+   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 1, countof(desc), desc, 0, NULL);
    vkCmdBindVertexBuffers(cmd, 0, 1, &renderer->vbo.info.buffer, &renderer->vbo.info.offset);
 
    int count = (renderer->vbo.info.range - renderer->vbo.info.offset) / renderer->vertex_stride;
@@ -1476,9 +1503,10 @@ void vk_renderer_exec(VkCommandBuffer cmd, vk_renderer_t *renderer)
       return;
 
    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipe);
-   uint32_t dynamic_offset = 0;
-   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, 1, &renderer->desc, 1,
-                           &dynamic_offset);
+//   uint32_t dynamic_offset = 0;
+//   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, 1, &renderer->desc, 1,
+//                           &dynamic_offset);
+   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 1, 1, &renderer->desc, 0, NULL);
    vkCmdBindVertexBuffers(cmd, 0, 1, &renderer->vbo.info.buffer, &renderer->vbo.info.offset);
 
    int count = (renderer->vbo.info.range - renderer->vbo.info.offset) / renderer->vertex_stride;
@@ -1503,12 +1531,12 @@ void vk_renderer_exec(VkCommandBuffer cmd, vk_renderer_t *renderer)
 
       if (renderer->textures[i])
       {
-         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 1, 1, &renderer->textures[i]->desc, 0,
+         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 2, 1, &renderer->textures[i]->desc, 0,
                                  NULL);
          renderer->textures[i] = NULL;
       }
       else if (renderer->tex.desc)
-         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 1, 1, &renderer->tex.desc, 0, NULL);
+         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 2, 1, &renderer->tex.desc, 0, NULL);
 
       vkCmdDraw(cmd, i + 1 - first_vertex, 1, first_vertex, 0);
       first_vertex = i + 1;

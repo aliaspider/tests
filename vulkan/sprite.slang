@@ -82,21 +82,22 @@ layout(set = 1, binding = 0, location = 0) uniform highp sampler2D uTex;
 
 layout(set = 1, binding = 1, std140) uniform UBO
 {
+   vec2 size;
    int format;
    int ignore_alpha;
-};
+}tex;
 
 void main()
 {
-   if (format == 0)
+   if (tex.format == 0)
       FragColor = color;
-   else if (format > 8 && format < 16)
+   else if (tex.format > 8 && tex.format < 16)
       FragColor = texture(uTex, vTexCoord).r * color;
    else
       FragColor = texture(uTex, vTexCoord) * color;
 //      FragColor = texture(uTex, vTexCoord);
 //   FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-   if(ignore_alpha != 0)
+   if(tex.ignore_alpha != 0)
       FragColor.a = color.a;
 }
 #endif

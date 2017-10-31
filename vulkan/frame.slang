@@ -39,17 +39,19 @@ layout(push_constant) uniform PC
    vec2 vp_size;
 }pc;
 
-layout(set = 0, binding = 0, std140) uniform UBO
+layout(set = 1, binding = 1, std140) uniform UBO
 {
-   vec2 tex_size;
-};
+   vec2 size;
+   int format;
+   int ignore_alpha;
+}tex;
 
 void main()
 {
    gl_Position.zw = vec2(0.0f, 1.0f);
 
    gl_Position.xy = - 1.0f + (pos[0].xy + vec2(size[0].x, 0.0)) * 2.0f / pc.vp_size;
-   vTexCoord = vec2(tex_size.x, 0.0);
+   vTexCoord = vec2(tex.size.x, 0.0);
    EmitVertex();
 
    gl_Position.xy = - 1.0f + (pos[0].xy + vec2(0.0, 0.0))* 2.0f / pc.vp_size;
@@ -57,11 +59,11 @@ void main()
    EmitVertex();
 
    gl_Position.xy = - 1.0f + (pos[0].xy + vec2(size[0].x, size[0].y))* 2.0f / pc.vp_size;
-   vTexCoord = vec2(tex_size.x, tex_size.y);
+   vTexCoord = vec2(tex.size.x, tex.size.y);
    EmitVertex();
 
    gl_Position.xy = - 1.0f + (pos[0].xy + vec2(0.0, size[0].y))* 2.0f / pc.vp_size;
-   vTexCoord = vec2(0.0, tex_size.y);
+   vTexCoord = vec2(0.0, tex.size.y);
    EmitVertex();
 
    EndPrimitive();
@@ -74,7 +76,7 @@ layout(location = 0) in vec2 vTexCoord;
 
 layout(location = 0) out vec4 FragColor;
 
-layout(set = 1, binding = 0) uniform highp sampler2D uTex;
+layout(set = 2, binding = 0) uniform highp sampler2D uTex;
 
 void main()
 {
