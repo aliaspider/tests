@@ -36,14 +36,20 @@ layout(set = 1, binding = 1, std140) uniform UBO
 void main()
 {
    uint c = id[0] & 0xFFu;
+
+   if(c == 0u)
+      return;
    uint col = c & 0xFu;
    uint row = c >> 4u;
 
    gl_Position.zw = vec2(0.0f, 1.0f);
    vColor = color[0];
    vec2 pos = - (0.5 * pc.vp_size);
-   pos.x += glyph_size.x * mod(float(gl_PrimitiveIDIn), floor(pc.vp_size.x / glyph_size.x));
-   pos.y += glyph_size.y * floor(float(gl_PrimitiveIDIn)/ floor(pc.vp_size.x / glyph_size.x));
+   float cols = floor(pc.vp_size.x / glyph_size.x);
+   pos.x += glyph_size.x * mod(float(gl_PrimitiveIDIn), cols);
+   pos.y += glyph_size.y * floor(float(gl_PrimitiveIDIn)/ cols);
+//   if(pos.y > pc.vp_size.y)
+//      return;
    vec2 coords = vec2(float(col), float(row)) * tex_size / 16.0;
 #if 1
    gl_Position.xy = (pos + vec2(glyph_size.x, 0.0)) * 2.0 / pc.vp_size;
