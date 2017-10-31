@@ -949,13 +949,8 @@ void vk_texture_upload(VkDevice device, VkCommandBuffer cmd, vk_texture_t *textu
    VkImageMemoryBarrier barrier =
    {
       VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-      .srcAccessMask = VK_ACCESS_HOST_WRITE_BIT,
-      .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
-      .oldLayout = texture->staging.layout,
-      .newLayout = VK_IMAGE_LAYOUT_GENERAL,
       .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
       .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-      .image  = texture->staging.image,
       .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
       .subresourceRange.levelCount = 1,
       .subresourceRange.layerCount = 1
@@ -963,6 +958,11 @@ void vk_texture_upload(VkDevice device, VkCommandBuffer cmd, vk_texture_t *textu
 
    if(texture->staging.layout == VK_IMAGE_LAYOUT_PREINITIALIZED)
    {
+      barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+      barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+      barrier.oldLayout = VK_IMAGE_LAYOUT_PREINITIALIZED,
+      barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL,
+      barrier.image  = texture->staging.image;
       vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, &barrier);
       texture->staging.layout = VK_IMAGE_LAYOUT_GENERAL;
    }
