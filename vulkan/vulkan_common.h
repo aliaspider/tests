@@ -320,6 +320,7 @@ struct vk_renderer_t
    VkPipeline pipe;
    uint32_t vertex_stride;
    vk_texture_t *textures[VK_RENDERER_MAX_TEXTURES + 1];
+   VkCommandBuffer cmds[MAX_SCREENS];
    VkCommandBuffer cmd;
 };
 

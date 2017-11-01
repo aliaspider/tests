@@ -28,8 +28,6 @@ static vk_renderer_t     *renderers[] =
    NULL
 };
 
-static VkCommandBuffer    RTcmds[MAX_SCREENS][countof(renderers)];
-
 void console_draw(screen_t *screen);
 void console_mono_draw(screen_t *screen);
 
@@ -236,10 +234,6 @@ void video_init()
    vk_context_init(&vk);
 
    VkAllocateCommandBuffers(vk.device, vk.pools.cmd, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1, &cmd);
-   VkAllocateCommandBuffers(vk.device, vk.pools.cmd, VK_COMMAND_BUFFER_LEVEL_SECONDARY, countof(RTcmds[0]) * MAX_SCREENS,
-                            RTcmds[0]);
-//   vkFreeCommandBuffers(vk.device, vk.pools.cmd,  countof(RTcmds[0]) * MAX_SCREENS, RTcmds[0]);
-//   VkAllocateCommandBuffers(vk.device, vk.pools.cmd, VK_COMMAND_BUFFER_LEVEL_SECONDARY, countof(RTcmds[0]) * MAX_SCREENS, RTcmds[0]);
 
    vk_render_targets_init(&vk, video.screen_count, video.screens, RTarget);
 
@@ -282,26 +276,29 @@ void video_render()
    uint32_t       image_indices[MAX_SCREENS];
    VkSwapchainKHR swapchains[MAX_SCREENS];
 
+   VK_CHECK(vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, 0 ? UINT64_MAX : 100000000));
+   vkResetFences(vk.device, 1, &vk.queue_fence);
+
    R_frame.tex.dirty = true;
 
-//   vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, UINT64_MAX);
-   VK_CHECK(vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, 100000000));
-   vkResetFences(vk.device, 1, &vk.queue_fence);
+   if (R_frame.tex.filter != video.filter)
+   {
+      R_frame.tex.filter = video.filter ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
+      R_frame.tex.info.sampler = video.filter ? vk.samplers.linear : vk.samplers.nearest;
+      vk_texture_update_descriptor_sets(&vk, &R_frame.tex);
+   }
 
    for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
       (*renderer)->begin(*renderer);
 
+   VkCommandBuffer RTcmds[video.screen_count][countof(renderers)];
+
    for (int i = 0; i < video.screen_count; i++)
    {
+      VkCommandBuffer* cmds = RTcmds[i];
+
       vkWaitForFences(vk.device, 1, &RTarget[i].chain_fence, VK_TRUE, UINT64_MAX);
       vkResetFences(vk.device, 1, &RTarget[i].chain_fence);
-
-      if (R_frame.tex.filter != video.filter)
-      {
-         R_frame.tex.filter = video.filter ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
-         R_frame.tex.info.sampler = video.filter ? vk.samplers.linear : vk.samplers.nearest;
-         vk_texture_update_descriptor_sets(&vk, &R_frame.tex);
-      }
 
       if (video.vsync != RTarget[i].vsync)
       {
@@ -317,51 +314,39 @@ void video_render()
          vk_swapchain_init(&vk, &RTarget[i]);
       }
 
-//      vkWaitForFences(vk.device, 1, &display_fence, VK_TRUE, UINT64_MAX);
-//      vkResetFences(vk.device, 1, &display_fence);
+      swapchains[i] = RTarget[i].swapchain;
 
+      *cmds++ = RTarget[i].cmd;
 
-      VkCommandBuffer *rtcmd = &RTcmds[i][0];
-      *rtcmd = RTarget[i].cmd;
-      rtcmd++;
-
-      for (vk_renderer_t **renderer = renderers; *renderer; renderer++, rtcmd++)
+      for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
       {
-         VkBeginCommandBuffer(*rtcmd, vk.renderpass, VK_ONE_TIME_SUBMIT | VK_RENDER_PASS_CONTINUE);
-         (*renderer)->cmd = *rtcmd;
+         (*renderer)->cmd = (*renderer)->cmds[i];
+         VkBeginCommandBuffer((*renderer)->cmd, vk.renderpass, VK_ONE_TIME_SUBMIT | VK_RENDER_PASS_CONTINUE);
+         *cmds++ = (*renderer)->cmd;
       }
 
       for (vk_drawcmd_list_t *draw_cmd = RTarget[i].draw_list; draw_cmd; draw_cmd = draw_cmd->next)
          draw_cmd->draw(RTarget[i].screen);
 
       for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
-      {
          (*renderer)->exec(vk.pipeline_layout, *renderer);
-      }
-
-
-      swapchains[i] = RTarget[i].swapchain;
    }
+
    VkBeginCommandBuffer(cmd, NULL, VK_ONE_TIME_SUBMIT);
    vk_resource_flush_all(vk.device, cmd);
+
    for (int i = 0; i < video.screen_count; i++)
    {
-
       vkCmdBeginRenderPass(cmd, &RTarget[i].renderpass_info[image_indices[i]],
                            VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-
       vkCmdExecuteCommands(cmd, countof(RTcmds[i]), RTcmds[i]);
-
       vkCmdEndRenderPass(cmd);
    }
-   vkEndCommandBuffer(cmd);
 
-//   VkBeginCommandBuffer(cmd, NULL, VK_ONE_TIME_SUBMIT);
-//   vkEndCommandBuffer(cmd);
+   vkEndCommandBuffer(cmd);
 
    VkQueueSubmit(vk.queue, 1, &cmd, vk.queue_fence);
    VkQueuePresent(vk.queue, video.screen_count, swapchains, image_indices);
-
 
 #if 0
    {

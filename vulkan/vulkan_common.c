@@ -1357,6 +1357,8 @@ void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info
 
    vk_update_descriptor_sets(vk, out);
 
+   VkAllocateCommandBuffers(vk->device, vk->pools.cmd, VK_COMMAND_BUFFER_LEVEL_SECONDARY, MAX_SCREENS, out->cmds);
+
    {
       const VkPipelineShaderStageCreateInfo shaders_info[] =
       {
