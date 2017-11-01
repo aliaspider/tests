@@ -132,7 +132,7 @@ static void vk_monofont_init(vk_context_t *vk)
 
    {
       device_memory_t *mem = &R_monofont.tex.staging.mem;
-      memset(mem->u8 + mem->layout.offset, 0x40, mem->layout.size - mem->layout.offset);
+      memset(mem->u8 + mem->layout.offset, 0x00, mem->layout.size - mem->layout.offset);
    }
    {
       device_memory_t *mem = &R_monofont.vbo.mem;
@@ -438,7 +438,7 @@ void vk_monofont_draw_text(const char *text, int x, int y, uint32_t color, scree
 void console_mono_draw(screen_t *screen)
 {
 
-   static float pos[MAX_SCREENS];
+   static float pos[MAX_SCREENS] = {1.0, 1.0, 1.0, 1.0};
    static bool grab[MAX_SCREENS];
    static pointer_t old_pointer[MAX_SCREENS];
 

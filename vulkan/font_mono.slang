@@ -96,8 +96,8 @@ layout(set = 1, binding = 0) uniform highp sampler2D uTex;
 
 void main()
 {
-//   FragColor = vec4(vColor.rgb, vColor.a * texture(uTex, vTexCoord).r);
-   FragColor = vColor* texture(uTex, vTexCoord).r;
+   FragColor = vec4(vColor.rgb, vColor.a * texture(uTex, vTexCoord).r);
+//   FragColor = vColor* texture(uTex, vTexCoord).r;
 //   FragColor = vec4(1.0, 1.0, 1.0, texture(uTex, vTexCoord).r);
 //   FragColor = vec4(1.0);
 }
