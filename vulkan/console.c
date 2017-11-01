@@ -155,3 +155,4 @@ void console_draw(screen_t *screen)
    last_update_counter = console_update_counter;
    last_screen = *screen;
 }
+

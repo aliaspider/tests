@@ -30,6 +30,8 @@ static vk_renderer_t *renderers[] =
 
 
 void console_draw(screen_t *screen);
+void console_mono_draw(screen_t *screen);
+
 void fps_draw(screen_t *screen)
 {
    font_render_options_t options =
@@ -125,16 +127,7 @@ void sprite_test(screen_t *screen)
 
 void monofont_test(screen_t *screen)
 {
-//   {
-//      sprite_t sprite =
-//      {
-//         .pos.values = {10.0, (screen->height - R_monofont.tex.height) / 2, R_monofont.tex.width, R_monofont.tex.height},
-//         .coords.values = {0.0, 0.0, R_monofont.tex.width, R_monofont.tex.height},
-//         .color.values = {1.0, 1.0, 0.0, 1.0},
-//      };
-//      vk_sprite_add(&sprite, &R_monofont.tex);
-//   }
-   vk_monofont_draw_text(console_get(), 0, 3, 0xFFFFFFFF, screen);
+   vk_monofont_draw_text("testing monofont", 10, 12, 0xFFFFFFFF, screen);
 }
 
 void monofont_atlas(screen_t *screen)
@@ -233,15 +226,17 @@ void video_init()
    vk_register_draw_command(&RTarget[0].draw_list, fps_draw);
    vk_register_draw_command(&RTarget[0].draw_list, screen_id_draw);
    vk_register_draw_command(&RTarget[0].draw_list, display_message_handler);
-   vk_register_draw_command(&RTarget[0].draw_list, monofont_test);
+//   vk_register_draw_command(&RTarget[0].draw_list, monofont_test);
+   vk_register_draw_command(&RTarget[0].draw_list, console_mono_draw);
 
 //   vk_register_draw_command(&RTarget[1].draw_list, frame_draw_small);
 //   vk_register_draw_command(&RTarget[1].draw_list, sprite_test);
    vk_register_draw_command(&RTarget[1].draw_list, fps_draw);
    vk_register_draw_command(&RTarget[1].draw_list, screen_id_draw);
 //   vk_register_draw_command(&RTarget[1].draw_list, console_draw);
+   vk_register_draw_command(&RTarget[1].draw_list, console_mono_draw);
 //   vk_register_draw_command(&RTarget[1].draw_list, display_message_handler);
-   vk_register_draw_command(&RTarget[1].draw_list, monofont_test);
+//   vk_register_draw_command(&RTarget[1].draw_list, monofont_test);
 //   vk_register_draw_command(&RTarget[1].draw_list, monofont_atlas);
 
 //   vk_register_draw_command(&render_targets[2].draw_list, frame_draw);
@@ -321,11 +316,14 @@ void video_render()
 
       swapchains[i] = RTarget[i].swapchain;
    }
+
    vkEndCommandBuffer(cmd[1]);
 
    VkBeginCommandBuffer(cmd[0], VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, NULL);
+
    for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
       (*renderer)->flush(vk.device, cmd[0], *renderer);
+
    vkEndCommandBuffer(cmd[0]);
 
 //   VkCommandBuffer cmd_swap[2] ={cmd[1], cmd[0]};

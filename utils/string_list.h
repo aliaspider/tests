@@ -19,7 +19,7 @@ static inline string_list_t* string_list_create()
    return dst;
 }
 
-static inline void string_list_push(string_list_t *dst, const char *string)
+static inline string_list_t* string_list_push(string_list_t *dst, const char *string)
 {
    if (dst->count == dst->capacity)
    {
@@ -28,4 +28,5 @@ static inline void string_list_push(string_list_t *dst, const char *string)
    }
 
    dst->data[dst->count++] = string;
+   return dst;
 }

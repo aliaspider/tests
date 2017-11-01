@@ -11,6 +11,7 @@
 #include "font.h"
 #include "video.h"
 #include "input.h"
+#include "slider.h"
 
 #define VK_ATLAS_WIDTH  512
 #define VK_ATLAS_HEIGHT 512
@@ -160,7 +161,7 @@ void vk_monofont_destroy(VkDevice device, vk_renderer_t *this)
 }
 
 
-static int vulkan_monofont_get_new_slot(void)
+static inline int vulkan_monofont_get_new_slot(void)
 {
    unsigned oldest = 1;
    atlas_slot_t *const slot_map = font.atlas.slot_map;
@@ -212,7 +213,7 @@ static uint32_t console_colors[CONSOLE_COLORS_MAX] =
    [WHITE] =          0xFFFFFFFF,
 };
 
-static void ft_monofont_render_glyph(unsigned charcode, int slot_id)
+static inline void ft_monofont_render_glyph(unsigned charcode, int slot_id)
 {
    CHECK_ERR(FT_Load_Char(font.ftface, charcode, FT_LOAD_RENDER | (font.monochrome ? FT_LOAD_MONOCHROME : 0)));
    FT_Bitmap *bitmap = &font.ftface->glyph->bitmap;
@@ -245,7 +246,7 @@ static void ft_monofont_render_glyph(unsigned charcode, int slot_id)
    R_monofont.tex.dirty = true;
 }
 
-static int vulkan_monofont_get_slot_id(uint32_t charcode)
+static inline int vulkan_monofont_get_slot_id(uint32_t charcode)
 {
    unsigned map_id = charcode & 0xFF;
 
@@ -275,7 +276,7 @@ static int vulkan_monofont_get_slot_id(uint32_t charcode)
    return slot_id;
 }
 
-static inline void update_screen_data(screen_t* screen)
+static inline void update_screen_data(screen_t *screen)
 {
    if (screen->width == screen_data[screen->id].width && screen->height == screen_data[screen->id].height)
       return;
@@ -302,10 +303,51 @@ static inline void update_screen_data(screen_t* screen)
          vbo += screen_data[i].count;
    }
 }
+
+static inline string_list_t *vk_monofont_get_lines(const char *text, screen_t *screen)
+{
+   string_list_t *lines = string_list_create();
+   int row = 0;
+   int col = 0;
+   lines = string_list_push(lines, text);
+
+   while (*text)
+   {
+      const char c = *(text++);
+
+      if (c == '\e')
+      {
+         while (*(text++) != 'm');
+
+         continue;
+      }
+
+      if (c & 0x80)
+      {
+         while ((*(text) & 0xC0) == 0x80)
+            text++;
+
+      }
+
+      if (c == '\t')
+      {
+         row += 3;
+         continue;
+      }
+
+      row++;
+
+      if (row >= screen_data[screen->id].rows || c == '\n')
+      {
+         row = 0;
+         col++;
+         lines = string_list_push(lines, text);
+      }
+   }
+   return lines;
+}
 void vk_monofont_draw_text(const char *text, int x, int y, uint32_t color, screen_t *screen)
 {
-   const unsigned char *in = (const unsigned char *)text;
-
    update_screen_data(screen);
    R_monofont.vbo.info.offset = screen_data[screen->id].offset;
    R_monofont.vbo.info.range = screen_data[screen->id].range;
@@ -315,15 +357,17 @@ void vk_monofont_draw_text(const char *text, int x, int y, uint32_t color, scree
    out += x + y * screen_data[screen->id].cols;
    uint32_t current_color = color;
 
+   const unsigned char *in = (const unsigned char *)text;
+
    while (*in && out - screen_data[screen->id].vbo < screen_data[screen->id].count)
    {
       uint32_t charcode = *(in++);
 
-      if (charcode == 0x1B && *(in++) == '[')
+      if (charcode == '\e' && *(in++) == '[')
       {
          int color_code = 0;
 
-         while (*in != 'm')
+         while (*in != 'm') /* check for 0 ? */
             color_code = color_code * 10 + *(in++) - '0';
 
          if (color_code == CONSOLE_COLOR_RESET)
@@ -348,7 +392,10 @@ void vk_monofont_draw_text(const char *text, int x, int y, uint32_t color, scree
 
       if (charcode == '\t')
       {
-         out += 4;
+         (out++)->slot_id = 0;
+         (out++)->slot_id = 0;
+         (out++)->slot_id = 0;
+         (out++)->slot_id = 0;
          continue;
       }
 
@@ -385,6 +432,78 @@ void vk_monofont_draw_text(const char *text, int x, int y, uint32_t color, scree
 
    R_monofont.vbo.dirty = true;
 }
+
+void console_mono_draw(screen_t *screen)
+{
+
+   static float pos = 1.0;
+   static bool grab = false;
+   static pointer_t old_pointer;
+
+   if (input.pointer.x < screen->width - 20 && !input.pointer.touch1 && old_pointer.touch1)
+      printf("click\n");
+
+   const char* text = console_get();
+   string_list_t *lines = vk_monofont_get_lines(text, screen);
+
+   update_screen_data(screen);
+   int visible_lines = screen_data[screen->id].cols - 4;
+
+   if (visible_lines < lines->count)
+   {
+      float size;
+      size = (float)visible_lines / lines->count;
+
+      if (input.pointer.touch1 && !old_pointer.touch1)
+      {
+         if ((input.pointer.x > screen->width - 20)
+               && (input.pointer.x < screen->width))
+         {
+            if (!grab)
+            {
+               if (input.pointer.y < screen->height * (pos * (1.0 - size)))
+               {
+                  pos = input.pointer.y / ((float)screen->height * (1.0 - size)) - (size / 2) / (1.0 - size);
+                  pos = pos > 0.0 ? pos < 1.0 ? pos : 1.0 : 0.0;
+               }
+               else if (input.pointer.y > screen->height * (pos * (1.0 - size) + size))
+               {
+                  pos = input.pointer.y / ((float)screen->height * (1.0 - size)) - (size / 2) / (1.0 - size);
+                  pos = pos > 0.0 ? pos < 1.0 ? pos : 1.0 : 0.0;
+               }
+            }
+
+            grab = true;
+         }
+      }
+      else if (!input.pointer.touch1)
+      {
+         grab = false;
+         pos = pos > 0.0 ? pos < 1.0 ? pos : 1.0 : 0.0;
+      }
+
+      if (grab)
+         pos += (input.pointer.y - old_pointer.y) / ((float)screen->height * (1.0 - size));
+
+      float real_pos = pos > 0.0 ? pos < 1.0 ? pos * (1.0 - size) : 1.0 - size : 0.0;
+      vk_slider_add(screen->width - 20, 0, 20, screen->height, real_pos, size);
+
+      const char *line = lines->data[(int)(0.5 + lines->count * real_pos)];
+      vk_monofont_draw_text(line, 0, 4, 0xFFFFFFFF, screen);
+   }
+   else
+   {
+      vk_monofont_draw_text(lines->data[0], 0, 4, 0xFFFFFFFF, screen);
+   }
+
+   old_pointer = input.pointer;
+
+
+   free(lines);
+
+
+}
+
 
 vk_renderer_t R_monofont =
 {

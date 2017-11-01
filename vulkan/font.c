@@ -161,7 +161,7 @@ void vk_font_destroy(VkDevice device, vk_renderer_t *this)
 }
 
 
-static int vulkan_font_get_new_slot(void)
+static inline int vulkan_font_get_new_slot(void)
 {
    unsigned oldest = 0;
    atlas_slot_t *const slot_map = font.atlas.slot_map;
@@ -219,7 +219,7 @@ static colorR8G8B8_t console_colors[CONSOLE_COLORS_MAX] =
    [WHITE] =          {255, 255, 255},
 };
 
-static void ft_font_render_glyph(unsigned charcode, int slot_id)
+static inline void ft_font_render_glyph(unsigned charcode, int slot_id)
 {
    CHECK_ERR(FT_Load_Char(font.ftface, charcode, FT_LOAD_RENDER | (font.monochrome ? FT_LOAD_MONOCHROME : 0)));
    FT_Bitmap *bitmap = &font.ftface->glyph->bitmap;
@@ -258,7 +258,7 @@ static void ft_font_render_glyph(unsigned charcode, int slot_id)
    R_font.ubo.dirty = true;
 }
 
-static int vulkan_font_get_slot_id(uint32_t charcode)
+static inline int vulkan_font_get_slot_id(uint32_t charcode)
 {
    unsigned map_id = charcode & 0xFF;
 
@@ -304,7 +304,7 @@ void vk_font_draw_text(const char *text, font_render_options_t *options)
    int pos = 0;
 
    if (options->lines)
-      string_list_push(options->lines, text);
+      options->lines = string_list_push(options->lines, text);
 
    vertex_t *out = NULL;
 
@@ -348,7 +348,7 @@ void vk_font_draw_text(const char *text, font_render_options_t *options)
          vertex.position.y += font.line_height;
 
          if (*in && options->lines)
-            string_list_push(options->lines, (const char *)in);
+            options->lines = string_list_push(options->lines, (const char *)in);
 
          continue;
       }
@@ -393,7 +393,7 @@ void vk_font_draw_text(const char *text, font_render_options_t *options)
             vertex.position.x -= last_space_x;
 
             if (options->lines)
-               string_list_push(options->lines, (const char *)last_space);
+               options->lines = string_list_push(options->lines, (const char *)last_space);
 
             if (out)
             {
@@ -412,7 +412,7 @@ void vk_font_draw_text(const char *text, font_render_options_t *options)
          else
          {
             if (*in && options->lines)
-               string_list_push(options->lines, (const char *)in);
+               options->lines = string_list_push(options->lines, (const char *)in);
 
             vertex.position.x = 0;
 
