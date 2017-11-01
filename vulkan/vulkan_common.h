@@ -125,6 +125,8 @@ typedef struct
    uint32_t swapchain_count;
    VkImageView views[MAX_SWAPCHAIN_IMAGES];
    VkFramebuffer framebuffers[MAX_SWAPCHAIN_IMAGES];
+   VkRenderPassBeginInfo renderpass_info[MAX_SWAPCHAIN_IMAGES];
+   VkClearValue clear_value;
    VkFence chain_fence;
    vk_drawcmd_list_t *draw_list;
    bool vsync;
@@ -307,8 +309,8 @@ struct vk_renderer_t
 {
    void (*const init)(vk_context_t *vk);
    void (*const destroy)(VkDevice device, vk_renderer_t *renderer);
+   void (*const begin)(vk_renderer_t *renderer);
    void (*const exec)(VkCommandBuffer cmd, VkPipelineLayout layout, vk_renderer_t *renderer);
-   void (*const flush)(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *renderer);
    vk_texture_t tex;
    vk_buffer_t vbo;
    vk_buffer_t ubo;
@@ -323,7 +325,7 @@ struct vk_renderer_t
 
 void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info, vk_renderer_t *out);
 void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer);
-void vk_renderer_flush(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *renderer);
+void vk_renderer_begin(vk_renderer_t *renderer);
 void vk_renderer_exec(VkCommandBuffer cmd, VkPipelineLayout layout, vk_renderer_t *renderer);
 void vk_renderer_exec_simple(VkCommandBuffer cmd, VkPipelineLayout layout, vk_renderer_t *renderer);
 

@@ -133,9 +133,10 @@ void monofont_test(screen_t *screen)
 void console_select(screen_t *screen)
 {
    static draw_command_t draw = console_draw;
-   if(input.pad_pressed.meta.console)
+
+   if (input.pad_pressed.meta.console)
    {
-      if(draw == console_draw)
+      if (draw == console_draw)
       {
          draw = console_mono_draw;
          display_message(600, 0, 20, ~0, "mono console");
@@ -146,6 +147,7 @@ void console_select(screen_t *screen)
          display_message(600, 0, 20, ~0, "normal console");
       }
    }
+
    draw(screen);
 }
 
@@ -284,6 +286,9 @@ void video_render()
 
    VkBeginCommandBuffer(cmd[1], VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, NULL);
 
+   for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
+      (*renderer)->begin(*renderer);
+
    for (int i = 0; i < video.screen_count; i++)
    {
       vkWaitForFences(vk.device, 1, &RTarget[i].chain_fence, VK_TRUE, UINT64_MAX);
@@ -313,26 +318,20 @@ void video_render()
 //      vkWaitForFences(vk.device, 1, &display_fence, VK_TRUE, UINT64_MAX);
 //      vkResetFences(vk.device, 1, &display_fence);
 
-
       for (vk_drawcmd_list_t *draw_cmd = RTarget[i].draw_list; draw_cmd; draw_cmd = draw_cmd->next)
          draw_cmd->draw(RTarget[i].screen);
 
       /* renderpass */
-      {
-         const VkClearValue clearValue = {{{0.0f, 0.1f, 1.0f, 0.0f}}};
-         float pc[2] = {RTarget[i].viewport.width, RTarget[i].viewport.height};
-         VkCmdBeginRenderPass(cmd[1], vk.renderpass, RTarget[i].framebuffers[image_indices[i]],
-                              RTarget[i].scissor, &clearValue);
-         vkCmdPushConstants(cmd[1], vk.pipeline_layout, VK_SHADER_STAGE_ALL, 0, sizeof(pc), pc);
+      vkCmdBeginRenderPass(cmd[1], &RTarget[i].renderpass_info[image_indices[i]], VK_SUBPASS_CONTENTS_INLINE);
 
-         vkCmdSetViewport(cmd[1], 0, 1, &RTarget[i].viewport);
-         vkCmdSetScissor(cmd[1], 0, 1, &RTarget[i].scissor);
+      vkCmdPushConstants(cmd[1], vk.pipeline_layout, VK_SHADER_STAGE_ALL, 0, 2 * sizeof(float), &RTarget[i].viewport.width);
+      vkCmdSetViewport(cmd[1], 0, 1, &RTarget[i].viewport);
+      vkCmdSetScissor(cmd[1], 0, 1, &RTarget[i].scissor);
 
-         for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
-            (*renderer)->exec(cmd[1], vk.pipeline_layout, *renderer);
+      for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
+         (*renderer)->exec(cmd[1], vk.pipeline_layout, *renderer);
 
-         vkCmdEndRenderPass(cmd[1]);
-      }
+      vkCmdEndRenderPass(cmd[1]);
 
       swapchains[i] = RTarget[i].swapchain;
    }
@@ -341,8 +340,6 @@ void video_render()
 
    VkBeginCommandBuffer(cmd[0], VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, NULL);
 
-   for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
-      (*renderer)->flush(vk.device, cmd[0], *renderer);
 
    vk_resource_flush_all(vk.device, cmd[0]);
    vkEndCommandBuffer(cmd[0]);

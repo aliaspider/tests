@@ -699,6 +699,20 @@ void vk_swapchain_init(vk_context_t *vk, vk_render_target_t *render_target)
       VK_CHECK(vkCreateSwapchainKHR(vk->device, &info, NULL, &render_target->swapchain));
    }
 
+   render_target->viewport.x = 0.0f;
+   render_target->viewport.y = 0.0f;
+   render_target->viewport.width = render_target->screen->width;
+   render_target->viewport.height = render_target->screen->height;
+   render_target->viewport.minDepth = -1.0f;
+   render_target->viewport.maxDepth =  1.0f;
+
+   render_target->scissor.offset.x = 0.0f;
+   render_target->scissor.offset.y = 0.0f;
+   render_target->scissor.extent.width = render_target->screen->width;
+   render_target->scissor.extent.height = render_target->screen->height;
+
+   render_target->clear_value.color = (VkClearColorValue){{0.0f, 0.1f, 1.0f, 0.0f}};
+
    {
       vkGetSwapchainImagesKHR(vk->device, render_target->swapchain, &render_target->swapchain_count, NULL);
 
@@ -739,21 +753,20 @@ void vk_swapchain_init(vk_context_t *vk, vk_render_target_t *render_target)
             };
             vkCreateFramebuffer(vk->device, &info, NULL, &render_target->framebuffers[i]);
          }
+         {
+            VkRenderPassBeginInfo info =
+            {
+               VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+               .renderPass = vk->renderpass,
+               .framebuffer = render_target->framebuffers[i],
+               .renderArea = render_target->scissor,
+               .clearValueCount = 1,
+               .pClearValues = &render_target->clear_value
+            };
+            render_target->renderpass_info[i] = info;
+         }
       }
    }
-
-   render_target->viewport.x = 0.0f;
-   render_target->viewport.y = 0.0f;
-   render_target->viewport.width = render_target->screen->width;
-   render_target->viewport.height = render_target->screen->height;
-   render_target->viewport.minDepth = -1.0f;
-   render_target->viewport.maxDepth =  1.0f;
-
-   render_target->scissor.offset.x = 0.0f;
-   render_target->scissor.offset.y = 0.0f;
-   render_target->scissor.extent.width = render_target->screen->width;
-   render_target->scissor.extent.height = render_target->screen->height;
-
 }
 
 void vk_render_targets_init(vk_context_t *vk, int count, screen_t *screens, vk_render_target_t *render_targets)
@@ -1503,7 +1516,7 @@ void vk_renderer_exec(VkCommandBuffer cmd, VkPipelineLayout layout, vk_renderer_
    renderer->vbo.info.offset = renderer->vbo.info.range;
 }
 
-void vk_renderer_flush(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *renderer)
+void vk_renderer_begin(vk_renderer_t *renderer)
 {
    renderer->vbo.info.offset = 0;
    renderer->vbo.info.range = 0;

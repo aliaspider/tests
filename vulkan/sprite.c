@@ -58,7 +58,7 @@ vk_renderer_t R_sprite =
 {
    .init = vk_sprite_renderer_init,
    .destroy = vk_renderer_destroy,
+   .begin = vk_renderer_begin,
    .exec = vk_renderer_exec,
-   .flush = vk_renderer_flush,
 };
 
