@@ -329,7 +329,7 @@ void video_render()
          draw_cmd->draw(RTarget[i].screen);
 
       for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
-         (*renderer)->exec(vk.pipeline_layout, *renderer);
+         (*renderer)->finish(*renderer);
    }
 
    VkBeginCommandBuffer(cmd, NULL, VK_ONE_TIME_SUBMIT);

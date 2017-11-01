@@ -311,13 +311,15 @@ struct vk_renderer_t
    void (*const init)(vk_context_t *vk);
    void (*const destroy)(VkDevice device, vk_renderer_t *renderer);
    void (*const begin)(vk_renderer_t *renderer);
-   void (*const exec)(VkPipelineLayout layout, vk_renderer_t *renderer);
+   void (*const finish)(vk_renderer_t *renderer);
    vk_texture_t tex;
    vk_buffer_t vbo;
    vk_buffer_t ubo;
    vk_buffer_t ssbo;
    VkDescriptorSet desc;
    VkPipeline pipe;
+   VkPipelineLayout pipeline_layout;
+   VkRenderPass renderpass;
    uint32_t vertex_stride;
    vk_texture_t *textures[VK_RENDERER_MAX_TEXTURES + 1];
    VkCommandBuffer cmds[MAX_SCREENS];
@@ -329,8 +331,8 @@ struct vk_renderer_t
 void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info, vk_renderer_t *out);
 void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer);
 void vk_renderer_begin(vk_renderer_t *renderer);
-void vk_renderer_exec(VkPipelineLayout layout, vk_renderer_t *renderer);
-void vk_renderer_finish_simple(VkPipelineLayout layout, vk_renderer_t *renderer);
+void vk_renderer_finish(vk_renderer_t *renderer);
+void vk_renderer_finish_simple(vk_renderer_t *renderer);
 
 #define VK_UBO_ALIGNMENT 0x100
 

@@ -524,5 +524,5 @@ vk_renderer_t R_monofont =
    .init = vk_monofont_init,
    .destroy = vk_monofont_destroy,
    .begin = vk_renderer_begin,
-   .exec = vk_renderer_finish_simple,
+   .finish = vk_renderer_finish_simple,
 };

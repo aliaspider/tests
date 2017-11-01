@@ -66,6 +66,6 @@ vk_renderer_t R_slider =
    .init=vk_slider_init,
    .destroy=vk_renderer_destroy,
    .begin = vk_renderer_begin,
-   .exec=vk_renderer_exec,
+   .finish =vk_renderer_finish,
 };
 

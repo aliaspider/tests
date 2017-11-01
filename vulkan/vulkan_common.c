@@ -1359,6 +1359,9 @@ void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info
 
    VkAllocateCommandBuffers(vk->device, vk->pools.cmd, VK_COMMAND_BUFFER_LEVEL_SECONDARY, MAX_SCREENS, out->cmds);
 
+   out->pipeline_layout = vk->pipeline_layout;
+   out->renderpass = vk->renderpass;
+
    {
       const VkPipelineShaderStageCreateInfo shaders_info[] =
       {
@@ -1446,8 +1449,8 @@ void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info
             .pMultisampleState = &multisample_state,
             .pColorBlendState = &colorblend_state,
             .pDynamicState = &dynamic_state_info,
-            .layout = vk->pipeline_layout,
-            .renderPass = vk->renderpass,
+            .layout = out->pipeline_layout,
+            .renderPass = out->renderpass,
             .subpass = 0
          }
       };
@@ -1473,7 +1476,7 @@ void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer)
    memset(&renderer->vk_renderer_data_start, 0, sizeof(*renderer) - offsetof(vk_renderer_t, vk_renderer_data_start));
 }
 
-void vk_renderer_finish_simple(VkPipelineLayout layout, vk_renderer_t *renderer)
+void vk_renderer_finish_simple(vk_renderer_t *renderer)
 {
    if (renderer->vbo.info.range > renderer->vbo.info.offset)
    {
@@ -1485,7 +1488,7 @@ void vk_renderer_finish_simple(VkPipelineLayout layout, vk_renderer_t *renderer)
 //      vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, countof(desc), desc, 1,
 //                              &dynamic_offset);
 //   }
-      vkCmdBindDescriptorSets(renderer->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1, countof(desc), desc, 0, NULL);
+      vkCmdBindDescriptorSets(renderer->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipeline_layout, 1, countof(desc), desc, 0, NULL);
       vkCmdBindVertexBuffers(renderer->cmd, 0, 1, &renderer->vbo.info.buffer, &renderer->vbo.info.offset);
 
       int count = (renderer->vbo.info.range - renderer->vbo.info.offset) / renderer->vertex_stride;
@@ -1498,7 +1501,7 @@ void vk_renderer_finish_simple(VkPipelineLayout layout, vk_renderer_t *renderer)
 
 }
 
-void vk_renderer_exec(VkPipelineLayout layout, vk_renderer_t *renderer)
+void vk_renderer_finish(vk_renderer_t *renderer)
 {
    if (renderer->vbo.info.range > renderer->vbo.info.offset)
    {
@@ -1507,7 +1510,7 @@ void vk_renderer_exec(VkPipelineLayout layout, vk_renderer_t *renderer)
 //   uint32_t dynamic_offset = 0;
 //   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, 1, &renderer->desc, 1,
 //                           &dynamic_offset);
-      vkCmdBindDescriptorSets(renderer->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1, 1, &renderer->desc, 0, NULL);
+      vkCmdBindDescriptorSets(renderer->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipeline_layout, 1, 1, &renderer->desc, 0, NULL);
       vkCmdBindVertexBuffers(renderer->cmd, 0, 1, &renderer->vbo.info.buffer, &renderer->vbo.info.offset);
 
       int count = (renderer->vbo.info.range - renderer->vbo.info.offset) / renderer->vertex_stride;
@@ -1532,11 +1535,11 @@ void vk_renderer_exec(VkPipelineLayout layout, vk_renderer_t *renderer)
 
          if (renderer->textures[i])
          {
-            vkCmdBindDescriptorSets(renderer->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 2, 1, &renderer->textures[i]->desc, 0, NULL);
+            vkCmdBindDescriptorSets(renderer->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipeline_layout, 2, 1, &renderer->textures[i]->desc, 0, NULL);
             renderer->textures[i] = NULL;
          }
          else if (renderer->tex.desc)
-            vkCmdBindDescriptorSets(renderer->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 2, 1, &renderer->tex.desc, 0, NULL);
+            vkCmdBindDescriptorSets(renderer->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipeline_layout, 2, 1, &renderer->tex.desc, 0, NULL);
 
          vkCmdDraw(renderer->cmd, i + 1 - first_vertex, 1, first_vertex, 0);
          first_vertex = i + 1;
