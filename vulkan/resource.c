@@ -17,6 +17,9 @@ void vk_resource_add(void *ptr)
 {
    vk_resource_t *resource = (vk_resource_t *)ptr;
 
+   if(resource->type == VK_RESOURCE_BUFFER && (((vk_buffer_t*)ptr)->mem.flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
+      return;
+
    vk_resource_t **last;
    if(resource->type == VK_RESOURCE_TEXTURE)
       last = &textures;
@@ -40,6 +43,9 @@ void vk_resource_remove(void *ptr)
 {
    vk_resource_t *resource = (vk_resource_t *)ptr;
 
+   if(resource->type == VK_RESOURCE_BUFFER && (((vk_buffer_t*)ptr)->mem.flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
+      return;
+
    if (resource->next)
       resource->next->prev = resource->prev;
 
@@ -57,19 +63,11 @@ void vk_resource_remove(void *ptr)
 
 void vk_resource_flush_all(VkDevice device, VkCommandBuffer cmd)
 {
-   vk_resource_t* resource = textures;
-   while(resource)
-   {
+   for(vk_resource_t* resource = textures; resource; resource = resource->next)
       vk_texture_flush(device, cmd, (vk_texture_t*)resource);
-      resource = resource->next;
-   }
 
-   resource = buffers;
-   while(resource)
-   {
+   for(vk_resource_t* resource = buffers; resource; resource = resource->next)
       vk_buffer_flush(device, (vk_buffer_t*)resource);
-      resource = resource->next;
-   }
 }
 
 
