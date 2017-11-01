@@ -51,19 +51,19 @@ static void vk_init_device_pfn(VkDevice device)
 #undef VK_FN
 }
 
-
+#ifdef DEBUG
 VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(
    VkInstance instance, const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
    const VkAllocationCallbacks *pAllocator, VkDebugReportCallbackEXT *pCallback)
 {
    return vkCreateDebugReportCallbackEXTp(instance, pCreateInfo, pAllocator, pCallback);
 }
-
 VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback,
       const VkAllocationCallbacks *pAllocator)
 {
    return vkDestroyDebugReportCallbackEXTp(instance, callback, pAllocator);
 }
+#endif
 
 
 VKAPI_ATTR VkResult VKAPI_CALL vkRegisterDisplayEventEXT(
@@ -276,7 +276,7 @@ static uint32_t vk_get_queue_family_index(VkPhysicalDevice gpu, VkQueueFlags req
 
    return 0;
 }
-
+#ifdef DEBUG
 static VkBool32 vulkan_debug_report_callback(VkDebugReportFlagsEXT flags,
       VkDebugReportObjectTypeEXT objectType,
       uint64_t object, size_t location,
@@ -292,7 +292,7 @@ static VkBool32 vulkan_debug_report_callback(VkDebugReportFlagsEXT flags,
 
    if (false
          || messageCode == 61
-//   || messageCode == 68
+         || messageCode == 68
 //      || messageCode == 38
 //      || messageCode == 438304791
 //      || messageCode == 9
@@ -305,25 +305,27 @@ static VkBool32 vulkan_debug_report_callback(VkDebugReportFlagsEXT flags,
       if (flags & (1 << i))
          break;
 
-   debug_log("[%-14s - %-11s] %s\n", pLayerPrefix, debugFlags_str[i], pMessage);
+   debug_log("[%i-%-14s - %-11s] %s\n", messageCode, pLayerPrefix, debugFlags_str[i], pMessage);
    fflush(stdout);
 
    assert((flags & VK_DEBUG_REPORT_ERROR_BIT_EXT) == 0);
    return VK_FALSE;
 }
-
+#endif
 void vk_context_init(vk_context_t *vk)
 {
 
    {
       static const char *layers[] =
       {
+#ifdef DEBUG
          "VK_LAYER_LUNARG_standard_validation",
          "VK_LAYER_GOOGLE_unique_objects",
          "VK_LAYER_LUNARG_core_validation",
          "VK_LAYER_LUNARG_object_tracker",
          "VK_LAYER_LUNARG_parameter_validation",
          "VK_LAYER_GOOGLE_threading"
+#endif
 #ifdef __WIN32__
 //         "VK_LAYER_LUNARG_api_dump",
 //         "VK_LAYER_LUNARG_device_simulation",
@@ -380,7 +382,7 @@ void vk_context_init(vk_context_t *vk)
    }
 
    vk_init_instance_pfn(vk->instance);
-
+#ifdef DEBUG
    {
       static const VkDebugReportCallbackCreateInfoEXT info =
       {
@@ -396,7 +398,7 @@ void vk_context_init(vk_context_t *vk)
       };
       vkCreateDebugReportCallbackEXT(vk->instance, &info, NULL, &vk->debug_cb);
    }
-
+#endif
    {
       uint32_t one = 1;
       vkEnumeratePhysicalDevices(vk->instance, &one, &vk->gpu);
@@ -654,7 +656,9 @@ void vk_context_destroy(vk_context_t *vk)
    vkDestroyRenderPass(vk->device, vk->renderpass, NULL);
    vkDestroyCommandPool(vk->device, vk->pools.cmd, NULL);
    vkDestroyDevice(vk->device, NULL);
+#ifdef DEBUG
    vkDestroyDebugReportCallbackEXT(vk->instance, vk->debug_cb, NULL);
+#endif
    vkDestroyInstance(vk->instance, NULL);
    memset(vk, 0, sizeof(*vk));
 }
@@ -711,7 +715,26 @@ void vk_swapchain_init(vk_context_t *vk, vk_render_target_t *render_target)
    render_target->scissor.extent.width = render_target->screen->width;
    render_target->scissor.extent.height = render_target->screen->height;
 
-   render_target->clear_value.color = (VkClearColorValue){{0.0f, 0.1f, 1.0f, 0.0f}};
+   render_target->clear_value.color = (VkClearColorValue)
+   {
+      {
+         0.0f, 0.1f, 1.0f, 0.0f
+      }
+   };
+
+
+   {
+      VkAllocateCommandBuffers(vk->device, vk->pools.cmd, VK_COMMAND_BUFFER_LEVEL_SECONDARY, 1, &render_target->cmd);
+
+      VkBeginCommandBuffer(render_target->cmd, vk->renderpass, VK_RENDER_PASS_CONTINUE);
+
+      vkCmdPushConstants(render_target->cmd, vk->pipeline_layout, VK_SHADER_STAGE_ALL, 0, 2 * sizeof(float),
+                         &render_target->viewport.width);
+      vkCmdSetViewport(render_target->cmd, 0, 1, &render_target->viewport);
+      vkCmdSetScissor(render_target->cmd, 0, 1, &render_target->scissor);
+
+      vkEndCommandBuffer(render_target->cmd);
+   }
 
    {
       vkGetSwapchainImagesKHR(vk->device, render_target->swapchain, &render_target->swapchain_count, NULL);
@@ -826,6 +849,7 @@ void vk_swapchain_destroy(vk_context_t *vk, vk_render_target_t *render_target)
       vkDestroyFramebuffer(vk->device, render_target->framebuffers[i], NULL);
    }
 
+   vkFreeCommandBuffers(vk->device, vk->pools.cmd, 1, &render_target->cmd);
    vkDestroySwapchainKHR(vk->device, render_target->swapchain, NULL);
 
 }
@@ -1447,73 +1471,79 @@ void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer)
    memset(&renderer->vk_renderer_data_start, 0, sizeof(*renderer) - offsetof(vk_renderer_t, vk_renderer_data_start));
 }
 
-void vk_renderer_exec_simple(VkCommandBuffer cmd, VkPipelineLayout layout, vk_renderer_t *renderer)
+void vk_renderer_exec_simple(VkPipelineLayout layout, vk_renderer_t *renderer)
 {
-   if (renderer->vbo.info.range == renderer->vbo.info.offset)
-      return;
+   if (renderer->vbo.info.range > renderer->vbo.info.offset)
+   {
 
-   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipe);
+      vkCmdBindPipeline(renderer->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipe);
 //   {
 //      uint32_t dynamic_offset = 0;
       VkDescriptorSet desc[] = {renderer->desc, renderer->tex.desc};
 //      vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, countof(desc), desc, 1,
 //                              &dynamic_offset);
 //   }
-   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1, countof(desc), desc, 0, NULL);
-   vkCmdBindVertexBuffers(cmd, 0, 1, &renderer->vbo.info.buffer, &renderer->vbo.info.offset);
+      vkCmdBindDescriptorSets(renderer->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1, countof(desc), desc, 0, NULL);
+      vkCmdBindVertexBuffers(renderer->cmd, 0, 1, &renderer->vbo.info.buffer, &renderer->vbo.info.offset);
 
-   int count = (renderer->vbo.info.range - renderer->vbo.info.offset) / renderer->vertex_stride;
+      int count = (renderer->vbo.info.range - renderer->vbo.info.offset) / renderer->vertex_stride;
 
-   vkCmdDraw(cmd, count, 1, 0, 0);
+      vkCmdDraw(renderer->cmd, count, 1, 0, 0);
+      renderer->vbo.info.offset = renderer->vbo.info.range;
+   }
 
-   renderer->vbo.info.offset = renderer->vbo.info.range;
+   vkEndCommandBuffer(renderer->cmd);
+
 }
 
-void vk_renderer_exec(VkCommandBuffer cmd, VkPipelineLayout layout, vk_renderer_t *renderer)
+void vk_renderer_exec(VkPipelineLayout layout, vk_renderer_t *renderer)
 {
-   if (renderer->vbo.info.range <= renderer->vbo.info.offset)
-      return;
+   if (renderer->vbo.info.range > renderer->vbo.info.offset)
+   {
 
-   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipe);
+      vkCmdBindPipeline(renderer->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipe);
 //   uint32_t dynamic_offset = 0;
 //   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->layout, 0, 1, &renderer->desc, 1,
 //                           &dynamic_offset);
-   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1, 1, &renderer->desc, 0, NULL);
-   vkCmdBindVertexBuffers(cmd, 0, 1, &renderer->vbo.info.buffer, &renderer->vbo.info.offset);
+      vkCmdBindDescriptorSets(renderer->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1, 1, &renderer->desc, 0, NULL);
+      vkCmdBindVertexBuffers(renderer->cmd, 0, 1, &renderer->vbo.info.buffer, &renderer->vbo.info.offset);
 
-   int count = (renderer->vbo.info.range - renderer->vbo.info.offset) / renderer->vertex_stride;
-   int first_vertex = 0;
+      int count = (renderer->vbo.info.range - renderer->vbo.info.offset) / renderer->vertex_stride;
+      int first_vertex = 0;
 
-   for (uint32_t i = 0; i < count; i++)
-   {
-      if (i + 1 < count)
+      for (uint32_t i = 0; i < count; i++)
       {
-         if (i < VK_RENDERER_MAX_TEXTURES)
+         if (i + 1 < count)
          {
-            if (renderer->textures[i] == renderer->textures[i + 1])
+            if (i < VK_RENDERER_MAX_TEXTURES)
             {
-               renderer->textures[i] = NULL;
-               continue;
+               if (renderer->textures[i] == renderer->textures[i + 1])
+               {
+                  renderer->textures[i] = NULL;
+                  continue;
+               }
             }
+            else
+               i = count - 1;
          }
-         else
-            i = count - 1;
+
+
+         if (renderer->textures[i])
+         {
+            vkCmdBindDescriptorSets(renderer->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 2, 1, &renderer->textures[i]->desc, 0, NULL);
+            renderer->textures[i] = NULL;
+         }
+         else if (renderer->tex.desc)
+            vkCmdBindDescriptorSets(renderer->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 2, 1, &renderer->tex.desc, 0, NULL);
+
+         vkCmdDraw(renderer->cmd, i + 1 - first_vertex, 1, first_vertex, 0);
+         first_vertex = i + 1;
       }
 
-
-      if (renderer->textures[i])
-      {
-         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 2, 1, &renderer->textures[i]->desc, 0, NULL);
-         renderer->textures[i] = NULL;
-      }
-      else if (renderer->tex.desc)
-         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 2, 1, &renderer->tex.desc, 0, NULL);
-
-      vkCmdDraw(cmd, i + 1 - first_vertex, 1, first_vertex, 0);
-      first_vertex = i + 1;
+      renderer->vbo.info.offset = renderer->vbo.info.range;
    }
 
-   renderer->vbo.info.offset = renderer->vbo.info.range;
+   vkEndCommandBuffer(renderer->cmd);
 }
 
 void vk_renderer_begin(vk_renderer_t *renderer)

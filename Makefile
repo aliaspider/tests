@@ -52,7 +52,7 @@ $(foreach obj,$(HAS_SHADERS),$(eval $(BUILD_DIR)/$(obj).o: $(obj).vert.inc $(obj
 $(foreach obj,$(HAS_SHADERS),$(eval SPIRV_OBJS += $(obj).vert.inc $(obj).frag.inc $(obj).geom.inc))
 
 ifeq ($(DEBUG),1)
-   CFLAGS += -g -O0
+   CFLAGS += -g -O0 -DDEBUG
 else
    CFLAGS += -g -O3
 endif

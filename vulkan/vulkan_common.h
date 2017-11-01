@@ -126,6 +126,7 @@ typedef struct
    VkImageView views[MAX_SWAPCHAIN_IMAGES];
    VkFramebuffer framebuffers[MAX_SWAPCHAIN_IMAGES];
    VkRenderPassBeginInfo renderpass_info[MAX_SWAPCHAIN_IMAGES];
+   VkCommandBuffer cmd;
    VkClearValue clear_value;
    VkFence chain_fence;
    vk_drawcmd_list_t *draw_list;
@@ -310,7 +311,7 @@ struct vk_renderer_t
    void (*const init)(vk_context_t *vk);
    void (*const destroy)(VkDevice device, vk_renderer_t *renderer);
    void (*const begin)(vk_renderer_t *renderer);
-   void (*const exec)(VkCommandBuffer cmd, VkPipelineLayout layout, vk_renderer_t *renderer);
+   void (*const exec)(VkPipelineLayout layout, vk_renderer_t *renderer);
    vk_texture_t tex;
    vk_buffer_t vbo;
    vk_buffer_t ubo;
@@ -319,6 +320,7 @@ struct vk_renderer_t
    VkPipeline pipe;
    uint32_t vertex_stride;
    vk_texture_t *textures[VK_RENDERER_MAX_TEXTURES + 1];
+   VkCommandBuffer cmd;
 };
 
 #define vk_renderer_data_start tex
@@ -326,8 +328,8 @@ struct vk_renderer_t
 void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info, vk_renderer_t *out);
 void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer);
 void vk_renderer_begin(vk_renderer_t *renderer);
-void vk_renderer_exec(VkCommandBuffer cmd, VkPipelineLayout layout, vk_renderer_t *renderer);
-void vk_renderer_exec_simple(VkCommandBuffer cmd, VkPipelineLayout layout, vk_renderer_t *renderer);
+void vk_renderer_exec(VkPipelineLayout layout, vk_renderer_t *renderer);
+void vk_renderer_exec_simple(VkPipelineLayout layout, vk_renderer_t *renderer);
 
 #define VK_UBO_ALIGNMENT 0x100
 
@@ -340,30 +342,35 @@ static inline void *vk_get_vbo_memory(vk_buffer_t *vbo, VkDeviceSize size)
    return ptr;
 }
 
-static inline VkResult VkAllocateCommandBuffer(VkDevice device, VkCommandPool commandPool, VkCommandBuffer *out)
+static inline VkResult VkAllocateCommandBuffers(VkDevice device, VkCommandPool commandPool, VkCommandBufferLevel level, uint32_t count, VkCommandBuffer *out)
 {
    const VkCommandBufferAllocateInfo info =
    {
       VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
       .commandPool = commandPool,
-      .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-      .commandBufferCount = 1
+      .level = level,
+      .commandBufferCount = count
    };
    return vkAllocateCommandBuffers(device, &info, out);
 }
 
 
-static inline VkResult VkBeginCommandBuffer(VkCommandBuffer CommandBuffer, VkCommandBufferUsageFlags flags,
-      const VkCommandBufferInheritanceInfo *pInheritanceInfo)
+static inline VkResult VkBeginCommandBuffer(VkCommandBuffer CommandBuffer, VkRenderPass renderPass, VkCommandBufferUsageFlags flags)
 {
+   VkCommandBufferInheritanceInfo inheritance_info =
+   {
+      VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+      .renderPass = renderPass,
+   };
    const VkCommandBufferBeginInfo info =
    {
       VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
       .flags = flags,
-      .pInheritanceInfo = pInheritanceInfo,
+      .pInheritanceInfo = &inheritance_info,
    };
    return vkBeginCommandBuffer(CommandBuffer, &info);
 }
+
 
 static inline VkResult VkCreateFence(VkDevice device, bool signaled, VkFence *out)
 {
@@ -420,4 +427,6 @@ enum
    VK_ONE_MINUS_SRC_ALPHA  = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
    VK_ADD                  = VK_BLEND_OP_ADD,
    VK_COLOR_COMPONENT_ALL  = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+   VK_ONE_TIME_SUBMIT      = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+   VK_RENDER_PASS_CONTINUE = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
 };

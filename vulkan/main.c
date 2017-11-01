@@ -14,11 +14,11 @@
 #include "slider.h"
 #include "sprite.h"
 
-static vk_context_t vk;
+static vk_context_t       vk;
 static vk_render_target_t RTarget[MAX_SCREENS];
-static VkCommandBuffer cmd[2];
+static VkCommandBuffer    cmd[2];
 
-static vk_renderer_t *renderers[] =
+static vk_renderer_t     *renderers[] =
 {
    &R_frame,
    &R_sprite,
@@ -28,6 +28,7 @@ static vk_renderer_t *renderers[] =
    NULL
 };
 
+static VkCommandBuffer    RTcmds[MAX_SCREENS][countof(renderers)];
 
 void console_draw(screen_t *screen);
 void console_mono_draw(screen_t *screen);
@@ -36,7 +37,7 @@ void fps_draw(screen_t *screen)
 {
    font_render_options_t options =
    {
-      .max_width = screen->width,
+      .max_width  = screen->width,
       .max_height = screen->height,
    };
    vk_font_draw_text(video.fps, &options);
@@ -44,14 +45,14 @@ void fps_draw(screen_t *screen)
 
 void screen_id_draw(screen_t *screen)
 {
-   char buffer[16];
+   char                  buffer[16];
    snprintf(buffer, sizeof(buffer), "SCREEN: \e[%im%i", RED, screen->id);
 
    font_render_options_t options =
    {
-      .x = screen->width - 20 - 9 * 12,
-      .y = screen->width < 400 ? screen->height - 22 : 0,
-      .max_width = screen->width,
+      .x          = screen->width - 20 - 9 * 12,
+      .y          = screen->width < 400 ? screen->height - 22 : 0,
+      .max_width  = screen->width,
       .max_height = screen->height,
    };
    vk_font_draw_text(buffer, &options);
@@ -91,35 +92,35 @@ void sprite_test(screen_t *screen)
    {
       sprite_t sprite =
       {
-         .pos.values = {330.0, 100.0, (calls >> 3) & 0xFF, 256.0},
-         .coords.values = {0.0, 0.0, 256.0, 256.0},
-         .color.values = {0.4, 1.0, 0.5, 0.20},
+         .pos.values    = {330.0, 100.0, (calls >> 3) & 0xFF, 256.0},
+         .coords.values = {  0.0,   0.0,               256.0, 256.0},
+         .color.values  = {  0.4,   1.0,                 0.5,  0.20},
       };
       vk_sprite_add(&sprite, &test_image);
    }
    {
       sprite_t sprite =
       {
-         .pos.values = {100.0, 40.0, 128, 32.0},
-         .color.values = {1.0, 0.0, 0.5, 0.50},
+         .pos.values   = {100.0, 40.0, 128, 32.0},
+         .color.values = {  1.0,  0.0, 0.5, 0.50},
       };
       vk_sprite_add(&sprite, NULL);
    }
    {
       sprite_t sprite =
       {
-         .pos.values = {320.0, 400.0, 320.0, 64.0},
-         .coords.values = {20.0, 20.0, 132.0, 32.0},
-         .color.values = {0.0, 1.0, 1.0, 0.50},
+         .pos.values    = {320.0, 400.0, 320.0, 64.0},
+         .coords.values = { 20.0,  20.0, 132.0, 32.0},
+         .color.values  = {  0.0,   1.0,   1.0, 0.50},
       };
       vk_sprite_add(&sprite, &R_frame.tex);
    }
    {
       sprite_t sprite =
       {
-         .pos.values = {10.0, 190.0, R_font.tex.width, R_font.tex.height},
-         .coords.values = {0.0, 0.0, R_font.tex.width, R_font.tex.height},
-         .color.values = {1.0, 1.0, 0.0, 1.0},
+         .pos.values    = {10.0, 190.0, R_font.tex.width, R_font.tex.height},
+         .coords.values = { 0.0,   0.0, R_font.tex.width, R_font.tex.height},
+         .color.values  = { 1.0,   1.0,              0.0,               1.0},
       };
       vk_sprite_add(&sprite, &R_font.tex);
    }
@@ -156,9 +157,9 @@ void monofont_atlas(screen_t *screen)
    {
       sprite_t sprite =
       {
-         .pos.values = {10.0, (screen->height - R_monofont.tex.height) / 2, R_monofont.tex.width, R_monofont.tex.height},
-         .coords.values = {0.0, 0.0, R_monofont.tex.width, R_monofont.tex.height},
-         .color.values = {1.0, 1.0, 0.0, 1.0},
+         .pos.values    = {10.0, (screen->height - R_monofont.tex.height) / 2, R_monofont.tex.width, R_monofont.tex.height},
+         .coords.values = { 0.0,                                          0.0, R_monofont.tex.width, R_monofont.tex.height},
+         .color.values  = { 1.0,                                          1.0,                  0.0,                   1.0},
       };
       vk_sprite_add(&sprite, &R_monofont.tex);
    }
@@ -212,7 +213,7 @@ void display_message(int frames, int x, int y, unsigned screen_mask, const char 
    if (ptr - msg_buffer == countof(msg_buffer))
       return;
 
-   va_list va;
+   va_list       va;
    va_start(va, fmt);
    vasprintf(&ptr->msg, fmt, va);
    va_end(va);
@@ -234,8 +235,11 @@ void video_init()
 
    vk_context_init(&vk);
 
-   VkAllocateCommandBuffer(vk.device, vk.pools.cmd, &cmd[0]);
-   VkAllocateCommandBuffer(vk.device, vk.pools.cmd, &cmd[1]);
+   VkAllocateCommandBuffers(vk.device, vk.pools.cmd, VK_COMMAND_BUFFER_LEVEL_PRIMARY, countof(cmd), cmd);
+   VkAllocateCommandBuffers(vk.device, vk.pools.cmd, VK_COMMAND_BUFFER_LEVEL_SECONDARY, countof(RTcmds[0]) * MAX_SCREENS,
+                            RTcmds[0]);
+//   vkFreeCommandBuffers(vk.device, vk.pools.cmd,  countof(RTcmds[0]) * MAX_SCREENS, RTcmds[0]);
+//   VkAllocateCommandBuffers(vk.device, vk.pools.cmd, VK_COMMAND_BUFFER_LEVEL_SECONDARY, countof(RTcmds[0]) * MAX_SCREENS, RTcmds[0]);
 
    vk_render_targets_init(&vk, video.screen_count, video.screens, RTarget);
 
@@ -275,7 +279,7 @@ void video_init()
 
 void video_render()
 {
-   uint32_t image_indices[MAX_SCREENS];
+   uint32_t       image_indices[MAX_SCREENS];
    VkSwapchainKHR swapchains[MAX_SCREENS];
 
    R_frame.tex.dirty = true;
@@ -284,10 +288,10 @@ void video_render()
    VK_CHECK(vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, 100000000));
    vkResetFences(vk.device, 1, &vk.queue_fence);
 
-   VkBeginCommandBuffer(cmd[1], VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, NULL);
-
    for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
       (*renderer)->begin(*renderer);
+
+   VkBeginCommandBuffer(cmd[1], NULL, VK_ONE_TIME_SUBMIT);
 
    for (int i = 0; i < video.screen_count; i++)
    {
@@ -318,18 +322,27 @@ void video_render()
 //      vkWaitForFences(vk.device, 1, &display_fence, VK_TRUE, UINT64_MAX);
 //      vkResetFences(vk.device, 1, &display_fence);
 
+
+      VkCommandBuffer *rtcmd = &RTcmds[i][0];
+      *rtcmd = RTarget[i].cmd;
+      rtcmd++;
+
+      for (vk_renderer_t **renderer = renderers; *renderer; renderer++, rtcmd++)
+      {
+         VkBeginCommandBuffer(*rtcmd, vk.renderpass, VK_ONE_TIME_SUBMIT | VK_RENDER_PASS_CONTINUE);
+         (*renderer)->cmd = *rtcmd;
+      }
+
       for (vk_drawcmd_list_t *draw_cmd = RTarget[i].draw_list; draw_cmd; draw_cmd = draw_cmd->next)
          draw_cmd->draw(RTarget[i].screen);
 
-      /* renderpass */
-      vkCmdBeginRenderPass(cmd[1], &RTarget[i].renderpass_info[image_indices[i]], VK_SUBPASS_CONTENTS_INLINE);
-
-      vkCmdPushConstants(cmd[1], vk.pipeline_layout, VK_SHADER_STAGE_ALL, 0, 2 * sizeof(float), &RTarget[i].viewport.width);
-      vkCmdSetViewport(cmd[1], 0, 1, &RTarget[i].viewport);
-      vkCmdSetScissor(cmd[1], 0, 1, &RTarget[i].scissor);
-
       for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
-         (*renderer)->exec(cmd[1], vk.pipeline_layout, *renderer);
+         (*renderer)->exec(vk.pipeline_layout, *renderer);
+
+      vkCmdBeginRenderPass(cmd[1], &RTarget[i].renderpass_info[image_indices[i]],
+                           VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+
+      vkCmdExecuteCommands(cmd[1], countof(RTcmds[i]), RTcmds[i]);
 
       vkCmdEndRenderPass(cmd[1]);
 
@@ -338,9 +351,7 @@ void video_render()
 
    vkEndCommandBuffer(cmd[1]);
 
-   VkBeginCommandBuffer(cmd[0], VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, NULL);
-
-
+   VkBeginCommandBuffer(cmd[0], NULL, VK_ONE_TIME_SUBMIT);
    vk_resource_flush_all(vk.device, cmd[0]);
    vkEndCommandBuffer(cmd[0]);
 
@@ -386,8 +397,8 @@ void video_register_draw_command(int screen_id, draw_command_t fn)
 
 const video_t video_vulkan =
 {
-   .init = video_init,
-   .render = video_render,
-   .destroy = video_destroy,
+   .init                  = video_init,
+   .render                = video_render,
+   .destroy               = video_destroy,
    .register_draw_command = video_register_draw_command,
 };
