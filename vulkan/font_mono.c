@@ -449,6 +449,8 @@ void console_mono_draw(screen_t *screen)
    update_screen_data(screen);
 
    string_list_t *lines = vk_monofont_get_lines(text, screen_data[screen->id].cols);
+//   string_list_t *lines = string_list_create();
+//   lines = string_list_push(lines, text);
    int visible_lines = screen_data[screen->id].rows - 4;
 
    if (visible_lines < lines->count)
@@ -490,13 +492,23 @@ void console_mono_draw(screen_t *screen)
       float real_pos = pos[screen->id] > 0.0 ? pos[screen->id] < 1.0 ? pos[screen->id] * (1.0 - size) : 1.0 - size : 0.0;
       vk_slider_add(screen->width - 20, 0, 20, screen->height, real_pos, size);
 
-      const char *line = lines->data[(int)(0.5 + lines->count * real_pos)];
-      vk_monofont_draw_text(line, 0, 4, 0xFFFFFFFF, screen);
+      text = lines->data[(int)(0.5 + lines->count * real_pos)];
+   }
+
+   static int last_update_counter;
+   static const char *last_line_pointer[MAX_SCREENS];
+
+   if (last_update_counter != console_update_counter || last_line_pointer[screen->id] != text)
+   {
+      last_update_counter = console_update_counter;
+      last_line_pointer[screen->id] = text;
+      fprintf(stdout, "no skip\n");
+      fflush(stdout);
    }
    else
-   {
-      vk_monofont_draw_text(lines->data[0], 0, 4, 0xFFFFFFFF, screen);
-   }
+      text = "";
+
+   vk_monofont_draw_text(text, 0, 4, 0xFFFFFFFF, screen);
 
    old_pointer[screen->id] = input.pointer;
 

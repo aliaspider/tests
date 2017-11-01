@@ -80,6 +80,9 @@ void input_x11_update()
          if (e.xkey.keycode == XKeysymToKeycode(video.screens[0].display, XK_F6))
             input.pad.meta.filter = (e.type == KeyPress);
 
+         if (e.xkey.keycode == XKeysymToKeycode(video.screens[0].display, XK_F7))
+            input.pad.meta.console = (e.type == KeyPress);
+
          break;
 
       case ButtonPress:

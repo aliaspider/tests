@@ -22,8 +22,8 @@ static vk_renderer_t *renderers[] =
 {
    &R_frame,
    &R_sprite,
-   &R_font,
    &R_monofont,
+   &R_font,
    &R_slider,
    NULL
 };
@@ -130,6 +130,25 @@ void monofont_test(screen_t *screen)
    vk_monofont_draw_text("testing monofont", 10, 12, 0xFFFFFFFF, screen);
 }
 
+void console_select(screen_t *screen)
+{
+   static draw_command_t draw = console_draw;
+   if(input.pad_pressed.meta.console)
+   {
+      if(draw == console_draw)
+      {
+         draw = console_mono_draw;
+         display_message(600, 0, 20, ~0, "mono console");
+      }
+      else
+      {
+         draw = console_draw;
+         display_message(600, 0, 20, ~0, "normal console");
+      }
+   }
+   draw(screen);
+}
+
 void monofont_atlas(screen_t *screen)
 {
    {
@@ -233,8 +252,9 @@ void video_init()
 //   vk_register_draw_command(&RTarget[1].draw_list, sprite_test);
    vk_register_draw_command(&RTarget[1].draw_list, fps_draw);
    vk_register_draw_command(&RTarget[1].draw_list, screen_id_draw);
+   vk_register_draw_command(&RTarget[1].draw_list, console_select);
 //   vk_register_draw_command(&RTarget[1].draw_list, console_draw);
-   vk_register_draw_command(&RTarget[1].draw_list, console_mono_draw);
+//   vk_register_draw_command(&RTarget[1].draw_list, console_mono_draw);
 //   vk_register_draw_command(&RTarget[1].draw_list, display_message_handler);
 //   vk_register_draw_command(&RTarget[1].draw_list, monofont_test);
 //   vk_register_draw_command(&RTarget[1].draw_list, monofont_atlas);
