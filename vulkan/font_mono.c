@@ -304,11 +304,11 @@ static inline void update_screen_data(screen_t *screen)
    }
 }
 
-static inline string_list_t *vk_monofont_get_lines(const char *text, screen_t *screen)
+static inline string_list_t *vk_monofont_get_lines(const char *text, int line_width)
 {
    string_list_t *lines = string_list_create();
-   int row = 0;
    int col = 0;
+   int row = 0;
    lines = string_list_push(lines, text);
 
    while (*text)
@@ -331,18 +331,20 @@ static inline string_list_t *vk_monofont_get_lines(const char *text, screen_t *s
 
       if (c == '\t')
       {
-         row += 3;
+         col += 3;
          continue;
       }
 
-      row++;
+      col++;
 
-      if (row >= screen_data[screen->id].rows || c == '\n')
+      if (col >= line_width || c == '\n')
       {
-         row = 0;
-         col++;
+         col = 0;
+         row++;
          lines = string_list_push(lines, text);
       }
+      if(c == '\n')
+         fflush(stdout);
    }
    return lines;
 }
@@ -436,56 +438,56 @@ void vk_monofont_draw_text(const char *text, int x, int y, uint32_t color, scree
 void console_mono_draw(screen_t *screen)
 {
 
-   static float pos = 1.0;
-   static bool grab = false;
-   static pointer_t old_pointer;
+   static float pos[MAX_SCREENS];
+   static bool grab[MAX_SCREENS];
+   static pointer_t old_pointer[MAX_SCREENS];
 
-   if (input.pointer.x < screen->width - 20 && !input.pointer.touch1 && old_pointer.touch1)
+   if (input.pointer.x < screen->width - 20 && !input.pointer.touch1 && old_pointer[screen->id].touch1)
       printf("click\n");
 
    const char* text = console_get();
-   string_list_t *lines = vk_monofont_get_lines(text, screen);
-
    update_screen_data(screen);
-   int visible_lines = screen_data[screen->id].cols - 4;
+
+   string_list_t *lines = vk_monofont_get_lines(text, screen_data[screen->id].cols);
+   int visible_lines = screen_data[screen->id].rows - 4;
 
    if (visible_lines < lines->count)
    {
       float size;
       size = (float)visible_lines / lines->count;
 
-      if (input.pointer.touch1 && !old_pointer.touch1)
+      if (input.pointer.touch1 && !old_pointer[screen->id].touch1)
       {
          if ((input.pointer.x > screen->width - 20)
                && (input.pointer.x < screen->width))
          {
-            if (!grab)
+            if (!grab[screen->id])
             {
-               if (input.pointer.y < screen->height * (pos * (1.0 - size)))
+               if (input.pointer.y < screen->height * (pos[screen->id] * (1.0 - size)))
                {
-                  pos = input.pointer.y / ((float)screen->height * (1.0 - size)) - (size / 2) / (1.0 - size);
-                  pos = pos > 0.0 ? pos < 1.0 ? pos : 1.0 : 0.0;
+                  pos[screen->id] = input.pointer.y / ((float)screen->height * (1.0 - size)) - (size / 2) / (1.0 - size);
+                  pos[screen->id] = pos[screen->id] > 0.0 ? pos[screen->id] < 1.0 ? pos[screen->id] : 1.0 : 0.0;
                }
-               else if (input.pointer.y > screen->height * (pos * (1.0 - size) + size))
+               else if (input.pointer.y > screen->height * (pos[screen->id] * (1.0 - size) + size))
                {
-                  pos = input.pointer.y / ((float)screen->height * (1.0 - size)) - (size / 2) / (1.0 - size);
-                  pos = pos > 0.0 ? pos < 1.0 ? pos : 1.0 : 0.0;
+                  pos[screen->id] = input.pointer.y / ((float)screen->height * (1.0 - size)) - (size / 2) / (1.0 - size);
+                  pos[screen->id] = pos[screen->id] > 0.0 ? pos[screen->id] < 1.0 ? pos[screen->id] : 1.0 : 0.0;
                }
             }
 
-            grab = true;
+            grab[screen->id] = true;
          }
       }
       else if (!input.pointer.touch1)
       {
-         grab = false;
-         pos = pos > 0.0 ? pos < 1.0 ? pos : 1.0 : 0.0;
+         grab[screen->id] = false;
+         pos[screen->id] = pos[screen->id] > 0.0 ? pos[screen->id] < 1.0 ? pos[screen->id] : 1.0 : 0.0;
       }
 
-      if (grab)
-         pos += (input.pointer.y - old_pointer.y) / ((float)screen->height * (1.0 - size));
+      if (grab[screen->id])
+         pos[screen->id] += (input.pointer.y - old_pointer[screen->id].y) / ((float)screen->height * (1.0 - size));
 
-      float real_pos = pos > 0.0 ? pos < 1.0 ? pos * (1.0 - size) : 1.0 - size : 0.0;
+      float real_pos = pos[screen->id] > 0.0 ? pos[screen->id] < 1.0 ? pos[screen->id] * (1.0 - size) : 1.0 - size : 0.0;
       vk_slider_add(screen->width - 20, 0, 20, screen->height, real_pos, size);
 
       const char *line = lines->data[(int)(0.5 + lines->count * real_pos)];
@@ -496,7 +498,7 @@ void console_mono_draw(screen_t *screen)
       vk_monofont_draw_text(lines->data[0], 0, 4, 0xFFFFFFFF, screen);
    }
 
-   old_pointer = input.pointer;
+   old_pointer[screen->id] = input.pointer;
 
 
    free(lines);
