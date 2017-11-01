@@ -344,6 +344,7 @@ void video_render()
    for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
       (*renderer)->flush(vk.device, cmd[0], *renderer);
 
+   vk_resource_flush_all(vk.device, cmd[0]);
    vkEndCommandBuffer(cmd[0]);
 
 //   VkCommandBuffer cmd_swap[2] ={cmd[1], cmd[0]};

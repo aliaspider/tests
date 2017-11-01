@@ -965,6 +965,9 @@ void vk_texture_init(vk_context_t *vk, vk_texture_t *out)
 
    vk_texture_update_descriptor_sets(vk, out);
 
+   out->type = VK_RESOURCE_TEXTURE;
+   vk_resource_add(out);
+
 }
 
 void vk_texture_free(VkDevice device, vk_texture_t *texture)
@@ -977,6 +980,7 @@ void vk_texture_free(VkDevice device, vk_texture_t *texture)
    vk_buffer_free(device, &texture->ubo);
    texture->info.imageView = VK_NULL_HANDLE;
    texture->image = VK_NULL_HANDLE;
+   vk_resource_remove(texture);
 }
 
 
@@ -1177,6 +1181,9 @@ void vk_buffer_init(VkDevice device, const VkMemoryType *memory_types, const voi
       memcpy(out->mem.ptr, data, out->info.range);
       vk_device_memory_flush(device, &out->mem);
    }
+
+   out->type = VK_RESOURCE_BUFFER;
+   vk_resource_add(out);
 }
 
 void vk_buffer_free(VkDevice device, vk_buffer_t *buffer)
@@ -1184,6 +1191,7 @@ void vk_buffer_free(VkDevice device, vk_buffer_t *buffer)
    vk_device_memory_free(device, &buffer->mem);
    vkDestroyBuffer(device, buffer->info.buffer, NULL);
    buffer->info.buffer = VK_NULL_HANDLE;
+   vk_resource_remove(buffer);
 }
 
 void vk_buffer_invalidate(VkDevice device, vk_buffer_t *buffer)
@@ -1497,27 +1505,6 @@ void vk_renderer_exec(VkCommandBuffer cmd, VkPipelineLayout layout, vk_renderer_
 
 void vk_renderer_flush(VkDevice device, VkCommandBuffer cmd, vk_renderer_t *renderer)
 {
-   vk_texture_flush(device, cmd, &renderer->tex);
-   vk_buffer_flush(device, &renderer->tex.ubo);
-
-   int vertex_count = (renderer->vbo.info.range - renderer->vbo.info.offset) / renderer->vertex_stride;
-
-   if (vertex_count < VK_RENDERER_MAX_TEXTURES)
-   {
-      for (int i = 0; i < vertex_count; i++)
-      {
-         if (!renderer->textures[i])
-            continue;
-
-         vk_buffer_flush(device, &renderer->textures[i]->ubo);
-         vk_texture_upload(device, cmd, renderer->textures[i]);
-      }
-   }
-
-   vk_buffer_flush(device, &renderer->vbo);
-   vk_buffer_flush(device, &renderer->ubo);
-   vk_buffer_flush(device, &renderer->ssbo);
-
    renderer->vbo.info.offset = 0;
    renderer->vbo.info.range = 0;
 }

@@ -171,6 +171,21 @@ static inline void vk_remove_draw_command(vk_drawcmd_list_t **list, draw_command
    }
 }
 
+typedef enum
+{
+   VK_RESOURCE_TEXTURE,
+   VK_RESOURCE_BUFFER,
+}vk_resource_type_t;
+
+#define VK_RESOURCE \
+   bool dirty; \
+   vk_resource_type_t type; \
+   const uintptr_t private[2]
+
+void vk_resource_add(void* resource);
+void vk_resource_remove(void* resource);
+void vk_resource_flush_all(VkDevice device, VkCommandBuffer cmd);
+
 typedef struct
 {
    VkDeviceMemory handle;
@@ -198,10 +213,10 @@ void vk_device_memory_flush(VkDevice device, const device_memory_t *memory);
 
 typedef struct
 {
+   VK_RESOURCE;
    VkDescriptorBufferInfo info;
    device_memory_t mem;
    VkBufferUsageFlags usage;
-   bool dirty;
 } vk_buffer_t;
 
 void vk_buffer_init(VkDevice device, const VkMemoryType *memory_types, const void *data, vk_buffer_t *out);
@@ -225,7 +240,8 @@ typedef struct
 } texture_uniform_t;
 
 typedef struct
-{
+{   
+   VK_RESOURCE;
    struct
    {
       device_memory_t mem;
@@ -244,7 +260,6 @@ typedef struct
    int width;
    int height;
    bool ignore_alpha;
-   bool dirty;
    bool is_reference;
 } vk_texture_t;
 
