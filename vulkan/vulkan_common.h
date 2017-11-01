@@ -329,7 +329,7 @@ void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info
 void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer);
 void vk_renderer_begin(vk_renderer_t *renderer);
 void vk_renderer_exec(VkPipelineLayout layout, vk_renderer_t *renderer);
-void vk_renderer_exec_simple(VkPipelineLayout layout, vk_renderer_t *renderer);
+void vk_renderer_finish_simple(VkPipelineLayout layout, vk_renderer_t *renderer);
 
 #define VK_UBO_ALIGNMENT 0x100
 

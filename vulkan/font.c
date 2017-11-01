@@ -447,5 +447,5 @@ vk_renderer_t R_font =
    .init = vk_font_init,
    .destroy = vk_font_destroy,
    .begin = vk_renderer_begin,
-   .exec = vk_renderer_exec_simple,
+   .exec = vk_renderer_finish_simple,
 };

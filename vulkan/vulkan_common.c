@@ -1471,7 +1471,7 @@ void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer)
    memset(&renderer->vk_renderer_data_start, 0, sizeof(*renderer) - offsetof(vk_renderer_t, vk_renderer_data_start));
 }
 
-void vk_renderer_exec_simple(VkPipelineLayout layout, vk_renderer_t *renderer)
+void vk_renderer_finish_simple(VkPipelineLayout layout, vk_renderer_t *renderer)
 {
    if (renderer->vbo.info.range > renderer->vbo.info.offset)
    {
