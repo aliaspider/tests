@@ -1,5 +1,6 @@
 
 #include <string.h>
+#include <assert.h>
 
 #include "context.h"
 #include "stubs.h"

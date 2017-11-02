@@ -15,6 +15,7 @@
 #include "sprite.h"
 
 #include "ui/slider.h"
+#include "ui/button.h"
 
 static vk_context_t       vk;
 static vk_render_target_t RTarget[MAX_SCREENS];
@@ -94,7 +95,7 @@ void sprite_test(screen_t *screen)
       {
          .pos.values    = {330.0, 100.0, 0xFF, 256.0},
          .coords.values = {  0.0,   0.0,               256.0, 256.0},
-         .color.values  = {  0.4,   1.0,                 0.5,  0.20},
+         .color = 0x2080FF70,
       };
       vk_sprite_add(&sprite, &test_image);
    }
@@ -102,7 +103,7 @@ void sprite_test(screen_t *screen)
       sprite_t sprite =
       {
          .pos.values   = {100.0, 40.0, 128, 32.0},
-         .color.values = {  1.0,  0.0, 0.5, 0.50},
+         .color = 0x808000FF,
       };
       vk_sprite_add(&sprite, NULL);
    }
@@ -111,7 +112,7 @@ void sprite_test(screen_t *screen)
       {
          .pos.values    = {320.0, 400.0, 320.0, 64.0},
          .coords.values = { 20.0,  20.0, 132.0, 32.0},
-         .color.values  = {  0.0,   1.0,   1.0, 0.50},
+         .color = 0x80FFFF00,
       };
       vk_sprite_add(&sprite, &R_frame.default_texture);
    }
@@ -120,7 +121,7 @@ void sprite_test(screen_t *screen)
       {
          .pos.values    = {10.0, 190.0, R_font.default_texture.width, R_font.default_texture.height},
          .coords.values = { 0.0,   0.0, R_font.default_texture.width, R_font.default_texture.height},
-         .color.values  = { 1.0,   1.0, 0.0, 1.0},
+         .color = 0xFF00FFFF,
       };
       vk_sprite_add(&sprite, &R_font.default_texture);
    }
@@ -145,6 +146,23 @@ void slider_test(screen_t *screen)
       slider_init(&slider);
    }
    slider_update(&slider);
+}
+
+void button_test(screen_t *screen)
+{
+   static button_t buttons[10];
+   for(int i = 0; i < countof(buttons); i++)
+   {
+      if (!buttons[i].hitbox.width)
+      {
+         buttons[i].hitbox.x = 100 + i * 50;
+         buttons[i].hitbox.y = 40;
+         buttons[i].hitbox.width = 40;
+         buttons[i].hitbox.height = 70;
+         button_init(&buttons[i]);
+      }
+      button_update(&buttons[i]);
+   }
 }
 
 void console_select(screen_t *screen)
@@ -175,7 +193,7 @@ void monofont_atlas(screen_t *screen)
       {
          .pos.values    = {10.0, (screen->height - R_monofont.default_texture.height) / 2, R_monofont.default_texture.width, R_monofont.default_texture.height},
          .coords.values = { 0.0, 0.0, R_monofont.default_texture.width, R_monofont.default_texture.height},
-         .color.values  = { 1.0, 1.0, 0.0, 1.0},
+         .color = 0xFF00FFFF,
       };
       vk_sprite_add(&sprite, &R_monofont.default_texture);
    }
@@ -266,6 +284,7 @@ void video_init()
 //   vk_register_draw_command(&RTarget[0].draw_list, monofont_test);
 //   vk_register_draw_command(&RTarget[0].draw_list, console_mono_draw);
       vk_register_draw_command(&RTarget[0].draw_list, slider_test);
+      vk_register_draw_command(&RTarget[0].draw_list, button_test);
 
 //   vk_register_draw_command(&RTarget[1].draw_list, frame_draw_small);
 //   vk_register_draw_command(&RTarget[1].draw_list, sprite_test);

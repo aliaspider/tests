@@ -38,7 +38,7 @@ static void slider_scroll(slider_t *slider)
    }
 }
 
-static void slider_scroll_grab(slider_t *slider)
+static void slider_grab(slider_t *slider)
 {
    if (input.pointer.touch1_pressed)
       slider->grab = true;
@@ -51,7 +51,7 @@ void slider_init(slider_t *slider)
    slider->hitbox[2].data = slider;
 
    slider->hitbox[0].callback = (void *)slider_scroll;
-   slider->hitbox[1].callback = (void *)slider_scroll_grab;
+   slider->hitbox[1].callback = (void *)slider_grab;
    slider->hitbox[2].callback = (void *)slider_scroll;
 
    slider_update_hitbox(slider);

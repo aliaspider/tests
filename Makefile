@@ -22,6 +22,7 @@ OBJS += main.o
 OBJS += console.o
 OBJS += ui/hitbox.o
 OBJS += ui/slider.o
+OBJS += ui/button.o
 ifeq ($(platform),linux)
    OBJS += linux/platform.o
    OBJS += linux/audio_alsa.o

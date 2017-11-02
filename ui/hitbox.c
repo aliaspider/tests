@@ -6,6 +6,7 @@
 #include "input.h"
 
 static hitbox_t *first;
+static hitbox_t *last_hit;
 
 void hitbox_add(hitbox_t * hitbox)
 {
@@ -33,10 +34,24 @@ void hitbox_remove(hitbox_t *hitbox)
 		hitbox->prev->next = hitbox->next;
 	else
 		first = hitbox->next;
+
+   if(last_hit == hitbox)
+      last_hit = NULL;
 }
 
 void hitbox_check(void)
 {
+   if(last_hit && last_hit->grab)
+   {
+      if(!input.pointer.touch1)
+         last_hit->grab = false;
+      else
+      {
+         last_hit->callback(last_hit->data);
+         return;
+      }
+   }
+
 	hitbox_t *hitbox = first;
 
 	while(hitbox)
@@ -44,10 +59,27 @@ void hitbox_check(void)
 		if(input.pointer.x >= hitbox->x && input.pointer.x < hitbox->x + hitbox->width &&
          input.pointer.y >= hitbox->y && input.pointer.y < hitbox->y + hitbox->height)
       {
+         hitbox->hit = true;
+         if(input.pointer.touch1)
+            hitbox->grab = true;
 			hitbox->callback(hitbox->data);
+
+         if(last_hit != hitbox)
+         {
+            if(last_hit)
+               last_hit->hit = false;
+            last_hit = hitbox;
+         }
          return;
       }
 
 		hitbox = hitbox->next;
 	}
+
+   if(last_hit)
+   {
+      last_hit->hit = false;
+      last_hit = NULL;
+   }
+
 }
