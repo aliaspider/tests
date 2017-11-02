@@ -446,6 +446,6 @@ vk_renderer_t R_font =
 {
    .init = vk_font_init,
    .destroy = vk_font_destroy,
-   .begin = vk_renderer_begin,
-   .finish = vk_renderer_finish_simple,
+   .reset = vk_renderer_reset,
+   .finish = vk_renderer_finish,
 };

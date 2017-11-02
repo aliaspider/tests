@@ -289,7 +289,7 @@ void video_render()
    }
 
    for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
-      (*renderer)->begin(*renderer);
+      (*renderer)->reset(*renderer);
 
    VkCommandBuffer RTcmds[video.screen_count][countof(renderers)];
 
@@ -321,8 +321,14 @@ void video_render()
       for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
       {
          (*renderer)->cmd = (*renderer)->cmds[i];
-         VkBeginCommandBuffer((*renderer)->cmd, vk.renderpass, VK_ONE_TIME_SUBMIT | VK_RENDER_PASS_CONTINUE);
          *cmds++ = (*renderer)->cmd;
+         VkBeginCommandBuffer((*renderer)->cmd, vk.renderpass, VK_ONE_TIME_SUBMIT | VK_RENDER_PASS_CONTINUE);
+         vkCmdBindPipeline((*renderer)->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, (*renderer)->pipe);
+         VkDescriptorSet desc[] = {(*renderer)->desc.main, (*renderer)->tex.desc};
+         vkCmdBindDescriptorSets((*renderer)->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, (*renderer)->pipeline_layout, 1,
+                                 (*renderer)->tex.desc? 2:1, desc, 0, NULL);
+         vkCmdBindVertexBuffers((*renderer)->cmd, 0, 1, &(*renderer)->vbo.info.buffer, &(*renderer)->vbo.info.offset);
+         (*renderer)->first_vertex = 0;
       }
 
       for (vk_drawcmd_list_t *draw_cmd = RTarget[i].draw_list; draw_cmd; draw_cmd = draw_cmd->next)

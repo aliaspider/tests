@@ -44,11 +44,24 @@ static void vk_sprite_renderer_init(vk_context_t *vk)
 
 void vk_sprite_add(sprite_t *sprite, vk_texture_t *texture)
 {
-   int vertex_count = (R_sprite.vbo.info.range - R_sprite.vbo.info.offset) / sizeof(sprite_t);
+   if(!texture)
+      texture = &R_sprite.tex;
 
-   if(texture)
+   if(R_sprite.texture != texture)
    {
-      R_sprite.textures[vertex_count] = texture;
+      if (R_sprite.vbo.info.offset < R_sprite.vbo.info.range)
+      {
+         int count = (R_sprite.vbo.info.range - R_sprite.vbo.info.offset) / R_sprite.vertex_stride;
+
+         vkCmdDraw(R_sprite.cmd, count, 1, R_sprite.first_vertex, 0);
+
+         R_sprite.first_vertex += count;
+         R_sprite.vbo.info.offset = R_sprite.vbo.info.range;
+      }
+
+      R_sprite.texture = texture;
+      if(texture->desc)
+         vkCmdBindDescriptorSets(R_sprite.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, R_sprite.pipeline_layout, 2, 1, &R_sprite.texture->desc, 0, NULL);
    }
 
    *(sprite_t *)vk_get_vbo_memory(&R_sprite.vbo, sizeof(sprite_t)) = *sprite;
@@ -58,7 +71,7 @@ vk_renderer_t R_sprite =
 {
    .init = vk_sprite_renderer_init,
    .destroy = vk_renderer_destroy,
-   .begin = vk_renderer_begin,
+   .reset = vk_renderer_reset,
    .finish = vk_renderer_finish,
 };
 
