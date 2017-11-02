@@ -1,23 +1,10 @@
+#define RESOURCE_INTERNAL
 
 #include "resource.h"
 #include "buffer.h"
 #include "texture.h"
 
-typedef struct vk_resource_t vk_resource_t;
-struct vk_resource_t
-{
-	bool dirty;
-	vk_resource_type_t type;
-	vk_resource_t *next;
-	vk_resource_t *prev;
-};
 
-struct VK_RESOURCE_t
-{
-   VK_RESOURCE;
-};
-
-_Static_assert(sizeof(struct VK_RESOURCE_t) == sizeof(vk_resource_t), "VK_RESOURCE macro does not match vk_resource_t");
 
 static vk_resource_t *textures;
 static vk_resource_t *buffers;

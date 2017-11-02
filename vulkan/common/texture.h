@@ -15,7 +15,7 @@ typedef struct
 
 typedef struct
 {
-   VK_RESOURCE;
+   struct vk_resource_t;
    struct
    {
       device_memory_t mem;

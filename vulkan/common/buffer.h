@@ -6,7 +6,7 @@
 
 typedef struct
 {
-   VK_RESOURCE;
+   struct vk_resource_t;
    VkDescriptorBufferInfo info;
    device_memory_t mem;
    VkBufferUsageFlags usage;
