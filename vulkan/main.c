@@ -316,16 +316,13 @@ void video_render()
       *cmds++ = RTarget[i].cmd;
 
       for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
-      {
          (*renderer)->begin(*renderer, RTarget[i].screen);
-         *cmds++ = (*renderer)->cmd;
-      }
 
       for (vk_drawcmd_list_t *draw_cmd = RTarget[i].draw_list; draw_cmd; draw_cmd = draw_cmd->next)
          draw_cmd->draw(RTarget[i].screen);
 
       for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
-         (*renderer)->finish(*renderer);
+         *cmds++ = (*renderer)->finish(*renderer);
    }
 
    VkBeginCommandBuffer(cmd, NULL, VK_ONE_TIME_SUBMIT);

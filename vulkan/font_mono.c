@@ -276,34 +276,6 @@ static inline int vulkan_monofont_get_slot_id(uint32_t charcode)
    return slot_id;
 }
 
-static inline void update_screen_data(screen_t *screen)
-{
-   if (screen->width == screen_data[screen->id].width && screen->height == screen_data[screen->id].height)
-      return;
-
-   vertex_t *vbo = (vertex_t *)R_monofont.vbo.mem.ptr;
-
-   for (int i = 0; i < video.screen_count; i++)
-   {
-      if (i >= screen->id)
-      {
-         screen_data[i].width = screen->width;
-         screen_data[i].height = screen->height;
-         screen_data[i].cols = screen->width / font.glyph_width;
-         screen_data[i].rows = screen->height / font.glyph_height;
-         screen_data[i].count = screen_data[i].rows * screen_data[i].cols;
-         screen_data[i].vbo = vbo;
-         screen_data[i].offset = (uint8_t *)vbo - R_monofont.vbo.mem.u8;
-         vbo += screen_data[i].count;
-         screen_data[i].range = screen_data[i].count * sizeof(vertex_t*);
-
-         memset(screen_data[i].vbo, 0x00, screen_data[i].count * sizeof(vertex_t));
-      }
-      else
-         vbo += screen_data[i].count;
-   }
-}
-
 static inline string_list_t *vk_monofont_get_lines(const char *text, int line_width)
 {
    string_list_t *lines = string_list_create();
@@ -343,18 +315,15 @@ static inline string_list_t *vk_monofont_get_lines(const char *text, int line_wi
          row++;
          lines = string_list_push(lines, text);
       }
-      if(c == '\n')
+
+      if (c == '\n')
          fflush(stdout);
    }
+
    return lines;
 }
 void vk_monofont_draw_text(const char *text, int x, int y, uint32_t color, screen_t *screen)
 {
-   update_screen_data(screen);
-   R_monofont.vbo.info.offset = screen_data[screen->id].offset;
-   R_monofont.vbo.info.range = screen_data[screen->id].range;
-   assert(R_monofont.vbo.info.offset + R_monofont.vbo.info.range <= R_monofont.vbo.mem.size);
-
    vertex_t *out = screen_data[screen->id].vbo;
    out += x + y * screen_data[screen->id].cols;
    uint32_t current_color = color;
@@ -445,8 +414,7 @@ void console_mono_draw(screen_t *screen)
    if (input.pointer.x < screen->width - 20 && !input.pointer.touch1 && old_pointer[screen->id].touch1)
       printf("click\n");
 
-   const char* text = console_get();
-   update_screen_data(screen);
+   const char *text = console_get();
 
    string_list_t *lines = vk_monofont_get_lines(text, screen_data[screen->id].cols);
 //   string_list_t *lines = string_list_create();
@@ -514,15 +482,46 @@ void console_mono_draw(screen_t *screen)
 
 
    free(lines);
-
-
 }
 
+void vk_monofont_begin(vk_renderer_t *renderer, screen_t *screen)
+{
+   if (screen->width != screen_data[screen->id].width || screen->height != screen_data[screen->id].height)
+   {
+      vertex_t *vbo = (vertex_t *)R_monofont.vbo.mem.ptr;
+
+      for (int i = 0; i < video.screen_count; i++)
+      {
+         if (i >= screen->id)
+         {
+            screen_data[i].width = screen->width;
+            screen_data[i].height = screen->height;
+            screen_data[i].cols = screen->width / font.glyph_width;
+            screen_data[i].rows = screen->height / font.glyph_height;
+            screen_data[i].count = screen_data[i].rows * screen_data[i].cols;
+            screen_data[i].vbo = vbo;
+            screen_data[i].offset = (uint8_t *)vbo - R_monofont.vbo.mem.u8;
+            vbo += screen_data[i].count;
+            screen_data[i].range = screen_data[i].count * sizeof(vertex_t *);
+
+            memset(screen_data[i].vbo, 0x00, screen_data[i].count * sizeof(vertex_t));
+         }
+         else
+            vbo += screen_data[i].count;
+      }
+   }
+
+   R_monofont.vbo.info.offset = screen_data[screen->id].offset;
+   vk_renderer_begin(renderer, screen);
+
+   R_monofont.vbo.info.range = screen_data[screen->id].range;
+   assert(R_monofont.vbo.info.offset + R_monofont.vbo.info.range <= R_monofont.vbo.mem.size);
+}
 
 vk_renderer_t R_monofont =
 {
    .init = vk_monofont_init,
    .destroy = vk_monofont_destroy,
-   .begin = vk_renderer_begin,
+   .begin = vk_monofont_begin,
    .finish = vk_renderer_finish,
 };

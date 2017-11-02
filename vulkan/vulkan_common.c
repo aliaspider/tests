@@ -1477,27 +1477,9 @@ void vk_renderer_destroy(vk_renderer_t *renderer, VkDevice device)
    memset(&renderer->vk_renderer_data_start, 0, sizeof(*renderer) - offsetof(vk_renderer_t, vk_renderer_data_start));
 }
 
-void vk_renderer_finish(vk_renderer_t *renderer)
-{
-   if (renderer->vbo.info.range)
-   {
-      assert(renderer->vbo.info.range < 0x10000);
-
-      int count = renderer->vbo.info.range / renderer->vertex_stride;
-
-      vkCmdDraw(renderer->cmd, count, 1, renderer->first_vertex, 0);
-   }
-
-   renderer->vbo.info.offset += renderer->vbo.info.range;
-   renderer->vbo.info.range = 0;
-
-   vkEndCommandBuffer(renderer->cmd);
-
-}
-
 void vk_renderer_begin(vk_renderer_t *renderer, screen_t *screen)
 {
-   if(screen->id == 0)
+   if (screen->id == 0)
       renderer->vbo.info.offset = 0;
 
    assert(!renderer->vbo.info.range);
@@ -1510,6 +1492,23 @@ void vk_renderer_begin(vk_renderer_t *renderer, screen_t *screen)
    vkCmdBindDescriptorSets(renderer->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipeline_layout, 1,
                            renderer->desc.texture ? 2 : 1, &renderer->desc.main, 0, NULL);
    vkCmdBindVertexBuffers(renderer->cmd, 0, 1, &renderer->vbo.info.buffer, &renderer->vbo.info.offset);
+}
+
+VkCommandBuffer vk_renderer_finish(vk_renderer_t *renderer)
+{
+   if (renderer->vbo.info.range)
+   {
+      assert(renderer->vbo.info.range < 0x10000);
+
+      int count = renderer->vbo.info.range / renderer->vertex_stride;
+
+      vkCmdDraw(renderer->cmd, count, 1, renderer->first_vertex, 0);
+      renderer->vbo.info.offset += renderer->vbo.info.range;
+      renderer->vbo.info.range = 0;
+   }
+
+   vkEndCommandBuffer(renderer->cmd);
+   return renderer->cmd;
 }
 
 const char *vk_result_to_str(VkResult res)

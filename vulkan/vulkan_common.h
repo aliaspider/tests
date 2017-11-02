@@ -311,7 +311,7 @@ struct vk_renderer_t
    void (*const init)(vk_context_t *vk);
    void (*const destroy)(vk_renderer_t *renderer, VkDevice device);
    void (*const begin)(vk_renderer_t *renderer, screen_t* screen);
-   void (*const finish)(vk_renderer_t *renderer);
+   VkCommandBuffer (*const finish)(vk_renderer_t *renderer);
    vk_texture_t tex;
    vk_buffer_t vbo;
    vk_buffer_t ubo;
@@ -335,7 +335,7 @@ struct vk_renderer_t
 void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info, vk_renderer_t *out);
 void vk_renderer_destroy(vk_renderer_t *renderer, VkDevice device);
 void vk_renderer_begin(vk_renderer_t *renderer, screen_t* screen);
-void vk_renderer_finish(vk_renderer_t *renderer);
+VkCommandBuffer vk_renderer_finish(vk_renderer_t *renderer);
 
 #define VK_UBO_ALIGNMENT 0x100
 
