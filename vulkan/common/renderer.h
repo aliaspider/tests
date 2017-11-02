@@ -35,6 +35,8 @@ struct vk_renderer_t
    void (*const destroy)(vk_renderer_t *renderer, VkDevice device);
    void (*const begin)(vk_renderer_t *renderer, screen_t* screen);
    VkCommandBuffer (*const finish)(vk_renderer_t *renderer);
+
+#define vk_renderer_data_start default_texture
    vk_texture_t default_texture;
    vk_buffer_t vbo;
    vk_buffer_t ubo;
@@ -48,12 +50,10 @@ struct vk_renderer_t
    VkPipelineLayout pipeline_layout;
    VkRenderPass renderpass;
    uint32_t vertex_stride;
-   uint32_t first_vertex;
    VkCommandBuffer cmds[MAX_SCREENS];
    VkCommandBuffer cmd;
+   uint32_t first_vertex;
 };
-
-#define vk_renderer_data_start default_texture
 
 void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info, vk_renderer_t *out);
 void vk_renderer_destroy(vk_renderer_t *renderer, VkDevice device);

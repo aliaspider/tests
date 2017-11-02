@@ -10,7 +10,7 @@
 #include "audio.h"
 #include "input.h"
 #include "vulkan/font.h"
-
+#include "ui/hitbox.h"
 
 video_t video;
 audio_t audio;
@@ -75,10 +75,21 @@ int main(int argc, char** argv)
       platform_update();
       {
          uint64_t old_mask = input.pad.mask;
+         pointer_t old_pointer = input.pointer;
          input.update();
          input.pad_pressed.mask = (input.pad.mask ^ old_mask) & input.pad.mask;
          input.pad_released.mask = (input.pad.mask ^ old_mask) & ~input.pad.mask;
+         input.pointer.dx = input.pointer.x - old_pointer.x;
+         input.pointer.dy = input.pointer.y - old_pointer.y;
+         input.pointer.touch1_pressed = input.pointer.touch1 && !old_pointer.touch1;
+         input.pointer.touch2_pressed = input.pointer.touch2 && !old_pointer.touch2;
+         input.pointer.touch3_pressed = input.pointer.touch3 && !old_pointer.touch3;
+         input.pointer.touch1_released = !input.pointer.touch1 && old_pointer.touch1;
+         input.pointer.touch2_released = !input.pointer.touch2 && old_pointer.touch2;
+         input.pointer.touch3_released = !input.pointer.touch3 && old_pointer.touch3;
       }
+
+      hitbox_check();
 
       if (input.pad_pressed.meta.vsync)
       {

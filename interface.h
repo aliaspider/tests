@@ -109,9 +109,17 @@ typedef struct
 {
    int x;
    int y;
+   int dx;
+   int dy;
    bool touch1;
    bool touch2;
    bool touch3;
+   bool touch1_pressed;
+   bool touch2_pressed;
+   bool touch3_pressed;
+   bool touch1_released;
+   bool touch2_released;
+   bool touch3_released;
 }pointer_t;
 
 typedef struct

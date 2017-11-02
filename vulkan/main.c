@@ -14,6 +14,8 @@
 #include "slider.h"
 #include "sprite.h"
 
+#include "ui/slider.h"
+
 static vk_context_t       vk;
 static vk_render_target_t RTarget[MAX_SCREENS];
 static VkCommandBuffer    cmd;
@@ -127,6 +129,22 @@ void sprite_test(screen_t *screen)
 void monofont_test(screen_t *screen)
 {
    vk_monofont_draw_text("testing monofont", 10, 12, 0xFFFFFFFF, screen);
+}
+
+void slider_test(screen_t *screen)
+{
+   static slider_t slider;
+   if (!slider.width)
+   {
+      slider.x = 40;
+      slider.y = 40;
+      slider.width = 40;
+      slider.height = 200;
+      slider.pos = 0.5;
+      slider.size = 0.2;
+      slider_init(&slider);
+   }
+   slider_draw(&slider);
 }
 
 void console_select(screen_t *screen)
@@ -247,6 +265,7 @@ void video_init()
    vk_register_draw_command(&RTarget[0].draw_list, display_message_handler);
 //   vk_register_draw_command(&RTarget[0].draw_list, monofont_test);
 //   vk_register_draw_command(&RTarget[0].draw_list, console_mono_draw);
+      vk_register_draw_command(&RTarget[0].draw_list, slider_test);
 
 //   vk_register_draw_command(&RTarget[1].draw_list, frame_draw_small);
 //   vk_register_draw_command(&RTarget[1].draw_list, sprite_test);
