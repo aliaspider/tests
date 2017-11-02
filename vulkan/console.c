@@ -70,7 +70,7 @@ void console_draw(screen_t *screen)
       slider.y = 0;
       slider.size = (float)visible_lines / lines->count;
 
-      slider_draw(&slider);
+      slider_update(&slider);
 
       {
          char buffer[512];
@@ -93,8 +93,7 @@ void console_draw(screen_t *screen)
             .cache = &console_cache,
             .cache_size = console_cache_size,
          };
-         float realpos = (1.0 - slider.size) * (slider.pos > 0.0 ? slider.pos < 1.0 ? slider.pos : 1.0 : 0.0);
-         const char *line = lines->data[(int)(0.5 + lines->count * realpos)];
+         const char *line = lines->data[(int)(0.5 + lines->count * slider.real_pos)];
 
          if (last_update_counter != console_update_counter || line != last_line_pointer)
          {

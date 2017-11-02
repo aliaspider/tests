@@ -1,4 +1,4 @@
-
+#define SLIDER_INTERNAL
 #include <string.h>
 
 #include "slider.h"
@@ -79,7 +79,7 @@ void slider_destroy(slider_t* slider)
    memset(slider, 0x00, sizeof(*slider));
 }
 
-void slider_draw(slider_t* slider)
+void slider_update(slider_t* slider)
 {
    if(slider->grab)
    {
@@ -96,7 +96,7 @@ void slider_draw(slider_t* slider)
 
    slider_update_hitbox(slider);
 
-   float realpos = (1.0 - slider->size) * (slider->pos > 0.0 ? slider->pos < 1.0 ? slider->pos : 1.0 : 0.0);
+   slider->real_pos = (1.0 - slider->size) * (slider->pos > 0.0 ? slider->pos < 1.0 ? slider->pos : 1.0 : 0.0);
 
-   vk_slider_add(slider->x, slider->y, slider->width, slider->height, realpos, slider->size);
+   vk_slider_add(slider->x, slider->y, slider->width, slider->height, slider->real_pos, slider->size);
 }

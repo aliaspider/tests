@@ -1,31 +1,16 @@
+#define HITBOX_INTERNAL
 
 #include <stddef.h>
 
 #include "hitbox.h"
 #include "input.h"
 
-typedef struct hitbox_internal_t
+static hitbox_t *first;
+
+void hitbox_add(hitbox_t * hitbox)
 {
-	int x;
-	int y;
-	int width;
-	int height;
-	void (*callback)(void* data);
-	void* data;
-	struct hitbox_internal_t* next;
-	struct hitbox_internal_t* prev;
-}hitbox_internal_t;
-
-_Static_assert(sizeof (hitbox_t) == sizeof(hitbox_internal_t), "sizeof (hitbox_t) != sizeof(hitbox_internal_t)");
-
-static hitbox_internal_t *first;
-
-void hitbox_add(hitbox_t * hitbox_)
-{
-	hitbox_internal_t * hitbox = (hitbox_internal_t *)hitbox_;
-
-	hitbox_internal_t **last = &first;
-	hitbox_internal_t * prev = NULL;
+	hitbox_t **last = &first;
+	hitbox_t * prev = NULL;
 
 	while (*last)
 	{
@@ -39,10 +24,8 @@ void hitbox_add(hitbox_t * hitbox_)
 	hitbox->next = NULL;
 }
 
-void hitbox_remove(hitbox_t *hitbox_)
+void hitbox_remove(hitbox_t *hitbox)
 {
-	hitbox_internal_t *hitbox = (hitbox_internal_t *)hitbox_;
-
 	if (hitbox->next)
 		hitbox->next->prev = hitbox->prev;
 
@@ -54,7 +37,7 @@ void hitbox_remove(hitbox_t *hitbox_)
 
 void hitbox_check(void)
 {
-	hitbox_internal_t *hitbox = first;
+	hitbox_t *hitbox = first;
 
 	while(hitbox)
 	{

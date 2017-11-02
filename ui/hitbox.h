@@ -1,6 +1,7 @@
 #pragma once
 
-typedef struct
+typedef struct hitbox_t hitbox_t;
+struct hitbox_t
 {
    int x;
    int y;
@@ -8,8 +9,13 @@ typedef struct
    int height;
    void (*callback)(void* data);
    void* data;
+#ifdef HITBOX_INTERNAL
+   struct hitbox_t* next;
+	struct hitbox_t* prev;
+#else
    const void* private[2];
-}hitbox_t;
+#endif
+};
 
 void hitbox_add(hitbox_t * hitbox);
 void hitbox_remove(hitbox_t *hitbox);

@@ -144,7 +144,7 @@ void slider_test(screen_t *screen)
       slider.size = 0.2;
       slider_init(&slider);
    }
-   slider_draw(&slider);
+   slider_update(&slider);
 }
 
 void console_select(screen_t *screen)
