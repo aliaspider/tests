@@ -65,11 +65,11 @@ static void vk_frame_init(vk_context_t *vk)
          .color_blend_attachement_state = &blend_state,
       };
 
-      R_frame.tex.width = module.output_width;
-      R_frame.tex.height = module.output_height;
-      R_frame.tex.format = format;
-      R_frame.tex.filter = video.filter ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
-      R_frame.tex.ignore_alpha = true;
+      R_frame.default_texture.width = module.output_width;
+      R_frame.default_texture.height = module.output_height;
+      R_frame.default_texture.format = format;
+      R_frame.default_texture.filter = video.filter ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
+      R_frame.default_texture.ignore_alpha = true;
       R_frame.vbo.info.range = sizeof(vertex_t) * 8;
       R_frame.vertex_stride = sizeof(vertex_t);
       R_frame.ubo.info.range = sizeof(uniform_t);
@@ -78,20 +78,20 @@ static void vk_frame_init(vk_context_t *vk)
    }
 
    {
-      device_memory_t *mem = &R_frame.tex.staging.mem;
+      device_memory_t *mem = &R_frame.default_texture.staging.mem;
       memset(mem->u8 + mem->layout.offset, 0xFF, mem->layout.size - mem->layout.offset);
    }
 
-   R_frame.tex.dirty = true;
+   R_frame.default_texture.dirty = true;
 
-   ((uniform_t *)R_frame.ubo.mem.ptr)->tex_size.width = R_frame.tex.width;
-   ((uniform_t *)R_frame.ubo.mem.ptr)->tex_size.height = R_frame.tex.height;
+   ((uniform_t *)R_frame.ubo.mem.ptr)->tex_size.width = R_frame.default_texture.width;
+   ((uniform_t *)R_frame.ubo.mem.ptr)->tex_size.height = R_frame.default_texture.height;
    R_frame.ubo.dirty = true;
 
-   video.frame.width = R_frame.tex.width;
-   video.frame.height = R_frame.tex.height;
-   video.frame.pitch = R_frame.tex.staging.mem.layout.rowPitch / 4;
-   video.frame.data = R_frame.tex.staging.mem.u8 + R_frame.tex.staging.mem.layout.offset;
+   video.frame.width = R_frame.default_texture.width;
+   video.frame.height = R_frame.default_texture.height;
+   video.frame.pitch = R_frame.default_texture.staging.mem.layout.rowPitch / 4;
+   video.frame.data = R_frame.default_texture.staging.mem.u8 + R_frame.default_texture.staging.mem.layout.offset;
 }
 
 void vk_frame_add(int x, int y, int width, int height)

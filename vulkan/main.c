@@ -111,16 +111,16 @@ void sprite_test(screen_t *screen)
          .coords.values = { 20.0,  20.0, 132.0, 32.0},
          .color.values  = {  0.0,   1.0,   1.0, 0.50},
       };
-      vk_sprite_add(&sprite, &R_frame.tex);
+      vk_sprite_add(&sprite, &R_frame.default_texture);
    }
    {
       sprite_t sprite =
       {
-         .pos.values    = {10.0, 190.0, R_font.tex.width, R_font.tex.height},
-         .coords.values = { 0.0,   0.0, R_font.tex.width, R_font.tex.height},
-         .color.values  = { 1.0,   1.0,              0.0,               1.0},
+         .pos.values    = {10.0, 190.0, R_font.default_texture.width, R_font.default_texture.height},
+         .coords.values = { 0.0,   0.0, R_font.default_texture.width, R_font.default_texture.height},
+         .color.values  = { 1.0,   1.0, 0.0, 1.0},
       };
-      vk_sprite_add(&sprite, &R_font.tex);
+      vk_sprite_add(&sprite, &R_font.default_texture);
    }
 }
 
@@ -155,11 +155,11 @@ void monofont_atlas(screen_t *screen)
    {
       sprite_t sprite =
       {
-         .pos.values    = {10.0, (screen->height - R_monofont.tex.height) / 2, R_monofont.tex.width, R_monofont.tex.height},
-         .coords.values = { 0.0,                                          0.0, R_monofont.tex.width, R_monofont.tex.height},
-         .color.values  = { 1.0,                                          1.0,                  0.0,                   1.0},
+         .pos.values    = {10.0, (screen->height - R_monofont.default_texture.height) / 2, R_monofont.default_texture.width, R_monofont.default_texture.height},
+         .coords.values = { 0.0, 0.0, R_monofont.default_texture.width, R_monofont.default_texture.height},
+         .color.values  = { 1.0, 1.0, 0.0, 1.0},
       };
-      vk_sprite_add(&sprite, &R_monofont.tex);
+      vk_sprite_add(&sprite, &R_monofont.default_texture);
    }
 }
 
@@ -279,20 +279,20 @@ void video_render()
    VK_CHECK(vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, 0 ? UINT64_MAX : 100000000));
    vkResetFences(vk.device, 1, &vk.queue_fence);
 
-   R_frame.tex.dirty = true;
+   R_frame.default_texture.dirty = true;
 
-   if (R_frame.tex.filter != video.filter)
+   if (R_frame.default_texture.filter != video.filter)
    {
-      R_frame.tex.filter = video.filter ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
-      R_frame.tex.info.sampler = video.filter ? vk.samplers.linear : vk.samplers.nearest;
-      vk_texture_update_descriptor_sets(&vk, &R_frame.tex);
+      R_frame.default_texture.filter = video.filter ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
+      R_frame.default_texture.info.sampler = video.filter ? vk.samplers.linear : vk.samplers.nearest;
+      vk_texture_update_descriptor_sets(&vk, &R_frame.default_texture);
    }
 
    VkCommandBuffer RTcmds[video.screen_count][countof(renderers)];
 
    for (int i = 0; i < video.screen_count; i++)
    {
-      VkCommandBuffer* cmds = RTcmds[i] + 1;
+      VkCommandBuffer *cmds = RTcmds[i] + 1;
 
       for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
          (*renderer)->begin(*renderer, RTarget[i].screen);
@@ -325,6 +325,7 @@ void video_render()
          vk_swapchain_destroy(&vk, &RTarget[i]);
          vk_swapchain_init(&vk, &RTarget[i]);
       }
+
       swapchains[i] = RTarget[i].swapchain;
       RTcmds[i][0] = RTarget[i].cmd; /* viewport/scissor/push-constants commands */
 

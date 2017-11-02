@@ -27,18 +27,18 @@ static void vk_update_descriptor_sets(vk_context_t *vk, vk_renderer_t *out)
    VkDescriptorImageInfo image_info[] =
    {
       {
-         .sampler = out->tex.info.sampler,
-         .imageView = out->tex.info.imageView,
+         .sampler = out->default_texture.info.sampler,
+         .imageView = out->default_texture.info.imageView,
          .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
       },
       {
-         .sampler = out->tex.info.sampler,
-         .imageView = out->tex.info.imageView,
+         .sampler = out->default_texture.info.sampler,
+         .imageView = out->default_texture.info.imageView,
          .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
       }
    };
 
-   if (out->tex.image)
+   if (out->default_texture.image)
    {
       VkWriteDescriptorSet set =
       {
@@ -88,10 +88,10 @@ static void vk_update_descriptor_sets(vk_context_t *vk, vk_renderer_t *out)
 
 void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info, vk_renderer_t *out)
 {
-   if (out->tex.image)
-      out->tex.is_reference = true;
+   if (out->default_texture.image)
+      out->default_texture.is_reference = true;
    else
-      vk_texture_init(vk, &out->tex);
+      vk_texture_init(vk, &out->default_texture);
 
    if (out->ssbo.info.range)
    {
@@ -123,7 +123,7 @@ void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info
    }
    vk_update_descriptor_sets(vk, out);
 
-   out->desc.texture = out->tex.desc;
+   out->desc.texture = out->default_texture.desc;
 
    VkAllocateCommandBuffers(vk->device, vk->pools.cmd, VK_COMMAND_BUFFER_LEVEL_SECONDARY, MAX_SCREENS, out->cmds);
 
@@ -239,7 +239,7 @@ void vk_renderer_destroy(vk_renderer_t *renderer, VkDevice device)
    vk_buffer_free(device, &renderer->vbo);
    vk_buffer_free(device, &renderer->ubo);
    vk_buffer_free(device, &renderer->ssbo);
-   vk_texture_free(device, &renderer->tex);
+   vk_texture_free(device, &renderer->default_texture);
 
    memset(&renderer->vk_renderer_data_start, 0, sizeof(*renderer) - offsetof(vk_renderer_t, vk_renderer_data_start));
 }
@@ -251,7 +251,7 @@ void vk_renderer_begin(vk_renderer_t *renderer, screen_t *screen)
 
    assert(!renderer->vbo.info.range);
    renderer->first_vertex = 0;
-   renderer->desc.texture = renderer->tex.desc;
+   renderer->desc.texture = renderer->default_texture.desc;
    renderer->cmd = renderer->cmds[screen->id];
 
    VkBeginCommandBuffer(renderer->cmd, renderer->renderpass, VK_ONE_TIME_SUBMIT | VK_RENDER_PASS_CONTINUE);
@@ -264,7 +264,7 @@ void vk_renderer_begin(vk_renderer_t *renderer, screen_t *screen)
 void vk_renderer_bind_texture(vk_renderer_t *renderer, vk_texture_t *texture)
 {
    if(!texture)
-      texture = &renderer->tex;
+      texture = &renderer->default_texture;
 
    if(renderer->desc.texture != texture->desc)
    {

@@ -120,9 +120,9 @@ static void vk_monofont_init(vk_context_t *vk)
          .color_blend_attachement_state = &blend_state,
       };
 
-      R_monofont.tex.width = font.glyph_width << 4;
-      R_monofont.tex.height = font.glyph_height << 4;
-      R_monofont.tex.format = VK_FORMAT_R8_UNORM;
+      R_monofont.default_texture.width = font.glyph_width << 4;
+      R_monofont.default_texture.height = font.glyph_height << 4;
+      R_monofont.default_texture.format = VK_FORMAT_R8_UNORM;
 
       R_monofont.ubo.info.range = sizeof(uniforms_t);
       R_monofont.vbo.info.range = video.screen_count * 200 * 100 * sizeof(vertex_t);
@@ -132,7 +132,7 @@ static void vk_monofont_init(vk_context_t *vk)
    }
 
    {
-      device_memory_t *mem = &R_monofont.tex.staging.mem;
+      device_memory_t *mem = &R_monofont.default_texture.staging.mem;
       memset(mem->u8 + mem->layout.offset, 0x80, mem->layout.size - mem->layout.offset);
    }
    {
@@ -144,8 +144,8 @@ static void vk_monofont_init(vk_context_t *vk)
 //   R_monofont.tex.dirty = true;
 
    uniforms_t *uniforms = (uniforms_t *)R_monofont.ubo.mem.ptr;
-   uniforms->tex_size.width = R_monofont.tex.width;
-   uniforms->tex_size.height = R_monofont.tex.height;
+   uniforms->tex_size.width = R_monofont.default_texture.width;
+   uniforms->tex_size.height = R_monofont.default_texture.height;
    uniforms->glyph_size.width = font.glyph_width;
    uniforms->glyph_size.height = font.glyph_height;
    R_monofont.ubo.dirty = true;
@@ -219,7 +219,7 @@ static inline void ft_monofont_render_glyph(unsigned charcode, int slot_id)
    CHECK_ERR(FT_Load_Char(font.ftface, charcode, FT_LOAD_RENDER | (font.monochrome ? FT_LOAD_MONOCHROME : 0)));
    FT_Bitmap *bitmap = &font.ftface->glyph->bitmap;
    u8 *src = bitmap->buffer;
-   device_memory_t *mem = &R_monofont.tex.staging.mem;
+   device_memory_t *mem = &R_monofont.default_texture.staging.mem;
    int x = (slot_id & 0xF) * font.glyph_width;
    int y = (slot_id >> 4) * font.glyph_height;
    u8 *dst = mem->u8 + mem->layout.offset + x + y * mem->layout.rowPitch;
@@ -244,7 +244,7 @@ static inline void ft_monofont_render_glyph(unsigned charcode, int slot_id)
       dst += mem->layout.rowPitch;
    }
 
-   R_monofont.tex.dirty = true;
+   R_monofont.default_texture.dirty = true;
 
    uniforms_t *uniforms = (uniforms_t *)R_monofont.ubo.mem.ptr;
    uniforms->glyph_metrics[slot_id].x = font.ftface->glyph->metrics.horiBearingX >> 6;
