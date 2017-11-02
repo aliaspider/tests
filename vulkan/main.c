@@ -90,7 +90,7 @@ void sprite_test(screen_t *screen)
    {
       sprite_t sprite =
       {
-         .pos.values    = {330.0, 100.0, (calls >> 3) & 0xFF, 256.0},
+         .pos.values    = {330.0, 100.0, 0xFF, 256.0},
          .coords.values = {  0.0,   0.0,               256.0, 256.0},
          .color.values  = {  0.4,   1.0,                 0.5,  0.20},
       };

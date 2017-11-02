@@ -44,26 +44,7 @@ static void vk_sprite_renderer_init(vk_context_t *vk)
 
 void vk_sprite_add(sprite_t *sprite, vk_texture_t *texture)
 {
-   if(!texture)
-      texture = &R_sprite.tex;
-
-   if(R_sprite.desc.texture != texture->desc)
-   {
-      if (R_sprite.vbo.info.range)
-      {
-         int count = R_sprite.vbo.info.range / R_sprite.vertex_stride;
-
-         vkCmdDraw(R_sprite.cmd, count, 1, R_sprite.first_vertex, 0);
-
-         R_sprite.first_vertex += count;
-         R_sprite.vbo.info.offset += R_sprite.vbo.info.range;
-         R_sprite.vbo.info.range = 0;
-      }
-
-      R_sprite.desc.texture = texture->desc;
-
-      vkCmdBindDescriptorSets(R_sprite.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, R_sprite.pipeline_layout, 2, 1, &R_sprite.desc.texture, 0, NULL);
-   }
+   vk_renderer_bind_texture(&R_sprite, texture);
 
    *(sprite_t *)vk_get_vbo_memory(&R_sprite.vbo, sizeof(sprite_t)) = *sprite;
 }
