@@ -341,7 +341,7 @@ VkCommandBuffer vk_renderer_finish(vk_renderer_t *renderer);
 
 static inline void *vk_get_vbo_memory(vk_buffer_t *vbo, VkDeviceSize size)
 {
-   void *ptr = vbo->mem.u8 + vbo->info.range;
+   void *ptr = vbo->mem.u8 + vbo->info.offset + vbo->info.range;
    vbo->info.range += size;
    vbo->dirty = true;
    assert(vbo->info.range <= vbo->mem.size);

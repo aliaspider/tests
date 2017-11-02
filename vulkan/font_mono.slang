@@ -31,6 +31,7 @@ layout(set = 1, binding = 1, std140) uniform UBO
 {
    vec2 glyph_size;
    vec2 tex_size;
+   vec4 glyph_metrics[256];
 };
 
 void main()
@@ -49,24 +50,25 @@ void main()
    float cols = floor(pc.vp_size.x / glyph_size.x);
    pos.x += glyph_size.x * mod(float(gl_PrimitiveIDIn), cols);
    pos.y += glyph_size.y * floor(float(gl_PrimitiveIDIn)/ cols);
+   pos += glyph_metrics[c].xy;
 //   if(pos.y > pc.vp_size.y)
 //      return;
-   vec2 coords = vec2(float(col), float(row)) * tex_size / 16.0;
+   vec2 coords = vec2(float(col), float(row)) * (tex_size / 16.0);
 #if 1
-   gl_Position.xy = (pos + vec2(glyph_size.x, 0.0)) * 2.0 / pc.vp_size;
-   vTexCoord      = coords +    vec2(glyph_size.x, 0.0);
+   gl_Position.xy = (pos +   vec2(glyph_metrics[c].z, 0.0)) * 2.0 / pc.vp_size;
+   vTexCoord      = coords + vec2(glyph_metrics[c].z, 0.0);
    EmitVertex();
 
-   gl_Position.xy = (pos + vec2(0.0, 0.0)) * 2.0 / pc.vp_size;
-   vTexCoord      = coords +    vec2(0.0, 0.0);
+   gl_Position.xy = (pos +   vec2(0.0, 0.0)) * 2.0 / pc.vp_size;
+   vTexCoord      = coords + vec2(0.0, 0.0);
    EmitVertex();
 
-   gl_Position.xy = (pos + vec2(glyph_size.x, glyph_size.y)) * 2.0 / pc.vp_size;
-   vTexCoord      = coords +    vec2(glyph_size.x, glyph_size.y);
+   gl_Position.xy = (pos +   vec2(glyph_metrics[c].z, glyph_metrics[c].w)) * 2.0 / pc.vp_size;
+   vTexCoord      = coords + vec2(glyph_metrics[c].z, glyph_metrics[c].w);
    EmitVertex();
 
-   gl_Position.xy = (pos + vec2(0.0, glyph_size.y)) * 2.0 / pc.vp_size;
-   vTexCoord      = coords +    vec2(0.0, glyph_size.y);
+   gl_Position.xy = (pos +   vec2(0.0, glyph_metrics[c].w)) * 2.0 / pc.vp_size;
+   vTexCoord      = coords + vec2(0.0, glyph_metrics[c].w);
    EmitVertex();
 #else
    gl_Position.xy = vec2(1.0, -1.0) * tex_size / pc.vp_size;

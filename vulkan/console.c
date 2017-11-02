@@ -52,7 +52,7 @@ void console_draw(screen_t *screen)
       {
          font_render_options_t options =
          {
-            .y = 100,
+            .y = 17 * 5,
             .max_width = screen->width - 20,
             .max_height = screen->height,
             .lines = lines,
@@ -119,7 +119,7 @@ void console_draw(screen_t *screen)
       {
          font_render_options_t options =
          {
-            .y = 100,
+            .y = 17 * 5,
             .max_width = screen->width - 20,
             .max_height = screen->height,
             .cache = &console_cache,
@@ -143,7 +143,7 @@ void console_draw(screen_t *screen)
    {
       font_render_options_t options =
       {
-         .y = 100,
+         .y = 17 * 5,
          .max_width = screen->width,
          .max_height = screen->height,
       };

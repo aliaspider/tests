@@ -899,97 +899,91 @@ void vk_texture_update_descriptor_sets(vk_context_t *vk, vk_texture_t *out)
       }
    };
 
-   vkUpdateDescriptorSets(vk->device, countof(write_set), write_set, 0, NULL);
+   if(out->info.imageView)
+      vkUpdateDescriptorSets(vk->device, countof(write_set), write_set, 0, NULL);
+   else
+      vkUpdateDescriptorSets(vk->device, 1, &write_set[1], 0, NULL);
 }
 
 void vk_texture_init(vk_context_t *vk, vk_texture_t *out)
 {
-   out->info.sampler = out->filter == VK_FILTER_LINEAR ? vk->samplers.linear : vk->samplers.nearest;
-   out->info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-   out->staging.format = out->format;
-
+   if(out->format != VK_FORMAT_UNDEFINED)
    {
-      VkImageCreateInfo info =
+      out->info.sampler = out->filter == VK_FILTER_LINEAR ? vk->samplers.linear : vk->samplers.nearest;
+      out->info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+      out->staging.format = out->format;
+
       {
-         VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-         .flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
-         .imageType = VK_IMAGE_TYPE_2D,
-         .format = out->format,
-         .extent.width = out->width,
-         .extent.height = out->height,
-         .extent.depth = 1,
-         .mipLevels = 1,
-         .arrayLayers = 1,
-         .samples = VK_SAMPLE_COUNT_1_BIT,
-         .tiling = VK_IMAGE_TILING_OPTIMAL,
-         .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-         .queueFamilyIndexCount = 1,
-         .pQueueFamilyIndices = &vk->queue_family_index,
-         .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
-      };
+         VkImageCreateInfo info =
+         {
+            VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+            .flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
+            .imageType = VK_IMAGE_TYPE_2D,
+            .format = out->format,
+            .extent.width = out->width,
+            .extent.height = out->height,
+            .extent.depth = 1,
+            .mipLevels = 1,
+            .arrayLayers = 1,
+            .samples = VK_SAMPLE_COUNT_1_BIT,
+            .tiling = VK_IMAGE_TILING_OPTIMAL,
+            .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+            .queueFamilyIndexCount = 1,
+            .pQueueFamilyIndices = &vk->queue_family_index,
+            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
+         };
 
-      VK_CHECK(vkCreateImage(vk->device, &info, NULL, &out->image));
+         VK_CHECK(vkCreateImage(vk->device, &info, NULL, &out->image));
 
-      info.tiling = VK_IMAGE_TILING_LINEAR;
-      info.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
-      info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-      out->staging.layout = VK_IMAGE_LAYOUT_PREINITIALIZED;
-      VK_CHECK(vkCreateImage(vk->device, &info, NULL, &out->staging.image));
-   }
+         info.tiling = VK_IMAGE_TILING_LINEAR;
+         info.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+         info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+         out->staging.layout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+         VK_CHECK(vkCreateImage(vk->device, &info, NULL, &out->staging.image));
+      }
 
-   {
-      static const VkImageSubresource imageSubresource =
       {
-         .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-         .mipLevel = 0,
-         .arrayLayer = 0
-      };
-      vkGetImageSubresourceLayout(vk->device, out->staging.image, &imageSubresource, &out->staging.mem.layout);
-   }
+         static const VkImageSubresource imageSubresource =
+         {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .mipLevel = 0,
+            .arrayLayer = 0
+         };
+         vkGetImageSubresourceLayout(vk->device, out->staging.image, &imageSubresource, &out->staging.mem.layout);
+      }
 
-   {
-      memory_init_info_t info =
       {
-         .req_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-         .image = out->image
-      };
-      vk_device_memory_init(vk->device, vk->memoryTypes, &info, &out->mem);
-   }
-   {
-      memory_init_info_t info =
+         memory_init_info_t info =
+         {
+            .req_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            .image = out->image
+         };
+         vk_device_memory_init(vk->device, vk->memoryTypes, &info, &out->mem);
+      }
       {
-         .req_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-         .image = out->staging.image
-      };
-      vk_device_memory_init(vk->device, vk->memoryTypes, &info, &out->staging.mem);
-   }
+         memory_init_info_t info =
+         {
+            .req_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+            .image = out->staging.image
+         };
+         vk_device_memory_init(vk->device, vk->memoryTypes, &info, &out->staging.mem);
+      }
 
-   {
-      VkImageViewCreateInfo info =
       {
-         VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-         .image = out->image,
-         .viewType = VK_IMAGE_VIEW_TYPE_2D,
-         .format = out->format,
-         .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-         .subresourceRange.levelCount = 1,
-         .subresourceRange.layerCount = 1
-      };
-      VK_CHECK(vkCreateImageView(vk->device, &info, NULL, &out->info.imageView));
+         VkImageViewCreateInfo info =
+         {
+            VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .image = out->image,
+            .viewType = VK_IMAGE_VIEW_TYPE_2D,
+            .format = out->format,
+            .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .subresourceRange.levelCount = 1,
+            .subresourceRange.layerCount = 1
+         };
+         VK_CHECK(vkCreateImageView(vk->device, &info, NULL, &out->info.imageView));
+      }
    }
-
-   out->ubo.info.range = 256;
-   out->ubo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-   out->ubo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-   vk_buffer_init(vk->device, vk->memoryTypes, NULL, &out->ubo);
-   out->uniforms = out->ubo.mem.ptr;
-   out->uniforms->size.width = out->width;
-   out->uniforms->size.height = out->height;
-   out->uniforms->format = out->format;
-   out->uniforms->ignore_alpha = out->ignore_alpha;
-   out->ubo.dirty = true;
-
    {
       const VkDescriptorSetAllocateInfo info =
       {
@@ -1000,11 +994,23 @@ void vk_texture_init(vk_context_t *vk, vk_texture_t *out)
       VK_CHECK(vkAllocateDescriptorSets(vk->device, &info, &out->desc));
    }
 
+   out->ubo.info.range = 256;
+   out->ubo.mem.flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+   out->ubo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+   vk_buffer_init(vk->device, vk->memoryTypes, NULL, &out->ubo);
+
    vk_texture_update_descriptor_sets(vk, out);
+
+   out->uniforms = out->ubo.mem.ptr;
+   out->uniforms->size.width = out->width;
+   out->uniforms->size.height = out->height;
+   out->uniforms->format = out->format;
+   out->uniforms->ignore_alpha = out->ignore_alpha;
+   out->ubo.dirty = true;
+
 
    out->type = VK_RESOURCE_TEXTURE;
    vk_resource_add(out);
-
 }
 
 void vk_texture_free(VkDevice device, vk_texture_t *texture)
@@ -1323,7 +1329,7 @@ void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info
 {
    if (out->tex.image)
       out->tex.is_reference = true;
-   else if (out->tex.format != VK_FORMAT_UNDEFINED)
+   else
       vk_texture_init(vk, &out->tex);
 
    if (out->ssbo.info.range)
@@ -1490,7 +1496,7 @@ void vk_renderer_begin(vk_renderer_t *renderer, screen_t *screen)
    VkBeginCommandBuffer(renderer->cmd, renderer->renderpass, VK_ONE_TIME_SUBMIT | VK_RENDER_PASS_CONTINUE);
    vkCmdBindPipeline(renderer->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipe);
    vkCmdBindDescriptorSets(renderer->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipeline_layout, 1,
-                           renderer->desc.texture ? 2 : 1, &renderer->desc.main, 0, NULL);
+                           sizeof(renderer->desc) / sizeof(VkDescriptorSet), (VkDescriptorSet*)&renderer->desc, 0, NULL);
    vkCmdBindVertexBuffers(renderer->cmd, 0, 1, &renderer->vbo.info.buffer, &renderer->vbo.info.offset);
 }
 

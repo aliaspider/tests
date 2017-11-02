@@ -47,7 +47,7 @@ void vk_sprite_add(sprite_t *sprite, vk_texture_t *texture)
    if(!texture)
       texture = &R_sprite.tex;
 
-   if(R_sprite.desc.texture!= texture->desc)
+   if(R_sprite.desc.texture != texture->desc)
    {
       if (R_sprite.vbo.info.range)
       {
@@ -62,8 +62,7 @@ void vk_sprite_add(sprite_t *sprite, vk_texture_t *texture)
 
       R_sprite.desc.texture = texture->desc;
 
-      if(R_sprite.desc.texture)
-         vkCmdBindDescriptorSets(R_sprite.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, R_sprite.pipeline_layout, 2, 1, &R_sprite.desc.texture, 0, NULL);
+      vkCmdBindDescriptorSets(R_sprite.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, R_sprite.pipeline_layout, 2, 1, &R_sprite.desc.texture, 0, NULL);
    }
 
    *(sprite_t *)vk_get_vbo_memory(&R_sprite.vbo, sizeof(sprite_t)) = *sprite;

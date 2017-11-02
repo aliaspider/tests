@@ -21,6 +21,7 @@ typedef struct
 {
    vec2 glyph_size;
    vec2 tex_size;
+   vec4 glyph_metrics[256];
 } uniforms_t;
 
 typedef struct
@@ -132,7 +133,7 @@ static void vk_monofont_init(vk_context_t *vk)
 
    {
       device_memory_t *mem = &R_monofont.tex.staging.mem;
-      memset(mem->u8 + mem->layout.offset, 0x00, mem->layout.size - mem->layout.offset);
+      memset(mem->u8 + mem->layout.offset, 0x80, mem->layout.size - mem->layout.offset);
    }
    {
       device_memory_t *mem = &R_monofont.vbo.mem;
@@ -219,8 +220,8 @@ static inline void ft_monofont_render_glyph(unsigned charcode, int slot_id)
    FT_Bitmap *bitmap = &font.ftface->glyph->bitmap;
    u8 *src = bitmap->buffer;
    device_memory_t *mem = &R_monofont.tex.staging.mem;
-   int x = (slot_id & 0xF) * font.glyph_width + (font.ftface->glyph->metrics.horiBearingX >> 6);
-   int y = (slot_id >> 4) * font.glyph_height + font.ascender - (font.ftface->glyph->metrics.horiBearingY >> 6);
+   int x = (slot_id & 0xF) * font.glyph_width;
+   int y = (slot_id >> 4) * font.glyph_height;
    u8 *dst = mem->u8 + mem->layout.offset + x + y * mem->layout.rowPitch;
    assert((dst - mem->u8 + mem->layout.rowPitch * bitmap->rows  < mem->layout.size));
 
@@ -244,6 +245,14 @@ static inline void ft_monofont_render_glyph(unsigned charcode, int slot_id)
    }
 
    R_monofont.tex.dirty = true;
+
+   uniforms_t *uniforms = (uniforms_t *)R_monofont.ubo.mem.ptr;
+   uniforms->glyph_metrics[slot_id].x = font.ftface->glyph->metrics.horiBearingX >> 6;
+   uniforms->glyph_metrics[slot_id].y = font.ascender - (font.ftface->glyph->metrics.horiBearingY >> 6);
+   uniforms->glyph_metrics[slot_id].width = font.ftface->glyph->metrics.width >> 6;
+   uniforms->glyph_metrics[slot_id].height = font.ftface->glyph->metrics.height >> 6;
+   R_font.ubo.dirty = true;
+
 }
 
 static inline int vulkan_monofont_get_slot_id(uint32_t charcode)
@@ -424,7 +433,6 @@ void console_mono_draw(screen_t *screen)
    {
       free(lines[screen->id]);
       lines[screen->id] = vk_monofont_get_lines(text, screen_data[screen->id].cols);
-      fprintf(stdout, "no skip lines\n");
    }
    else if (!lines[screen->id])
       return;
@@ -478,8 +486,6 @@ void console_mono_draw(screen_t *screen)
    {
       last_update_counter = console_update_counter;
       last_line_pointer[screen->id] = text;
-      fprintf(stdout, "no skip\n");
-      fflush(stdout);
    }
    else
       text = "";
