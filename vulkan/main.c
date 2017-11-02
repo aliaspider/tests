@@ -241,7 +241,7 @@ void video_init()
       (*renderer)->init(&vk);
 
    vk_register_draw_command(&RTarget[0].draw_list, frame_draw);
-   vk_register_draw_command(&RTarget[0].draw_list, sprite_test);
+//   vk_register_draw_command(&RTarget[0].draw_list, sprite_test);
    vk_register_draw_command(&RTarget[0].draw_list, fps_draw);
    vk_register_draw_command(&RTarget[0].draw_list, screen_id_draw);
    vk_register_draw_command(&RTarget[0].draw_list, display_message_handler);
@@ -249,7 +249,7 @@ void video_init()
 //   vk_register_draw_command(&RTarget[0].draw_list, console_mono_draw);
 
 //   vk_register_draw_command(&RTarget[1].draw_list, frame_draw_small);
-   vk_register_draw_command(&RTarget[1].draw_list, sprite_test);
+//   vk_register_draw_command(&RTarget[1].draw_list, sprite_test);
    vk_register_draw_command(&RTarget[1].draw_list, fps_draw);
    vk_register_draw_command(&RTarget[1].draw_list, screen_id_draw);
    vk_register_draw_command(&RTarget[1].draw_list, console_select);
@@ -326,7 +326,7 @@ void video_render()
          vk_swapchain_init(&vk, &RTarget[i]);
       }
       swapchains[i] = RTarget[i].swapchain;
-      RTcmds[i][0] = RTarget[i].cmd;
+      RTcmds[i][0] = RTarget[i].cmd; /* viewport/scissor/push-constants commands */
 
       vkCmdBeginRenderPass(cmd, &RTarget[i].renderpass_info[image_indices[i]],
                            VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);

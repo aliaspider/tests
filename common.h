@@ -3,7 +3,16 @@
 #include <assert.h>
 #include <stdio.h>
 #include <inttypes.h>
-#include "interface.h"
+
+#ifndef debug_log
+void console_log(const char* fmt, ...);
+#define printf       console_log
+#define debug_log    console_log
+#endif
+
+#ifndef countof
+#define countof(a) (sizeof(a)/ sizeof(*a))
+#endif
 
 #define CNT_ARGS(...) CNT_ARGS_(__VA_ARGS__,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0)
 #define CNT_ARGS_(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,n,...) n

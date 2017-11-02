@@ -38,6 +38,15 @@ OBJS += vulkan/resource.o
 OBJS += vulkan/slider.o
 OBJS += vulkan/sprite.o
 OBJS += vulkan/vulkan_common.o
+OBJS += vulkan/common/buffer.o
+OBJS += vulkan/common/context.o
+OBJS += vulkan/common/memory.o
+OBJS += vulkan/common/render_target.o
+OBJS += vulkan/common/renderer.o
+OBJS += vulkan/common/resource.o
+OBJS += vulkan/common/stubs.o
+OBJS += vulkan/common/texture.o
+OBJS += vulkan/common/utils.o
 
 OBJS := $(addprefix $(BUILD_DIR)/,$(OBJS))
 
@@ -74,8 +83,6 @@ else ifeq ($(platform),win)
    LIBS +=  -L$(VULKAN_SDK)/Lib -lvulkan-1 -lfreetype -lgdi32 -ldinput -ldxguid -ldinput8 -ldsound
 endif
 
-
-
 $(BUILD_DIR)/$(TARGET): $(OBJS) $(MODULE) .lastbuild
 	touch .lastbuild
 	$(CXX) $(OBJS) -L$(dir $(MODULE)) -l:$(notdir $(MODULE)) $(LDFLAGS) $(LIBDIRS) $(LIBS) -Wall -o $@
@@ -83,7 +90,7 @@ $(BUILD_DIR)/$(TARGET): $(OBJS) $(MODULE) .lastbuild
 $(TARGET): $(BUILD_DIR)/$(TARGET)
 	cp $< $@
 
-$(BUILD_DIR)/%.o: %.c
+$(BUILD_DIR)/%.o: %.c Makefile
 	@mkdir -p $(dir $@)
 	$(CC) $< $(CFLAGS) -MT $@ -MMD -MP -MF $(BUILD_DIR)/$*.depend -c -o $@
 

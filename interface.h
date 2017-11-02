@@ -10,9 +10,11 @@ extern "C"
 {
 #endif
 
+#ifndef debug_log
 void console_log(const char* fmt, ...);
 #define printf       console_log
 #define debug_log    console_log
+#endif
 
 typedef struct
 {

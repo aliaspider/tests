@@ -36,7 +36,7 @@ static void vk_sprite_renderer_init(vk_context_t *vk)
       .color_blend_attachement_state = &blend_state,
    };
 
-   R_sprite.vbo.info.range = VK_RENDERER_MAX_TEXTURES * sizeof(sprite_t);
+   R_sprite.vbo.info.range = 256 * sizeof(sprite_t);
    R_sprite.vertex_stride = sizeof(sprite_t);
 
    vk_renderer_init(vk, &info, &R_sprite);
@@ -45,7 +45,6 @@ static void vk_sprite_renderer_init(vk_context_t *vk)
 void vk_sprite_add(sprite_t *sprite, vk_texture_t *texture)
 {
    vk_renderer_bind_texture(&R_sprite, texture);
-
    *(sprite_t *)vk_get_vbo_memory(&R_sprite.vbo, sizeof(sprite_t)) = *sprite;
 }
 
