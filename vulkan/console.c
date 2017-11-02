@@ -4,6 +4,7 @@
 #include "input.h"
 #include "slider.h"
 #include "font.h"
+#include "ui/slider.h"
 
 static int last_update_counter;
 static void *console_cache;
@@ -13,6 +14,7 @@ string_list_t *lines;
 screen_t last_screen;
 void console_draw(screen_t *screen)
 {
+   const int slider_width = 20;
    {
       char buffer[512];
       snprintf(buffer, sizeof(buffer), "[%c,%c,%c] \e[91m%i, \e[32m%i", input.pointer.touch1 ? '#' : ' ',
@@ -34,17 +36,6 @@ void console_draw(screen_t *screen)
    }
 
 
-
-   static float pos = 1.0;
-   static bool grab = false;
-   static pointer_t old_pointer;
-//   static int count = 0;
-//   printf("more %i\n", count++);
-//   input.update();
-
-   if (input.pointer.x < screen->width - 20 && !input.pointer.touch1 && old_pointer.touch1)
-      printf("click\n");
-
    if (last_update_counter != console_update_counter || last_screen.width != screen->width)
    {
       free(lines);
@@ -53,7 +44,7 @@ void console_draw(screen_t *screen)
          font_render_options_t options =
          {
             .y = 17 * 5,
-            .max_width = screen->width - 20,
+            .max_width = screen->width - slider_width,
             .max_height = screen->height,
             .lines = lines,
             .dry_run = true
@@ -66,52 +57,29 @@ void console_draw(screen_t *screen)
 
    if (visible_lines < lines->count)
    {
-      float size;
-      size = (float)visible_lines / lines->count;
+      static slider_t slider;
 
-      if (input.pointer.touch1 && !old_pointer.touch1)
+      if (!slider.width)
       {
-         if ((input.pointer.x > screen->width - 20)
-               && (input.pointer.x < screen->width))
-         {
-            if (!grab)
-            {
-               if (input.pointer.y < screen->height * (pos * (1.0 - size)))
-               {
-                  pos = input.pointer.y / ((float)screen->height * (1.0 - size)) - (size / 2) / (1.0 - size);
-                  pos = pos > 0.0 ? pos < 1.0 ? pos : 1.0 : 0.0;
-               }
-               else if (input.pointer.y > screen->height * (pos * (1.0 - size) + size))
-               {
-                  pos = input.pointer.y / ((float)screen->height * (1.0 - size)) - (size / 2) / (1.0 - size);
-                  pos = pos > 0.0 ? pos < 1.0 ? pos : 1.0 : 0.0;
-               }
-            }
-
-            grab = true;
-         }
+         slider.pos = 1.0;
+         slider_init(&slider);
       }
-      else if (!input.pointer.touch1)
-      {
-         grab = false;
-         pos = pos > 0.0 ? pos < 1.0 ? pos : 1.0 : 0.0;
-      }
+      slider.width = slider_width;
+      slider.height = screen->height;
+      slider.x = screen->width - slider.width;
+      slider.y = 0;
+      slider.size = (float)visible_lines / lines->count;
 
-      if (grab)
-         pos += (input.pointer.y - old_pointer.y) / ((float)screen->height * (1.0 - size));
-
-      float real_pos = pos > 0.0 ? pos < 1.0 ? pos * (1.0 - size) : 1.0 - size : 0.0;
-      vk_slider_add(screen->width - 20, 0, 20, screen->height, real_pos, size);
+      slider_draw(&slider);
 
       {
          char buffer[512];
-         snprintf(buffer, sizeof(buffer), "\e[31m[%c] %i\n[%c]Vsync_button", grab ? '#' : ' ', input.pointer.y - old_pointer.y
-                  , input.pad.meta.vsync ? '#' : ' ');
+         snprintf(buffer, sizeof(buffer), "\e[31m[%c]\n[%c]Vsync_button", slider.grab ? '#' : ' ', input.pad.meta.vsync ? '#' : ' ');
 
          font_render_options_t options =
          {
             .y = 40,
-            .max_width = screen->width - 20,
+            .max_width = screen->width - slider.width,
             .max_height = screen->height,
          };
          vk_font_draw_text(buffer, &options);
@@ -120,12 +88,13 @@ void console_draw(screen_t *screen)
          font_render_options_t options =
          {
             .y = 17 * 5,
-            .max_width = screen->width - 20,
+            .max_width = screen->width - slider.width,
             .max_height = screen->height,
             .cache = &console_cache,
             .cache_size = console_cache_size,
          };
-         const char *line = lines->data[(int)(0.5 + lines->count * real_pos)];
+         float realpos = (1.0 - slider.size) * (slider.pos > 0.0 ? slider.pos < 1.0 ? slider.pos : 1.0 : 0.0);
+         const char *line = lines->data[(int)(0.5 + lines->count * realpos)];
 
          if (last_update_counter != console_update_counter || line != last_line_pointer)
          {
@@ -149,8 +118,6 @@ void console_draw(screen_t *screen)
       };
       vk_font_draw_text(lines->data[0], &options);
    }
-
-   old_pointer = input.pointer;
 
    last_update_counter = console_update_counter;
    last_screen = *screen;

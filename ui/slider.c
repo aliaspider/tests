@@ -28,7 +28,12 @@ static void slider_update_hitbox(slider_t* slider)
 static void slider_scroll_up(slider_t* slider)
 {
    if(input.pointer.touch1_pressed)
-      DEBUG_LINE();
+   {
+      slider->pos = (((input.pointer.y - slider->y ) / (float)(slider->height)) / (1.0 - slider->size)) - (slider->size / 2.0)/ (1.0 - slider->size);
+      slider->grab = true;
+      slider_update_hitbox(slider);
+   }
+
 
 }
 
@@ -42,8 +47,11 @@ static void slider_scroll_grab(slider_t* slider)
 static void slider_scroll_down(slider_t* slider)
 {
    if(input.pointer.touch1_pressed)
-      DEBUG_LINE();
-
+   {
+      slider->pos = ((input.pointer.y - slider->y ) / (float)(slider->height) / (1.0 - slider->size)) - (slider->size / 2.0);
+      slider->grab = true;
+      slider_update_hitbox(slider);
+   }
 }
 
 void slider_init(slider_t* slider)
@@ -78,7 +86,6 @@ void slider_draw(slider_t* slider)
       if(input.pointer.touch1)
       {
          slider->pos += input.pointer.dy / (float)(slider->height * (1.0 - slider->size));
-         slider_update_hitbox(slider);
       }
       else
       {
@@ -87,6 +94,7 @@ void slider_draw(slider_t* slider)
       }
    }
 
+   slider_update_hitbox(slider);
 
    float realpos = (1.0 - slider->size) * (slider->pos > 0.0 ? slider->pos < 1.0 ? slider->pos : 1.0 : 0.0);
 

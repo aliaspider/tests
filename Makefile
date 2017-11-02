@@ -63,7 +63,7 @@ $(foreach obj,$(HAS_SHADERS),$(eval SPIRV_OBJS += $(obj).vert.inc $(obj).frag.in
 ifeq ($(DEBUG),1)
    CFLAGS += -g -O0 -DDEBUG
 else
-   CFLAGS += -g -O3
+   CFLAGS += -g -O3 -DNDEBUG
 endif
 
 CFLAGS += -Wall -Werror=implicit-function-declaration -Werror=incompatible-pointer-types

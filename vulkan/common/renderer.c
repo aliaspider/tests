@@ -261,30 +261,7 @@ void vk_renderer_begin(vk_renderer_t *renderer, screen_t *screen)
    vkCmdBindVertexBuffers(renderer->cmd, 0, 1, &renderer->vbo.info.buffer, &renderer->vbo.info.offset);
 }
 
-void vk_renderer_bind_texture(vk_renderer_t *renderer, vk_texture_t *texture)
-{
-   if(!texture)
-      texture = &renderer->default_texture;
-
-   if(renderer->desc.texture != texture->desc)
-   {
-      if (renderer->vbo.info.range)
-      {
-         int count = renderer->vbo.info.range / renderer->vertex_stride;
-
-         vkCmdDraw(renderer->cmd, count, 1, renderer->first_vertex, 0);
-
-         renderer->first_vertex += count;
-         renderer->vbo.info.offset += renderer->vbo.info.range;
-         renderer->vbo.info.range = 0;
-      }
-
-      renderer->desc.texture = texture->desc;
-      vkCmdBindDescriptorSets(renderer->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipeline_layout, 2, 1, &renderer->desc.texture, 0, NULL);
-   }
-}
-
-VkCommandBuffer vk_renderer_finish(vk_renderer_t *renderer)
+static inline void vk_renderer_flush_vertices(vk_renderer_t *renderer)
 {
    if (renderer->vbo.info.range)
    {
@@ -293,10 +270,31 @@ VkCommandBuffer vk_renderer_finish(vk_renderer_t *renderer)
       int count = renderer->vbo.info.range / renderer->vertex_stride;
 
       vkCmdDraw(renderer->cmd, count, 1, renderer->first_vertex, 0);
+
+      renderer->first_vertex += count;
       renderer->vbo.info.offset += renderer->vbo.info.range;
       renderer->vbo.info.range = 0;
    }
+}
 
+void vk_renderer_bind_texture(vk_renderer_t *renderer, vk_texture_t *texture)
+{
+   if(!texture)
+      texture = &renderer->default_texture;
+
+   if(renderer->desc.texture != texture->desc)
+   {
+      vk_renderer_flush_vertices(renderer);
+
+      renderer->desc.texture = texture->desc;
+      vkCmdBindDescriptorSets(renderer->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipeline_layout, 2, 1, &renderer->desc.texture, 0, NULL);
+   }
+}
+
+VkCommandBuffer vk_renderer_finish(vk_renderer_t *renderer)
+{
+   vk_renderer_flush_vertices(renderer);
    vkEndCommandBuffer(renderer->cmd);
+
    return renderer->cmd;
 }
