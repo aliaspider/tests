@@ -324,14 +324,18 @@ static inline string_list_t *vk_monofont_get_lines(const char *text, int line_wi
 }
 void vk_monofont_draw_text(const char *text, int x, int y, uint32_t color, screen_t *screen)
 {
+   R_monofont.vbo.info.range = screen_data[screen->id].range;
+   assert(R_monofont.vbo.info.offset + R_monofont.vbo.info.range <= R_monofont.vbo.mem.size);
+
    vertex_t *out = screen_data[screen->id].vbo;
    out += x + y * screen_data[screen->id].cols;
    uint32_t current_color = color;
 
    const unsigned char *in = (const unsigned char *)text;
-
    while (*in && out - screen_data[screen->id].vbo < screen_data[screen->id].count)
    {
+      R_monofont.vbo.dirty = true;
+
       uint32_t charcode = *(in++);
 
       if (charcode == '\e' && *(in++) == '[')
@@ -399,32 +403,36 @@ void vk_monofont_draw_text(const char *text, int x, int y, uint32_t color, scree
    }
 
    assert(out - 1 - screen_data[screen->id].vbo < screen_data[screen->id].count);
-
-
-   R_monofont.vbo.dirty = true;
 }
 
 void console_mono_draw(screen_t *screen)
 {
-
    static float pos[MAX_SCREENS] = {1.0, 1.0, 1.0, 1.0};
    static bool grab[MAX_SCREENS];
    static pointer_t old_pointer[MAX_SCREENS];
+   static string_list_t *lines[MAX_SCREENS];
+   static int last_update_counter;
+   static const char *last_line_pointer[MAX_SCREENS];
 
    if (input.pointer.x < screen->width - 20 && !input.pointer.touch1 && old_pointer[screen->id].touch1)
       printf("click\n");
 
    const char *text = console_get();
 
-   string_list_t *lines = vk_monofont_get_lines(text, screen_data[screen->id].cols);
-//   string_list_t *lines = string_list_create();
-//   lines = string_list_push(lines, text);
+   if(last_update_counter != console_update_counter)
+   {
+      free(lines[screen->id]);
+      lines[screen->id] = vk_monofont_get_lines(text, screen_data[screen->id].cols);
+      fprintf(stdout, "no skip lines\n");
+   }else if(!lines[screen->id])
+      return;
+
    int visible_lines = screen_data[screen->id].rows - 4;
 
-   if (visible_lines < lines->count)
+   if (visible_lines < lines[screen->id]->count)
    {
       float size;
-      size = (float)visible_lines / lines->count;
+      size = (float)visible_lines / lines[screen->id]->count;
 
       if (input.pointer.touch1 && !old_pointer[screen->id].touch1)
       {
@@ -460,11 +468,9 @@ void console_mono_draw(screen_t *screen)
       float real_pos = pos[screen->id] > 0.0 ? pos[screen->id] < 1.0 ? pos[screen->id] * (1.0 - size) : 1.0 - size : 0.0;
       vk_slider_add(screen->width - 20, 0, 20, screen->height, real_pos, size);
 
-      text = lines->data[(int)(0.5 + lines->count * real_pos)];
+      text = lines[screen->id]->data[(int)(0.5 + lines[screen->id]->count * real_pos)];
    }
 
-   static int last_update_counter;
-   static const char *last_line_pointer[MAX_SCREENS];
 
    if (last_update_counter != console_update_counter || last_line_pointer[screen->id] != text)
    {
@@ -479,9 +485,6 @@ void console_mono_draw(screen_t *screen)
    vk_monofont_draw_text(text, 0, 4, 0xFFFFFFFF, screen);
 
    old_pointer[screen->id] = input.pointer;
-
-
-   free(lines);
 }
 
 void vk_monofont_begin(vk_renderer_t *renderer, screen_t *screen)
@@ -513,9 +516,6 @@ void vk_monofont_begin(vk_renderer_t *renderer, screen_t *screen)
 
    R_monofont.vbo.info.offset = screen_data[screen->id].offset;
    vk_renderer_begin(renderer, screen);
-
-   R_monofont.vbo.info.range = screen_data[screen->id].range;
-   assert(R_monofont.vbo.info.offset + R_monofont.vbo.info.range <= R_monofont.vbo.mem.size);
 }
 
 vk_renderer_t R_monofont =

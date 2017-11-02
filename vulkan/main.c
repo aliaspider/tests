@@ -292,28 +292,7 @@ void video_render()
 
    for (int i = 0; i < video.screen_count; i++)
    {
-      VkCommandBuffer* cmds = RTcmds[i];
-
-      vkWaitForFences(vk.device, 1, &RTarget[i].chain_fence, VK_TRUE, UINT64_MAX);
-      vkResetFences(vk.device, 1, &RTarget[i].chain_fence);
-
-      if (video.vsync != RTarget[i].vsync)
-      {
-         vk_swapchain_destroy(&vk, &RTarget[i]);
-         vk_swapchain_init(&vk, &RTarget[i]);
-      }
-
-      while (vkAcquireNextImageKHR(vk.device, RTarget[i].swapchain, UINT64_MAX, NULL,
-                                   RTarget[i].chain_fence, &image_indices[i]) != VK_SUCCESS)
-      {
-         usleep(100000);
-         vk_swapchain_destroy(&vk, &RTarget[i]);
-         vk_swapchain_init(&vk, &RTarget[i]);
-      }
-
-      swapchains[i] = RTarget[i].swapchain;
-
-      *cmds++ = RTarget[i].cmd;
+      VkCommandBuffer* cmds = RTcmds[i] + 1;
 
       for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
          (*renderer)->begin(*renderer, RTarget[i].screen);
@@ -330,6 +309,25 @@ void video_render()
 
    for (int i = 0; i < video.screen_count; i++)
    {
+      vkWaitForFences(vk.device, 1, &RTarget[i].chain_fence, VK_TRUE, UINT64_MAX);
+      vkResetFences(vk.device, 1, &RTarget[i].chain_fence);
+
+      if (video.vsync != RTarget[i].vsync)
+      {
+         vk_swapchain_destroy(&vk, &RTarget[i]);
+         vk_swapchain_init(&vk, &RTarget[i]);
+      }
+
+      while (vkAcquireNextImageKHR(vk.device, RTarget[i].swapchain, UINT64_MAX, NULL,
+                                   RTarget[i].chain_fence, &image_indices[i]) != VK_SUCCESS)
+      {
+         usleep(100000);
+         vk_swapchain_destroy(&vk, &RTarget[i]);
+         vk_swapchain_init(&vk, &RTarget[i]);
+      }
+      swapchains[i] = RTarget[i].swapchain;
+      RTcmds[i][0] = RTarget[i].cmd;
+
       vkCmdBeginRenderPass(cmd, &RTarget[i].renderpass_info[image_indices[i]],
                            VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
       vkCmdExecuteCommands(cmd, countof(RTcmds[i]), RTcmds[i]);
