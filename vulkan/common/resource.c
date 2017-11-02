@@ -4,8 +4,6 @@
 #include "buffer.h"
 #include "texture.h"
 
-
-
 static vk_resource_t *textures;
 static vk_resource_t *buffers;
 
