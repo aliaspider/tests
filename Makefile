@@ -34,7 +34,6 @@ OBJS += vulkan/font.o
 OBJS += vulkan/font_mono.o
 OBJS += vulkan/frame.o
 OBJS += vulkan/main.o
-OBJS += vulkan/resource.o
 OBJS += vulkan/slider.o
 OBJS += vulkan/sprite.o
 OBJS += vulkan/vulkan_common.o
