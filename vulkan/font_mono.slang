@@ -35,10 +35,11 @@ layout(set = 1, binding = 1, std140) uniform UBO
 
 void main()
 {
+   if(id[0] == 0u)
+      return;
+
    uint c = id[0] & 0xFFu;
 
-   if(c == 0u)
-      return;
    uint col = c & 0xFu;
    uint row = c >> 4u;
 

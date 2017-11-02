@@ -332,6 +332,7 @@ void vk_monofont_draw_text(const char *text, int x, int y, uint32_t color, scree
    uint32_t current_color = color;
 
    const unsigned char *in = (const unsigned char *)text;
+
    while (*in && out - screen_data[screen->id].vbo < screen_data[screen->id].count)
    {
       R_monofont.vbo.dirty = true;
@@ -419,12 +420,13 @@ void console_mono_draw(screen_t *screen)
 
    const char *text = console_get();
 
-   if(last_update_counter != console_update_counter)
+   if (last_update_counter != console_update_counter)
    {
       free(lines[screen->id]);
       lines[screen->id] = vk_monofont_get_lines(text, screen_data[screen->id].cols);
       fprintf(stdout, "no skip lines\n");
-   }else if(!lines[screen->id])
+   }
+   else if (!lines[screen->id])
       return;
 
    int visible_lines = screen_data[screen->id].rows - 4;
