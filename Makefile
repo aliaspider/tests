@@ -36,7 +36,6 @@ OBJS += vulkan/frame.o
 OBJS += vulkan/main.o
 OBJS += vulkan/slider.o
 OBJS += vulkan/sprite.o
-OBJS += vulkan/vulkan_common.o
 OBJS += vulkan/common/buffer.o
 OBJS += vulkan/common/context.o
 OBJS += vulkan/common/memory.o

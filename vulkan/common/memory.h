@@ -2,7 +2,6 @@
 
 #include "common.h"
 
-
 typedef struct
 {
    VkDeviceMemory handle;
@@ -23,6 +22,7 @@ typedef struct
    VkBuffer buffer;
    VkImage image;
 } memory_init_info_t;
+
 void vk_device_memory_init(VkDevice device, const VkMemoryType *memory_types, const memory_init_info_t *init_info,
                            device_memory_t *out);
 void vk_device_memory_free(VkDevice device, device_memory_t *memory);

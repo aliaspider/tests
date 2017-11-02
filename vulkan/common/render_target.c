@@ -26,9 +26,8 @@ static void vk_get_surface_props(VkPhysicalDevice gpu, uint32_t queue_family_ind
       vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, surface, &presentModeCount, NULL);
       VkPresentModeKHR presentModes[presentModeCount];
       vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, surface, &presentModeCount, presentModes);
-      int i;
 
-      for (i = 0; i < presentModeCount; i++)
+      for (int i = 0; i < presentModeCount; i++)
          debug_log("supports present mode %i\n", presentModes[i]);
 
       fflush(stdout);
@@ -148,6 +147,7 @@ void vk_swapchain_init(vk_context_t *vk, vk_render_target_t *render_target)
             };
             vkCreateFramebuffer(vk->device, &info, NULL, &render_target->framebuffers[i]);
          }
+
          {
             VkRenderPassBeginInfo info =
             {
@@ -166,9 +166,7 @@ void vk_swapchain_init(vk_context_t *vk, vk_render_target_t *render_target)
 
 void vk_render_targets_init(vk_context_t *vk, int count, screen_t *screens, vk_render_target_t *render_targets)
 {
-   int i;
-
-   for (i = 0; i < count; i++)
+   for (int i = 0; i < count; i++)
    {
       render_targets[i].screen = &screens[i];
 
@@ -197,25 +195,12 @@ void vk_render_targets_init(vk_context_t *vk, int count, screen_t *screens, vk_r
       vk_swapchain_init(vk, &render_targets[i]);
 
       VkCreateFence(vk->device, true, &render_targets[i].chain_fence);
-
-//   {
-//      VkDisplayEventInfoEXT displayEventInfo =
-//      {
-//         VK_STRUCTURE_TYPE_DISPLAY_EVENT_INFO_EXT,
-//         .displayEvent = VK_DISPLAY_EVENT_TYPE_FIRST_PIXEL_OUT_EXT
-//      };
-//      VK_CHECK(vkRegisterDisplayEventEXT(vk->device, surface.display, &displayEventInfo, NULL, &display_fence));
-//   }
    }
-
 }
 
 void vk_swapchain_destroy(vk_context_t *vk, vk_render_target_t *render_target)
 {
-
-   int i;
-
-   for (i = 0; i < render_target->swapchain_count; i++)
+   for (int i = 0; i < render_target->swapchain_count; i++)
    {
       vkDestroyImageView(vk->device, render_target->views[i], NULL);
       vkDestroyFramebuffer(vk->device, render_target->framebuffers[i], NULL);
@@ -223,18 +208,11 @@ void vk_swapchain_destroy(vk_context_t *vk, vk_render_target_t *render_target)
 
    vkFreeCommandBuffers(vk->device, vk->pools.cmd, 1, &render_target->cmd);
    vkDestroySwapchainKHR(vk->device, render_target->swapchain, NULL);
-
 }
 
 void vk_render_targets_destroy(vk_context_t *vk, int count, vk_render_target_t *render_targets)
 {
-
-//   vkWaitForFences(vk->device, 1, &display_fence, VK_TRUE, UINT64_MAX);
-//   vkDestroyFence(vk->device, display_fence, NULL);
-
-   int i;
-
-   for (i = 0; i < count; i++)
+   for (int i = 0; i < count; i++)
    {
       vkWaitForFences(vk->device, 1, &render_targets[i].chain_fence, VK_TRUE, UINT64_MAX);
       vkDestroyFence(vk->device, render_targets[i].chain_fence, NULL);
@@ -243,6 +221,4 @@ void vk_render_targets_destroy(vk_context_t *vk, int count, vk_render_target_t *
    }
 
    memset(render_targets, 0, count * sizeof(*render_targets));
-
-
 }
