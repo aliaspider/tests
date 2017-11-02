@@ -150,14 +150,14 @@ static void vk_monofont_init(vk_context_t *vk)
    R_monofont.ubo.dirty = true;
 }
 
-void vk_monofont_destroy(VkDevice device, vk_renderer_t *this)
+void vk_monofont_destroy(vk_renderer_t *renderer, VkDevice device)
 {
    FT_Done_Face(font.ftface);
    FT_Done_FreeType(font.ftlib);
    memset(&font, 0, sizeof(font));
    memset(&screen_data, 0, sizeof(screen_data));
 
-   vk_renderer_destroy(device, &R_monofont);
+   vk_renderer_destroy(&R_monofont, device);
 }
 
 
@@ -295,7 +295,7 @@ static inline void update_screen_data(screen_t *screen)
          screen_data[i].vbo = vbo;
          screen_data[i].offset = (uint8_t *)vbo - R_monofont.vbo.mem.u8;
          vbo += screen_data[i].count;
-         screen_data[i].range = (uint8_t *)vbo - R_monofont.vbo.mem.u8;
+         screen_data[i].range = screen_data[i].count * sizeof(vertex_t*);
 
          memset(screen_data[i].vbo, 0x00, screen_data[i].count * sizeof(vertex_t));
       }
@@ -353,7 +353,7 @@ void vk_monofont_draw_text(const char *text, int x, int y, uint32_t color, scree
    update_screen_data(screen);
    R_monofont.vbo.info.offset = screen_data[screen->id].offset;
    R_monofont.vbo.info.range = screen_data[screen->id].range;
-   assert(R_monofont.vbo.info.range <= R_monofont.vbo.mem.size);
+   assert(R_monofont.vbo.info.offset + R_monofont.vbo.info.range <= R_monofont.vbo.mem.size);
 
    vertex_t *out = screen_data[screen->id].vbo;
    out += x + y * screen_data[screen->id].cols;
@@ -523,6 +523,6 @@ vk_renderer_t R_monofont =
 {
    .init = vk_monofont_init,
    .destroy = vk_monofont_destroy,
-   .reset = vk_renderer_reset,
+   .begin = vk_renderer_begin,
    .finish = vk_renderer_finish,
 };

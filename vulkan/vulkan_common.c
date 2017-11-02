@@ -1354,8 +1354,9 @@ void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info
       };
       vkAllocateDescriptorSets(vk->device, &info, &out->desc.main);
    }
-
    vk_update_descriptor_sets(vk, out);
+
+   out->desc.texture = out->tex.desc;
 
    VkAllocateCommandBuffers(vk->device, vk->pools.cmd, VK_COMMAND_BUFFER_LEVEL_SECONDARY, MAX_SCREENS, out->cmds);
 
@@ -1465,7 +1466,7 @@ void vk_renderer_init(vk_context_t *vk, const vk_renderer_init_info_t *init_info
 
 }
 
-void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer)
+void vk_renderer_destroy(vk_renderer_t *renderer, VkDevice device)
 {
    vkDestroyPipeline(device, renderer->pipe, NULL);
    vk_buffer_free(device, &renderer->vbo);
@@ -1478,24 +1479,37 @@ void vk_renderer_destroy(VkDevice device, vk_renderer_t *renderer)
 
 void vk_renderer_finish(vk_renderer_t *renderer)
 {
-   if (renderer->vbo.info.range > renderer->vbo.info.offset)
+   if (renderer->vbo.info.range)
    {
-      int count = (renderer->vbo.info.range - renderer->vbo.info.offset) / renderer->vertex_stride;
+      assert(renderer->vbo.info.range < 0x10000);
+
+      int count = renderer->vbo.info.range / renderer->vertex_stride;
 
       vkCmdDraw(renderer->cmd, count, 1, renderer->first_vertex, 0);
    }
-   renderer->vbo.info.offset = renderer->vbo.info.range;
+
+   renderer->vbo.info.offset += renderer->vbo.info.range;
+   renderer->vbo.info.range = 0;
 
    vkEndCommandBuffer(renderer->cmd);
 
 }
 
-void vk_renderer_reset(vk_renderer_t *renderer)
+void vk_renderer_begin(vk_renderer_t *renderer, screen_t *screen)
 {
-   renderer->vbo.info.offset = 0;
-   renderer->vbo.info.range = 0;
+   if(screen->id == 0)
+      renderer->vbo.info.offset = 0;
+
+   assert(!renderer->vbo.info.range);
    renderer->first_vertex = 0;
-   renderer->texture = &renderer->tex;
+   renderer->desc.texture = renderer->tex.desc;
+   renderer->cmd = renderer->cmds[screen->id];
+
+   VkBeginCommandBuffer(renderer->cmd, renderer->renderpass, VK_ONE_TIME_SUBMIT | VK_RENDER_PASS_CONTINUE);
+   vkCmdBindPipeline(renderer->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipe);
+   vkCmdBindDescriptorSets(renderer->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipeline_layout, 1,
+                           renderer->desc.texture ? 2 : 1, &renderer->desc.main, 0, NULL);
+   vkCmdBindVertexBuffers(renderer->cmd, 0, 1, &renderer->vbo.info.buffer, &renderer->vbo.info.offset);
 }
 
 const char *vk_result_to_str(VkResult res)

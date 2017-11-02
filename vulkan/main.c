@@ -288,9 +288,6 @@ void video_render()
       vk_texture_update_descriptor_sets(&vk, &R_frame.tex);
    }
 
-   for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
-      (*renderer)->reset(*renderer);
-
    VkCommandBuffer RTcmds[video.screen_count][countof(renderers)];
 
    for (int i = 0; i < video.screen_count; i++)
@@ -320,15 +317,8 @@ void video_render()
 
       for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
       {
-         (*renderer)->cmd = (*renderer)->cmds[i];
+         (*renderer)->begin(*renderer, RTarget[i].screen);
          *cmds++ = (*renderer)->cmd;
-         VkBeginCommandBuffer((*renderer)->cmd, vk.renderpass, VK_ONE_TIME_SUBMIT | VK_RENDER_PASS_CONTINUE);
-         vkCmdBindPipeline((*renderer)->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, (*renderer)->pipe);
-         VkDescriptorSet desc[] = {(*renderer)->desc.main, (*renderer)->tex.desc};
-         vkCmdBindDescriptorSets((*renderer)->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, (*renderer)->pipeline_layout, 1,
-                                 (*renderer)->tex.desc? 2:1, desc, 0, NULL);
-         vkCmdBindVertexBuffers((*renderer)->cmd, 0, 1, &(*renderer)->vbo.info.buffer, &(*renderer)->vbo.info.offset);
-         (*renderer)->first_vertex = 0;
       }
 
       for (vk_drawcmd_list_t *draw_cmd = RTarget[i].draw_list; draw_cmd; draw_cmd = draw_cmd->next)
@@ -374,7 +364,7 @@ void video_destroy()
    vkWaitForFences(vk.device, 1, &vk.queue_fence, VK_TRUE, UINT64_MAX);
 
    for (vk_renderer_t **renderer = renderers; *renderer; renderer++)
-      (*renderer)->destroy(vk.device, *renderer);
+      (*renderer)->destroy(*renderer, vk.device);
 
    vk_texture_free(vk.device, &test_image);
    vk_render_targets_destroy(&vk, video.screen_count, RTarget);

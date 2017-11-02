@@ -107,6 +107,6 @@ vk_renderer_t R_frame =
 {
    .init = vk_frame_init,
    .destroy = vk_renderer_destroy,
-   .reset = vk_renderer_reset,
+   .begin = vk_renderer_begin,
    .finish = vk_renderer_finish,
 };

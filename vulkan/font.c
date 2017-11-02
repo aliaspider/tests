@@ -151,13 +151,13 @@ static void vk_font_init(vk_context_t *vk)
    R_font.ubo.dirty = true;
 }
 
-void vk_font_destroy(VkDevice device, vk_renderer_t *this)
+void vk_font_destroy(vk_renderer_t *renderer, VkDevice device)
 {
    FT_Done_Face(font.ftface);
    FT_Done_FreeType(font.ftlib);
    memset(&font, 0, sizeof(font));
 
-   vk_renderer_destroy(device, &R_font);
+   vk_renderer_destroy(&R_font, device);
 }
 
 
@@ -309,7 +309,7 @@ void vk_font_draw_text(const char *text, font_render_options_t *options)
    vertex_t *out = NULL;
 
    if (!options->dry_run)
-      out = (vertex_t *)(R_font.vbo.mem.u8 + R_font.vbo.info.range);
+      out = (vertex_t *)(R_font.vbo.mem.u8 + R_font.vbo.info.offset + R_font.vbo.info.range);
 
    vertex_t vertex;
    vertex.color = *(typeof(vertex.color) *)&options->color;
@@ -434,18 +434,18 @@ void vk_font_draw_text(const char *text, font_render_options_t *options)
    {
       options->cache_size = pos * sizeof(vertex_t);
       *options->cache = malloc(options->cache_size);
-      memcpy(*options->cache, R_font.vbo.mem.u8 + R_font.vbo.info.range, options->cache_size);
+      memcpy(*options->cache, R_font.vbo.mem.u8 + R_font.vbo.info.offset + R_font.vbo.info.range, options->cache_size);
    }
 
    R_font.vbo.info.range += pos * sizeof(vertex_t);
    R_font.vbo.dirty = true;
-   assert(R_font.vbo.info.range <= R_font.vbo.mem.size);
+   assert(R_font.vbo.info.offset + R_font.vbo.info.range <= R_font.vbo.mem.size);
 }
 
 vk_renderer_t R_font =
 {
    .init = vk_font_init,
    .destroy = vk_font_destroy,
-   .reset = vk_renderer_reset,
+   .begin = vk_renderer_begin,
    .finish = vk_renderer_finish,
 };
