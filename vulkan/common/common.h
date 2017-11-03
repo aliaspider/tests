@@ -12,9 +12,7 @@
 #endif
 
 #ifndef debug_log
-void console_log(const char* fmt, ...);
-#define printf       console_log
-#define debug_log    console_log
+#define debug_log    printf
 #endif
 
 #define VK_CHECK(vk_call) do {VkResult res = vk_call; if (res != VK_SUCCESS) {debug_log("%s:%i:%s:%s --> %s(%i)\n", __FILE__, __LINE__, __FUNCTION__, #vk_call, vk_result_to_str(res), res); fflush(stdout); exit(1); }} while(0)

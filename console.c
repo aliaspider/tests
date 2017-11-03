@@ -8,7 +8,11 @@ static char con_buffer[1 << 13];
 static int con_pos;
 int console_update_counter;
 
-void console_log(const char *fmt, ...)
+#ifdef PRINTF_WRAPPED
+void __wrap_printf(const char *fmt, ...)
+#else
+int printf(const char *fmt, ...)
+#endif
 {
    int available = (sizeof(con_buffer) - con_pos);
 
@@ -50,6 +54,7 @@ void console_log(const char *fmt, ...)
       fputs(con_buffer + con_pos, stdout);
       con_pos += len;
    }
+   return len;
 }
 
 

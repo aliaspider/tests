@@ -87,6 +87,9 @@ endif
 
 LIBS += -lfreetype -lpng
 
+#CFLAGS += -DPRINTF_WRAPPED
+#LDFLAGS += -Wl,--wrap,printf
+
 $(BUILD_DIR)/$(TARGET): $(OBJS) $(MODULE) .lastbuild
 	touch .lastbuild
 	$(CXX) $(OBJS) -L$(dir $(MODULE)) -l:$(notdir $(MODULE)) $(LDFLAGS) $(LIBDIRS) $(LIBS) -Wall -o $@

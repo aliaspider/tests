@@ -309,8 +309,8 @@ void video_init()
    vk_register_draw_command(&RTarget[0].draw_list, display_message_handler);
 //   vk_register_draw_command(&RTarget[0].draw_list, monofont_test);
 //   vk_register_draw_command(&RTarget[0].draw_list, console_mono_draw);
-      vk_register_draw_command(&RTarget[0].draw_list, slider_test);
-      vk_register_draw_command(&RTarget[0].draw_list, button_test);
+//      vk_register_draw_command(&RTarget[0].draw_list, slider_test);
+//      vk_register_draw_command(&RTarget[0].draw_list, button_test);
 
 //   vk_register_draw_command(&RTarget[1].draw_list, frame_draw_small);
 //   vk_register_draw_command(&RTarget[1].draw_list, sprite_test);

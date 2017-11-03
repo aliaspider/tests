@@ -5,9 +5,7 @@
 #include <inttypes.h>
 
 #ifndef debug_log
-void console_log(const char* fmt, ...);
-#define printf       console_log
-#define debug_log    console_log
+#define debug_log    printf
 #endif
 
 #ifndef countof
@@ -23,7 +21,7 @@ void console_log(const char* fmt, ...);
 #define fatal(...)   do{debug_log(__VA_ARGS__); fflush(stdout); assert(0);}while(0)
 
 #define CHECK_ERR(x) do{int res = x; if(res != 0) {printf("error at %s:%i:%s: 0x%08X(%i)\n", \
-   __FILE__, __LINE__, res, res);fflush(stdout);assert(0);}}while(0)
+   __FILE__, __LINE__,__FUNCTION__, res, res);fflush(stdout);assert(0);}}while(0)
 
 #define DEBUG_LINE(x) do{debug_log("%s@%i : %s\n", __FILE__, __LINE__, __FUNCTION__); fflush(stdout);}while(0)
 #define DEBUG_CHAR(x) do{debug_log("%-40s : %6c\n", #x, x); fflush(stdout);}while(0)
