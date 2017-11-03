@@ -1,6 +1,6 @@
 #version 310 es
 precision highp float;
-
+//#define NO_TEX
 #ifdef VERTEX_SHADER
 
 layout(location = 0) in vec4 pos;
@@ -107,10 +107,9 @@ layout(set = 2, binding = 1, std140) uniform UBO
    int format;
    int ignore_alpha;
 } tex;
-
+#ifdef NO_TEX
 void main()
 {
-//   if(fract((vTexCoord.y - fract(vTexCoord.y)) / 2.0) == 0.5)
    if (path == 0)
    {
       if (fract((vTexCoord.y) / 2.0) >= 0.5)
@@ -118,24 +117,59 @@ void main()
       else
          FragColor = vec4(0.0, 0.0, 0.0, 1.0);
 
-//      vec2 coords = vTexCoord;
-//      vec2 tile_size = vec2(55.0, 32.0);
-//      vec2 tile_offset = vec2(0.0, 48.0);
-//      /* vertical */
-//      tile_size = tile_size.yx;
+   }
+   else
+   {
+      vec4 BG = vec4(1.0, 0.0, 0.0, 1.0);
+      vec4 FG = vec4(1.0, 1.0, 1.0, 1.0);
+      vec2 border = vec2(2.0, 2.0);
 
-//      coords.x *= tile_size.x / size.x;
-//      coords.y = mod(coords.y, tile_size.y);
+      vec2 coords = vTexCoord / size;
+      FG.a = 1.0 - clamp((coords.x  - 0.35), 0.0, 1.0) ;
+      FG.a = exp(-3.14 * FG.a * FG.a);
+
+      float r = size.x / 2.8;
+//      float r = 15.0;
+      vec2 coords2 = vTexCoord;
+
+      coords2 = clamp(abs(vTexCoord - size / 2.0), size / 2.0 - vec2(r), size / 2.0) - size / 2.0 + vec2(r);
+      BG.a *= step(dot(coords2, coords2), r * r);
+//      coords2 = clamp(abs(vec2(vTexCoord.x / 2.0, vTexCoord.y) - vec2(3.0 * size.x / 4.0 ,size.y / 2.0)),
+//      vec2(size.x / 4.0, size.y / 2.0) - vec2(r), vec2(size.x / 4.0, size.y / 2.0)) - vec2(size.x / 4.0, size.y / 2.0) + vec2(r);
+      FG.a *= step(dot(coords2, coords2), (r - border.x) * (r - border.y));
+
+      FragColor = BG.rgba * (1.0 - FG.a) + vec4(FG.rgb * FG.a, FG.a);
+   }
+}
+#else
+void main()
+{
+//   if(fract((vTexCoord.y - fract(vTexCoord.y)) / 2.0) == 0.5)
+   if (path == 0)
+   {
+//      if (fract((vTexCoord.y) / 2.0) >= 0.5)
+//         FragColor = vec4(0.0, 0.50, 1.0, 1.0);
+//      else
+//         FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+
+      vec2 coords = vTexCoord;
+      vec2 tile_size = vec2(32.0, 20.0);
+      vec2 tile_offset = vec2(32.0, 0.0);
+      /* vertical */
+      tile_size = tile_size.yx;
+
+      coords.x *= tile_size.x / size.x;
+      coords.y = mod(coords.y, tile_size.y);
 
 
-//      coords = coords.yx;
-//      FragColor = texture(uTex, coords + tile_offset);
+      coords = coords.yx;
+      FragColor = texture(uTex, coords + tile_offset);
 //      FragColor = vec4(0.3, 0.3, 0.3, FragColor.a);
    }
    else
    {
       vec2 coords = vTexCoord;
-      vec2 tile_size = vec2(128.0, 32.0);
+      vec2 tile_size = vec2(32.0, 20.0);
       vec2 tile_offset = vec2(0.0, 0.0);
 //      vec2 tile_size = vec2(64.0, 32.0);
 //      vec2 tile_offset = vec2(192.0, 0.0);
@@ -170,8 +204,9 @@ void main()
       else
          coords.y = coords.y * tile_size.y / size.y;
 
-      coords = coords.yx;
+      coords = vec2(coords.y, tile_size.x - coords.x);
 
+//      coords = (vTexCoord * tile_size / size).yx;
 
 //      if(coords.y > 16.0 && coords.y < size.y - 16.0)
 //         coords.y = 16.0;
@@ -185,4 +220,5 @@ void main()
 //      FragColor.a = 0.0;
    }
 }
+#endif
 #endif
