@@ -5,6 +5,7 @@
 #include "vulkan_common.h"
 #include "common.h"
 #include "slider.h"
+#include "utils/png_file.h"
 
 typedef struct
 {
@@ -18,7 +19,6 @@ typedef struct
 
 static void vk_slider_init(vk_context_t *vk)
 {
-
 #define SHADER_FILE slider
 #include "shaders.h"
 
@@ -30,9 +30,12 @@ static void vk_slider_init(vk_context_t *vk)
 
    static const VkPipelineColorBlendAttachmentState blend_state =
    {
-      .blendEnable = VK_FALSE,
+      .blendEnable = VK_TRUE,
+      .srcColorBlendFactor = VK_SRC_ALPHA, VK_ONE_MINUS_SRC_ALPHA, VK_ADD,
+      .srcAlphaBlendFactor = VK_SRC_ALPHA, VK_ONE_MINUS_SRC_ALPHA, VK_ADD,
       .colorWriteMask = VK_COLOR_COMPONENT_ALL
    };
+
 
    static const vk_renderer_init_info_t info =
    {
@@ -43,10 +46,23 @@ static void vk_slider_init(vk_context_t *vk)
       .color_blend_attachement_state = &blend_state,
    };
 
+   png_file_t png;
+   png_file_init("vulkan/slider.png", &png);
+
+   R_slider.default_texture.width = png.width;
+   R_slider.default_texture.height = png.height;
+   R_slider.default_texture.format = VK_FORMAT_R8G8B8A8_UNORM;
    R_slider.vbo.info.range = 256 * sizeof(vertex_t);
    R_slider.vertex_stride = sizeof(vertex_t);
 
    vk_renderer_init(vk, &info, &R_slider);
+
+   device_memory_t *mem = &R_slider.default_texture.staging.mem;
+   memset(mem->u8 + mem->layout.offset, 0xFF, mem->layout.size - mem->layout.offset);
+
+   png_file_read(&png, R_slider.default_texture.staging.mem.ptr+ mem->layout.offset, R_slider.default_texture.staging.mem.layout.rowPitch);
+   R_slider.default_texture.dirty = true;
+   png_file_free(&png);
 }
 
 

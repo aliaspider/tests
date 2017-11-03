@@ -23,6 +23,7 @@ OBJS += console.o
 OBJS += ui/hitbox.o
 OBJS += ui/slider.o
 OBJS += ui/button.o
+OBJS += utils/png_file.o
 ifeq ($(platform),linux)
    OBJS += linux/platform.o
    OBJS += linux/audio_alsa.o
@@ -76,13 +77,15 @@ ifeq ($(platform),linux)
    CFLAGS += -DVK_USE_PLATFORM_XLIB_KHR
    CFLAGS += -DVK_USE_PLATFORM_XLIB_XRANDR_EXT
    CFLAGS += -DHAVE_X11
-   LIBS += -lvulkan -lX11 -lasound -lfreetype
+   LIBS += -lvulkan -lX11 -lasound
    CFLAGS += $(shell freetype-config --cflags)
 else ifeq ($(platform),win)
    CFLAGS += $(shell pkg-config.exe freetype2 --cflags)
    CFLAGS += -I$(VULKAN_SDK)/Include -DVK_USE_PLATFORM_WIN32_KHR
-   LIBS +=  -L$(VULKAN_SDK)/Lib -lvulkan-1 -lfreetype -lgdi32 -ldinput -ldxguid -ldinput8 -ldsound
+   LIBS +=  -L$(VULKAN_SDK)/Lib -lvulkan-1 -lgdi32 -ldinput -ldxguid -ldinput8 -ldsound
 endif
+
+LIBS += -lfreetype -lpng
 
 $(BUILD_DIR)/$(TARGET): $(OBJS) $(MODULE) .lastbuild
 	touch .lastbuild

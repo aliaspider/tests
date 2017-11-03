@@ -146,6 +146,32 @@ void slider_test(screen_t *screen)
       slider_init(&slider);
    }
    slider_update(&slider);
+   static slider_t slider2;
+   if (!slider2.width)
+   {
+      slider2.x = 100;
+      slider2.y = 40;
+      slider2.width = 80;
+      slider2.height = 200;
+      slider2.pos = 0.5;
+      slider2.size = 0.8;
+      slider_init(&slider2);
+   }
+   slider_update(&slider2);
+   {
+      sprite_t sprite;
+      sprite.coords.x = 0;
+      sprite.coords.y = 0;
+      sprite.coords.width = 128;
+      sprite.coords.height = 32;
+      sprite.pos.x = 400;
+      sprite.pos.y = 200;
+      sprite.pos.width = sprite.coords.width;
+      sprite.pos.height = sprite.coords.height;
+      sprite.color = 0xFFFFFFFF;
+//      vk_sprite_add(&sprite, &R_slider.default_texture);
+      vk_sprite_add(&sprite, &R_slider.default_texture);
+   }
 }
 
 void button_test(screen_t *screen)
@@ -420,3 +446,4 @@ const video_t video_vulkan =
    .destroy               = video_destroy,
    .register_draw_command = video_register_draw_command,
 };
+

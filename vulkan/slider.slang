@@ -21,10 +21,12 @@ layout(location = 0) in vec4 pos[1];
 layout(location = 1) in vec2 info[1];
 layout(triangle_strip, max_vertices = 8) out;
 layout(location = 0) out vec2 vTexCoord;
+layout(location = 1) out vec2 size;
+layout(location = 2) out int path;
 layout(push_constant) uniform PC
 {
    vec2 vp_size;
-}pc;
+} pc;
 
 //layout(set = 0, binding = 0, std140) uniform UBO
 //{
@@ -36,40 +38,55 @@ layout(push_constant) uniform PC
 void main()
 {
    gl_Position.zw = vec2(0.0f, 1.0f);
+   path = 0;
+   size = vec2(pos[0].z, pos[0].w);
 
 
    gl_Position.xy = - 1.0f + (pos[0].xy + vec2(pos[0].z, 0.0)) * 2.0f / pc.vp_size;
    vTexCoord = vec2(pos[0].z, 0.0);
    EmitVertex();
 
-   gl_Position.xy = - 1.0f + (pos[0].xy + vec2(0.0, 0.0))* 2.0f / pc.vp_size;
+   gl_Position.xy = - 1.0f + (pos[0].xy + vec2(0.0, 0.0)) * 2.0f / pc.vp_size;
    vTexCoord = vec2(0.0, 0.0);
    EmitVertex();
 
-   gl_Position.xy = - 1.0f + (pos[0].xy + vec2(pos[0].z, pos[0].w))* 2.0f / pc.vp_size;
+   gl_Position.xy = - 1.0f + (pos[0].xy + vec2(pos[0].z, pos[0].w)) * 2.0f / pc.vp_size;
    vTexCoord = vec2(pos[0].z, pos[0].w);
    EmitVertex();
 
-   gl_Position.xy = - 1.0f + (pos[0].xy + vec2(0.0, pos[0].w))* 2.0f / pc.vp_size;
+   gl_Position.xy = - 1.0f + (pos[0].xy + vec2(0.0, pos[0].w)) * 2.0f / pc.vp_size;
    vTexCoord = vec2(0.0, pos[0].w);
    EmitVertex();
 
    EndPrimitive();
 
-   vTexCoord = vec2(1.0);
+   path = 1;
    float height = pos[0].w * info[0].y;
    float off = pos[0].w * info[0].x;
+   size = vec2(pos[0].z, height);
 
+   // -#
+   // --
    gl_Position.xy = - 1.0f + (vec2(0.0, off) + pos[0].xy + vec2(pos[0].z, 0.0)) * 2.0f / pc.vp_size;
+   vTexCoord = vec2(pos[0].z, 0.0);
    EmitVertex();
 
-   gl_Position.xy = - 1.0f + (vec2(0.0, off) + pos[0].xy + vec2(0.0, 0.0))* 2.0f / pc.vp_size;
+   // #-
+   // --
+   gl_Position.xy = - 1.0f + (vec2(0.0, off) + pos[0].xy + vec2(0.0, 0.0)) * 2.0f / pc.vp_size;
+   vTexCoord = vec2(0.0, 0.0);
    EmitVertex();
 
-   gl_Position.xy = - 1.0f + (vec2(0.0, off) + pos[0].xy + vec2(pos[0].z, height))* 2.0f / pc.vp_size;
+   // --
+   // -#
+   gl_Position.xy = - 1.0f + (vec2(0.0, off) + pos[0].xy + vec2(pos[0].z, height)) * 2.0f / pc.vp_size;
+   vTexCoord = vec2(pos[0].z, height);
    EmitVertex();
 
-   gl_Position.xy = - 1.0f + (vec2(0.0, off) + pos[0].xy + vec2(0.0, height))* 2.0f / pc.vp_size;
+   // --
+   // #-
+   gl_Position.xy = - 1.0f + (vec2(0.0, off) + pos[0].xy + vec2(0.0, height)) * 2.0f / pc.vp_size;
+   vTexCoord = vec2(0.0, height);
    EmitVertex();
 
    EndPrimitive();
@@ -79,15 +96,93 @@ void main()
 
 #ifdef FRAGMENT_SHADER
 layout(location = 0) in vec2 vTexCoord;
+layout(location = 1) in vec2 size;
+layout(location = 2) in flat int path;
 layout(location = 0) out vec4 FragColor;
-layout(set = 0, binding = 1, location = 0) uniform highp sampler2D uTex;
+//layout(set = 0, binding = 1, location = 0) uniform highp sampler2D uTex;
+layout(set = 2, binding = 0, location = 0) uniform highp sampler2D uTex;
+layout(set = 2, binding = 1, std140) uniform UBO
+{
+   vec2 size;
+   int format;
+   int ignore_alpha;
+} tex;
 
 void main()
 {
 //   if(fract((vTexCoord.y - fract(vTexCoord.y)) / 2.0) == 0.5)
-   if(fract((vTexCoord.y) / 2.0) >= 0.5)
-      FragColor = vec4(0.0, 0.50, 1.0, 1.0);
+   if (path == 0)
+   {
+      if (fract((vTexCoord.y) / 2.0) >= 0.5)
+         FragColor = vec4(0.0, 0.50, 1.0, 1.0);
+      else
+         FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+
+//      vec2 coords = vTexCoord;
+//      vec2 tile_size = vec2(55.0, 32.0);
+//      vec2 tile_offset = vec2(0.0, 48.0);
+//      /* vertical */
+//      tile_size = tile_size.yx;
+
+//      coords.x *= tile_size.x / size.x;
+//      coords.y = mod(coords.y, tile_size.y);
+
+
+//      coords = coords.yx;
+//      FragColor = texture(uTex, coords + tile_offset);
+//      FragColor = vec4(0.3, 0.3, 0.3, FragColor.a);
+   }
    else
-      FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+   {
+      vec2 coords = vTexCoord;
+      vec2 tile_size = vec2(128.0, 32.0);
+      vec2 tile_offset = vec2(0.0, 0.0);
+//      vec2 tile_size = vec2(64.0, 32.0);
+//      vec2 tile_offset = vec2(192.0, 0.0);
+      /* vertical */
+      tile_size = tile_size.yx;
+
+      if (size.x > tile_size.x)
+      {
+         if (coords.x > (tile_size.x / 2.0))
+         {
+            if (coords.x < size.x - (tile_size.x / 2.0))
+               coords.x = (tile_size.x / 2.0);
+            else
+               coords.x = coords.x - size.x + tile_size.x;
+         }
+
+      }
+      else
+         coords.x = coords.x * tile_size.x / size.x;
+
+      if (size.y > tile_size.y)
+      {
+         if (coords.y > (tile_size.y / 2.0))
+         {
+            if (coords.y < size.y - (tile_size.y / 2.0))
+               coords.y = (tile_size.y / 2.0);
+            else
+               coords.y = coords.y - size.y + tile_size.y;
+         }
+
+      }
+      else
+         coords.y = coords.y * tile_size.y / size.y;
+
+      coords = coords.yx;
+
+
+//      if(coords.y > 16.0 && coords.y < size.y - 16.0)
+//         coords.y = 16.0;
+
+//      if(coords.y > 16.0)// && coords.x < size.x - 16.0)
+//         coords.y = 16.0;
+//      coords = coords * vec2(128.0, 32.0)/size.yx;
+//      vec2 coords = vTexCoord
+//      FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+      FragColor = texture(uTex, coords + tile_offset);
+//      FragColor.a = 0.0;
+   }
 }
 #endif
