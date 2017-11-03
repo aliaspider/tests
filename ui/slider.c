@@ -30,18 +30,22 @@ static void slider_scroll(slider_t *slider)
 {
    if (input.pointer.touch1_pressed)
    {
+      slider->hitbox[0].grab = false;
+      slider->hitbox[1].grab = true;
+      slider->hitbox[2].grab = false;
       slider->pos = (((input.pointer.y - slider->y) / (float)(slider->height)) / (1.0 - slider->size)) -
                     (slider->size / 2.0) / (1.0 - slider->size);
       slider->pos = slider->pos > 0.0 ? slider->pos < 1.0 ? slider->pos : 1.0 : 0.0;
-      slider->grab = true;
       slider_update_hitbox(slider);
    }
 }
 
 static void slider_grab(slider_t *slider)
 {
-   if (input.pointer.touch1_pressed)
-      slider->grab = true;
+   if (slider->hitbox[1].grab)
+      slider->pos += input.pointer.dy / (float)(slider->height * (1.0 - slider->size));
+   else
+      slider->pos = slider->pos > 0.0 ? slider->pos < 1.0 ? slider->pos : 1.0 : 0.0;
 }
 
 void slider_init(slider_t *slider)
@@ -71,20 +75,8 @@ void slider_destroy(slider_t *slider)
 
 void slider_update(slider_t *slider)
 {
-   if (slider->grab)
-   {
-      if (input.pointer.touch1)
-         slider->pos += input.pointer.dy / (float)(slider->height * (1.0 - slider->size));
-      else
-      {
-         slider->grab = false;
-         slider->pos = slider->pos > 0.0 ? slider->pos < 1.0 ? slider->pos : 1.0 : 0.0;
-      }
-   }
+   slider->start = (1.0 - slider->size) * (slider->pos > 0.0 ? slider->pos < 1.0 ? slider->pos : 1.0 : 0.0);
 
    slider_update_hitbox(slider);
-
-   slider->real_pos = (1.0 - slider->size) * (slider->pos > 0.0 ? slider->pos < 1.0 ? slider->pos : 1.0 : 0.0);
-
-   vk_slider_add(slider->x, slider->y, slider->width, slider->height, slider->real_pos, slider->size);
+   vk_slider_add(slider->x, slider->y, slider->width, slider->height, slider->start, slider->size);
 }

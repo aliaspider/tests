@@ -14,9 +14,9 @@ typedef struct
    int y;
    int width;
    int height;
-   float pos;
    float size;
-   const float real_pos;
+   float pos;            /* [0.0 .. 1.0] */
+   const float start; /* [0.0 .. 1.0 - size] */
    const bool grab;
 }slider_t;
 

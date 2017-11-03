@@ -59,17 +59,21 @@ void hitbox_check(void)
 		if(input.pointer.x >= hitbox->x && input.pointer.x < hitbox->x + hitbox->width &&
          input.pointer.y >= hitbox->y && input.pointer.y < hitbox->y + hitbox->height)
       {
-         hitbox->hit = true;
-         if(input.pointer.touch1)
-            hitbox->grab = true;
-			hitbox->callback(hitbox->data);
-
          if(last_hit != hitbox)
          {
             if(last_hit)
+            {
                last_hit->hit = false;
+//               last_hit->callback(last_hit->data);
+            }
             last_hit = hitbox;
          }
+
+         hitbox->hit = true;
+         if(input.pointer.touch1_pressed)
+            hitbox->grab = true;
+
+         hitbox->callback(hitbox->data);
          return;
       }
 
@@ -79,6 +83,7 @@ void hitbox_check(void)
    if(last_hit)
    {
       last_hit->hit = false;
+//      last_hit->callback(last_hit->data);
       last_hit = NULL;
    }
 

@@ -93,7 +93,7 @@ void console_draw(screen_t *screen)
             .cache = &console_cache,
             .cache_size = console_cache_size,
          };
-         const char *line = lines->data[(int)(0.5 + lines->count * slider.real_pos)];
+         const char *line = lines->data[(int)(0.5 + lines->count * slider.start)];
 
          if (last_update_counter != console_update_counter || line != last_line_pointer)
          {
