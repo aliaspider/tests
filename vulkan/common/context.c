@@ -427,7 +427,7 @@ void vk_context_init(vk_context_t *vk)
          {
             .stageFlags = VK_SHADER_STAGE_ALL,
             .offset = 0,
-            .size = 8
+            .size = 2 * sizeof(float)
          },
       };
 

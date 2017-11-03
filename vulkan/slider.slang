@@ -168,56 +168,19 @@ void main()
    }
    else
    {
-      vec2 coords = vTexCoord;
       vec2 tile_size = vec2(32.0, 20.0);
       vec2 tile_offset = vec2(0.0, 0.0);
+
+
 //      vec2 tile_size = vec2(64.0, 32.0);
 //      vec2 tile_offset = vec2(192.0, 0.0);
       /* vertical */
-      tile_size = tile_size.yx;
+      vec2 center = (tile_size.yx / 2.0);
+      vec2 coords = (vTexCoord - size / 2.0);
+      coords = center + clamp(abs(coords) - (size / 2.0) + center, vec2(0.0), center) * -sign(coords);
+      coords = vec2(tile_size.x - coords.y, coords.x);
 
-      if (size.x > tile_size.x)
-      {
-         if (coords.x > (tile_size.x / 2.0))
-         {
-            if (coords.x < size.x - (tile_size.x / 2.0))
-               coords.x = (tile_size.x / 2.0);
-            else
-               coords.x = coords.x - size.x + tile_size.x;
-         }
-
-      }
-      else
-         coords.x = coords.x * tile_size.x / size.x;
-
-      if (size.y > tile_size.y)
-      {
-         if (coords.y > (tile_size.y / 2.0))
-         {
-            if (coords.y < size.y - (tile_size.y / 2.0))
-               coords.y = (tile_size.y / 2.0);
-            else
-               coords.y = coords.y - size.y + tile_size.y;
-         }
-
-      }
-      else
-         coords.y = coords.y * tile_size.y / size.y;
-
-      coords = vec2(coords.y, tile_size.x - coords.x);
-
-//      coords = (vTexCoord * tile_size / size).yx;
-
-//      if(coords.y > 16.0 && coords.y < size.y - 16.0)
-//         coords.y = 16.0;
-
-//      if(coords.y > 16.0)// && coords.x < size.x - 16.0)
-//         coords.y = 16.0;
-//      coords = coords * vec2(128.0, 32.0)/size.yx;
-//      vec2 coords = vTexCoord
-//      FragColor = vec4(1.0, 0.0, 0.0, 1.0);
       FragColor = texture(uTex, coords + tile_offset);
-//      FragColor.a = 0.0;
    }
 }
 #endif
