@@ -14,7 +14,11 @@ struct hitbox_t
    int width;
    int height;
    const bool hit;
-   bool grab;
+   union
+   {
+      bool grab;
+      bool clicked;
+   };
    void (*callback)(void* data);
    void* data;
 #ifdef HITBOX_INTERNAL

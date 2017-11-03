@@ -47,7 +47,8 @@ void hitbox_check(void)
          last_hit->grab = false;
       else
       {
-         last_hit->callback(last_hit->data);
+         if(last_hit->callback)
+            last_hit->callback(last_hit->data);
          return;
       }
    }
@@ -73,7 +74,8 @@ void hitbox_check(void)
          if(input.pointer.touch1_pressed)
             hitbox->grab = true;
 
-         hitbox->callback(hitbox->data);
+         if(hitbox->callback)
+            hitbox->callback(hitbox->data);
          return;
       }
 

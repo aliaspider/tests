@@ -8,11 +8,10 @@
 
 static void slider_update_hitbox(slider_t *slider)
 {
-   float pos = slider->pos > 0.0 ? slider->pos < 1.0 ? slider->pos : 1.0 : 0.0;
    slider->hitbox[0].x = slider->x;
    slider->hitbox[0].y = slider->y;
    slider->hitbox[0].width = slider->width;
-   slider->hitbox[0].height = slider->height * pos * (1.0 - slider->size);
+   slider->hitbox[0].height = slider->height * slider->start;
 
    slider->hitbox[1].x = slider->x;
    slider->hitbox[1].y = slider->hitbox[0].y + slider->hitbox[0].height;
@@ -58,8 +57,6 @@ void slider_init(slider_t *slider)
    slider->hitbox[1].callback = (void *)slider_grab;
    slider->hitbox[2].callback = (void *)slider_scroll;
 
-   slider_update_hitbox(slider);
-
    hitbox_add(&slider->hitbox[0]);
    hitbox_add(&slider->hitbox[1]);
    hitbox_add(&slider->hitbox[2]);
@@ -76,7 +73,7 @@ void slider_destroy(slider_t *slider)
 void slider_update(slider_t *slider)
 {
    slider->start = (1.0 - slider->size) * (slider->pos > 0.0 ? slider->pos < 1.0 ? slider->pos : 1.0 : 0.0);
-
    slider_update_hitbox(slider);
+
    vk_slider_add(slider->x, slider->y, slider->width, slider->height, slider->start, slider->size);
 }
