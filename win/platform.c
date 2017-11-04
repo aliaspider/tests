@@ -28,6 +28,18 @@ static LRESULT CALLBACK wndproc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
       ValidateRect(hWnd, NULL);
       break;
 
+   case WM_SIZE:
+      for(int i = 0; i < video.screen_count; i++)
+      {
+         if (video.screens[i].hwnd == hWnd)
+         {
+            video.screens[i].width = LOWORD(lParam);
+            video.screens[i].height = HIWORD(lParam);
+            break;
+         }
+      }
+      break;
+
    default:
       break;
    }

@@ -406,6 +406,13 @@ void video_render()
          vk_swapchain_init(&vk, &RTarget[i]);
       }
 
+      if(RTarget[i].screen->width  != RTarget[i].viewport.width ||
+         RTarget[i].screen->height  != RTarget[i].viewport.height)
+      {
+         vk_swapchain_destroy(&vk, &RTarget[i]);
+         vk_swapchain_init(&vk, &RTarget[i]);
+      }
+
       while (vkAcquireNextImageKHR(vk.device, RTarget[i].swapchain, UINT64_MAX, NULL,
                                    RTarget[i].chain_fence, &image_indices[i]) != VK_SUCCESS)
       {

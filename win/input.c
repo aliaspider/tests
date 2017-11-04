@@ -136,7 +136,7 @@ void mouse_update(void)
       {
          if (SUCCEEDED(DIDEV8_Acquire(mice[i])))
          {
-            if (FAILED(DIDEV8_GetDeviceState(mouse, sizeof(state), &state)))
+            if (FAILED(DIDEV8_GetDeviceState(mice[i], sizeof(state), &state)))
             {
                DIDEV8_Unacquire(mice[i]);
                return;
