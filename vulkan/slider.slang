@@ -1,6 +1,6 @@
 #version 310 es
 precision highp float;
-//#define NO_TEX
+#define NO_TEX
 #ifdef VERTEX_SHADER
 
 layout(location = 0) in vec4 pos;
@@ -22,7 +22,8 @@ layout(location = 1) in vec2 info[1];
 layout(triangle_strip, max_vertices = 8) out;
 layout(location = 0) out vec2 vTexCoord;
 layout(location = 1) out vec2 size;
-layout(location = 2) out int path;
+layout(location = 2) out vec2 center;
+layout(location = 3) out int path;
 layout(push_constant) uniform PC
 {
    vec2 vp_size;
@@ -64,6 +65,7 @@ void main()
    float height = pos[0].w * info[0].y;
    float off = pos[0].w * info[0].x;
    size = vec2(pos[0].z, height);
+   center = size / 2.0;
 
    // -#
    // --
@@ -97,7 +99,8 @@ void main()
 #ifdef FRAGMENT_SHADER
 layout(location = 0) in vec2 vTexCoord;
 layout(location = 1) in vec2 size;
-layout(location = 2) in flat int path;
+layout(location = 2) in vec2 center;
+layout(location = 3) in flat int path;
 layout(location = 0) out vec4 FragColor;
 //layout(set = 0, binding = 1, location = 0) uniform highp sampler2D uTex;
 layout(set = 2, binding = 0, location = 0) uniform highp sampler2D uTex;
@@ -128,15 +131,16 @@ void main()
       FG.a = 1.0 - clamp((coords.x  - 0.35), 0.0, 1.0) ;
       FG.a = exp(-3.14 * FG.a * FG.a);
 
-      float r = size.x / 2.8;
+      float r = min(size.x, size.y) / 3.0;
 //      float r = 15.0;
       vec2 coords2 = vTexCoord;
 
-      coords2 = clamp(abs(vTexCoord - size / 2.0), size / 2.0 - vec2(r), size / 2.0) - size / 2.0 + vec2(r);
+      coords2 = clamp(abs(vTexCoord - center), center - vec2(r), center) - center + vec2(r);
       BG.a *= step(dot(coords2, coords2), r * r);
 //      coords2 = clamp(abs(vec2(vTexCoord.x / 2.0, vTexCoord.y) - vec2(3.0 * size.x / 4.0 ,size.y / 2.0)),
 //      vec2(size.x / 4.0, size.y / 2.0) - vec2(r), vec2(size.x / 4.0, size.y / 2.0)) - vec2(size.x / 4.0, size.y / 2.0) + vec2(r);
       FG.a *= step(dot(coords2, coords2), (r - border.x) * (r - border.y));
+//      FG.a *= step(-vTexCoord.x, r * 1.5 - size.x);
 
       FragColor = BG.rgba * (1.0 - FG.a) + vec4(FG.rgb * FG.a, FG.a);
    }
@@ -175,9 +179,9 @@ void main()
 //      vec2 tile_size = vec2(64.0, 32.0);
 //      vec2 tile_offset = vec2(192.0, 0.0);
       /* vertical */
-      vec2 center = (tile_size.yx / 2.0);
-      vec2 coords = (vTexCoord - size / 2.0);
-      coords = center + clamp(abs(coords) - (size / 2.0) + center, vec2(0.0), center) * -sign(coords);
+      vec2 tile_center = (tile_size.yx / 2.0);
+      vec2 coords = (vTexCoord - center);
+      coords = tile_center + clamp(abs(coords) - (center) + tile_center, vec2(0.0), tile_center) * -sign(coords);
       coords = vec2(tile_size.x - coords.y, coords.x);
 
       FragColor = texture(uTex, coords + tile_offset);
