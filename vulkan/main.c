@@ -137,6 +137,7 @@ void monofont_test(screen_t *screen)
 void slider_test(screen_t *screen)
 {
    static slider_t slider;
+
    if (!slider.width)
    {
       slider.x = 40;
@@ -147,8 +148,10 @@ void slider_test(screen_t *screen)
       slider.size = 0.2;
       slider_init(&slider);
    }
+
    slider_update(&slider);
    static slider_t slider2;
+
    if (!slider2.width)
    {
       slider2.x = 100;
@@ -159,19 +162,23 @@ void slider_test(screen_t *screen)
       slider2.size = 0.8;
       slider_init(&slider2);
    }
+
    slider_update(&slider2);
    {
-      sprite_t sprite;
-      sprite.coords.x = 0;
-      sprite.coords.y = 0;
-      sprite.coords.width = 128;
-      sprite.coords.height = 32;
-      sprite.pos.x = 400;
-      sprite.pos.y = 200;
-      sprite.pos.width = sprite.coords.width;
-      sprite.pos.height = sprite.coords.height;
-      sprite.color = 0xFFFFFFFF;
-//      vk_sprite_add(&sprite, &R_slider.default_texture);
+      sprite_t sprite =
+      {
+         .coords.x = 0,
+         .coords.y = 0,
+         .coords.width = 128,
+         .coords.height = 32,
+         .pos.x = 400,
+         .pos.y = 200,
+         .pos.width = sprite.coords.width,
+         .pos.height = sprite.coords.height,
+         .color = 0xFFFFFFFF,
+      };
+      sprite.effect.edge = 1;
+      sprite.effect.gloss = 1;
       vk_sprite_add(&sprite, &R_slider.default_texture);
    }
 }
@@ -179,18 +186,33 @@ void slider_test(screen_t *screen)
 void button_test(screen_t *screen)
 {
    static button_t buttons[10];
-   for(int i = 0; i < countof(buttons); i++)
+
+   for (int i = 0; i < countof(buttons); i++)
    {
       if (!buttons[i].hitbox.width)
       {
-         buttons[i].hitbox.x = 100 + i * 50;
-         buttons[i].hitbox.y = 40;
-         buttons[i].hitbox.width = 40;
-         buttons[i].hitbox.height = 70;
+         buttons[i].x = 100 + i * 50;
+         buttons[i].y = 40;
+         buttons[i].width = 40;
+         buttons[i].height = 70;
          button_init(&buttons[i]);
       }
+
       button_update(&buttons[i]);
    }
+   static button_t frame_button;
+
+   if (!frame_button.hitbox.width)
+   {
+      frame_button.x = 450;
+      frame_button.y = 300;
+      frame_button.width = R_frame.default_texture.width;
+      frame_button.height = R_frame.default_texture.height;
+      frame_button.texture = &R_frame.default_texture;
+      button_init(&frame_button);
+   }
+
+   button_update(&frame_button);
 }
 
 void console_select(screen_t *screen)
@@ -311,8 +333,8 @@ void video_init()
    vk_register_draw_command(&RTarget[0].draw_list, display_message_handler);
 //   vk_register_draw_command(&RTarget[0].draw_list, monofont_test);
 //   vk_register_draw_command(&RTarget[0].draw_list, console_mono_draw);
-      vk_register_draw_command(&RTarget[0].draw_list, slider_test);
-      vk_register_draw_command(&RTarget[0].draw_list, button_test);
+   vk_register_draw_command(&RTarget[0].draw_list, slider_test);
+   vk_register_draw_command(&RTarget[0].draw_list, button_test);
 
 //   vk_register_draw_command(&RTarget[1].draw_list, frame_draw_small);
 //   vk_register_draw_command(&RTarget[1].draw_list, sprite_test);

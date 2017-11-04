@@ -118,6 +118,7 @@ void main()
 
 //      FragColor = texture(uTex, vTexCoord);
 //   FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+
    if (tex.ignore_alpha != 0)
       FragColor.a = color.a;
 

@@ -23,7 +23,7 @@ layout(triangle_strip, max_vertices = 8) out;
 layout(location = 0) out vec2 vTexCoord;
 layout(location = 1) out vec2 size;
 layout(location = 2) out vec2 center;
-layout(location = 3) out int path;
+layout(location = 3) out float path;
 layout(push_constant) uniform PC
 {
    vec2 vp_size;
@@ -39,7 +39,7 @@ layout(push_constant) uniform PC
 void main()
 {
    gl_Position.zw = vec2(0.0f, 1.0f);
-   path = 0;
+   path = 0.0;
    size = vec2(pos[0].z, pos[0].w);
 
 
@@ -61,7 +61,7 @@ void main()
 
    EndPrimitive();
 
-   path = 1;
+   path = 1.0;
    float height = pos[0].w * info[0].y;
    float off = pos[0].w * info[0].x;
    size = vec2(pos[0].z, height);
@@ -100,7 +100,7 @@ void main()
 layout(location = 0) in vec2 vTexCoord;
 layout(location = 1) in vec2 size;
 layout(location = 2) in vec2 center;
-layout(location = 3) in flat int path;
+layout(location = 3) in float path;
 layout(location = 0) out vec4 FragColor;
 //layout(set = 0, binding = 1, location = 0) uniform highp sampler2D uTex;
 layout(set = 2, binding = 0, location = 0) uniform highp sampler2D uTex;
@@ -149,7 +149,7 @@ void main()
 void main()
 {
 //   if(fract((vTexCoord.y - fract(vTexCoord.y)) / 2.0) == 0.5)
-   if (path == 0)
+   if (path == 0.0)
    {
 //      if (fract((vTexCoord.y) / 2.0) >= 0.5)
 //         FragColor = vec4(0.0, 0.50, 1.0, 1.0);
