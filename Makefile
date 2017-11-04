@@ -80,9 +80,40 @@ ifeq ($(platform),linux)
    LIBS += -lvulkan -lX11 -lasound
    CFLAGS += $(shell freetype-config --cflags)
 else ifeq ($(platform),win)
+   SPACE :=
+   SPACE := $(SPACE) $(SPACE)
+   BACKSLASH :=
+   BACKSLASH := \$(BACKSLASH)
+   filter_out1 = $(filter-out $(firstword $1),$1)
+   filter_out2 = $(call filter_out1,$(call filter_out1,$1))
+
+   reg_query = $(call filter_out2,$(subst $2,,$(shell reg query "$2" -v "$1" 2>nul)))
+   fix_path = $(subst $(SPACE),\ ,$(subst \,/,$1))
+   WindowsSdkDir := $(call reg_query,InstallationFolder,HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\Microsoft SDKs\Windows\v10.0)
+   ifeq ($(WindowsSdkDir),)
+      WindowsSdkDir := $(call reg_query,InstallationFolder,HKEY_CURRENT_USER\SOFTWARE\Wow6432Node\Microsoft\Microsoft SDKs\Windows\v10.0)
+   endif
+   ifeq ($(WindowsSdkDir),)
+      WindowsSdkDir := $(call reg_query,InstallationFolder,HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Microsoft SDKs\Windows\v10.0)
+   endif
+   ifeq ($(WindowsSdkDir),)
+      WindowsSdkDir := $(call reg_query,InstallationFolder,HKEY_CURRENT_USER\SOFTWARE\Microsoft\Microsoft SDKs\Windows\v10.0)
+   endif
+   WindowsSDKVersion := $(firstword $(foreach folder,$(subst $(subst \,/,$(WindowsSdkDir)Include/),,$(wildcard $(call fix_path,$(WindowsSdkDir)Include\*))),$(if $(wildcard $(call fix_path,$(WindowsSdkDir)Include/$(folder)/um/Windows.h)),$(folder),)))$(BACKSLASH)
+#   VSINSTALLDIR ?= $(patsubst %Common7\Tools\,%,$(VS140COMNTOOLS))
+#   VCINSTALLDIR ?= $(VSINSTALLDIR)VC$(BACKSLASH)
+#   INCLUDE ?=$(VCINSTALLDIR)INCLUDE;$(VCINSTALLDIR)ATLMFC\INCLUDE;$(WindowsSdkDir)include\$(WindowsSDKVersion)ucrt;$(WindowsSdkDir)include\$(WindowsSDKVersion)shared;$(WindowsSdkDir)include\$(WindowsSDKVersion)um;
+#   LIB ?=$(VCINSTALLDIR)LIB\amd64;$(VCINSTALLDIR)ATLMFC\LIB\amd64;$(WindowsSdkDir)lib\$(WindowsSDKVersion)ucrt\x64;$(WindowsSdkDir)lib\$(WindowsSDKVersion)um\x64;
+#   LIBPATH ?=$(VCINSTALLDIR)LIB\amd64;$(VCINSTALLDIR)ATLMFC\LIB\amd64;
+#   CFLAGS += -idirafter"$(WindowsSdkDir)include\$(WindowsSDKVersion)ucrt"
+#   CFLAGS += -idirafter"$(WindowsSdkDir)include\$(WindowsSDKVersion)shared"
    CFLAGS += $(shell pkg-config.exe freetype2 --cflags)
    CFLAGS += -I$(VULKAN_SDK)/Include -DVK_USE_PLATFORM_WIN32_KHR
    LIBS +=  -L$(VULKAN_SDK)/Lib -lvulkan-1 -lgdi32 -ldinput -ldxguid -ldinput8 -ldsound
+#   CFLAGS += -idirafter"$(WindowsSdkDir)include\$(WindowsSDKVersion)um"
+#   LIBS +=  -L"$(WindowsSdkDir)lib\$(WindowsSDKVersion)ucrt\x64" -L"$(WindowsSdkDir)lib\$(WindowsSDKVersion)um\x64"
+
+
 endif
 
 LIBS += -lfreetype -lpng
@@ -97,7 +128,7 @@ $(BUILD_DIR)/$(TARGET): $(OBJS) $(MODULE) .lastbuild
 $(TARGET): $(BUILD_DIR)/$(TARGET)
 	cp $< $@
 
-$(BUILD_DIR)/%.o: %.c Makefile
+$(BUILD_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) $< $(CFLAGS) -MT $@ -MMD -MP -MF $(BUILD_DIR)/$*.depend -c -o $@
 
