@@ -1,6 +1,6 @@
 #version 310 es
 precision highp float;
-#define NO_TEX
+//#define NO_TEX
 #ifdef VERTEX_SHADER
 
 layout(location = 0) in vec4 pos;
@@ -160,7 +160,8 @@ void main()
       vec2 tile_size = vec2(32.0, 20.0);
       vec2 tile_offset = vec2(32.0, 0.0);
       /* vertical */
-      tile_size = tile_size.yx;
+//      if(size.x < size.y)
+         tile_size = tile_size.yx;
 
       coords.x *= tile_size.x / size.x;
       coords.y = mod(coords.y, tile_size.y);

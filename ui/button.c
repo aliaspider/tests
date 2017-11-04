@@ -29,11 +29,13 @@ void button_destroy(button_t *button)
 
 void button_update(button_t *button)
 {
-   sprite_t sprite;
-   sprite.pos.x = button->hitbox.x;
-   sprite.pos.y = button->hitbox.y;
-   sprite.pos.width = button->hitbox.width;
-   sprite.pos.height = button->hitbox.height;
-   sprite.color = button->hitbox.clicked? 0xFFFFFFFF :button->hitbox.hit? 0xFF0000FF : 0x80404040;
+   sprite_t sprite = {};
+   sprite.pos.x = button->x;
+   sprite.pos.y = button->y;
+   sprite.pos.width = button->width;
+   sprite.pos.height = button->height;
+   sprite.effect.edge = true;
+   sprite.effect.gloss = true;
+   sprite.color = button->clicked? 0xFFFFFFFF :button->hitbox.hit? 0xFF0000FF : 0x80404040;
    vk_sprite_add(&sprite, NULL);
 }

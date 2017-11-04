@@ -9,8 +9,18 @@
 typedef struct button_t button_t;
 struct button_t
 {
-   hitbox_t hitbox;
-   const bool clicked;
+   union
+   {
+      struct
+      {
+         int x;
+         int y;
+         int width;
+         int height;
+         const bool clicked;
+      };
+      hitbox_t hitbox;
+   };
 };
 
 #ifdef BUTTON_INTERNAL
