@@ -14,7 +14,7 @@ typedef uint64_t u64;
 //printf("%s\n", err_str);
 
 #define CHECK_WINERR(x) do{HRESULT hr = x; if(FAILED(hr)) {\
-   printf("error at %s:%i:%s: (%i, %i, %i) 0x%08X(%i)\n", \
+   printf("error at %s:%i:%s: (%li, %li, %li) 0x%08lX(%li)\n", \
    __FILE__, __LINE__, __FUNCTION__, HRESULT_SEVERITY(hr), HRESULT_FACILITY(hr), HRESULT_CODE(hr), hr, hr);\
    fflush(stdout);assert(0);}}while(0)
 

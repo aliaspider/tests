@@ -15,6 +15,7 @@
    VK_FN(vkAcquireXlibDisplayEXT); \
    VK_FN(vkGetRandROutputDisplayEXT);
 #elif defined(VK_USE_PLATFORM_WIN32_KHR)
+#define VK_PLATFORM_FN_LIST
 #else
 #endif
 

@@ -31,8 +31,8 @@ static void vk_slider_init(vk_context_t *vk)
    static const VkPipelineColorBlendAttachmentState blend_state =
    {
       .blendEnable = VK_TRUE,
-      .srcColorBlendFactor = VK_SRC_ALPHA, VK_ONE_MINUS_SRC_ALPHA, VK_ADD,
-      .srcAlphaBlendFactor = VK_SRC_ALPHA, VK_ONE_MINUS_SRC_ALPHA, VK_ADD,
+      .srcColorBlendFactor = VK_SRC_ALPHA, VK_ONE_MINUS_SRC_ALPHA, VK_BLEND_OP_ADD,
+      .srcAlphaBlendFactor = VK_SRC_ALPHA, VK_ONE_MINUS_SRC_ALPHA, VK_BLEND_OP_ADD,
       .colorWriteMask = VK_COLOR_COMPONENT_ALL
    };
 
