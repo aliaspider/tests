@@ -237,8 +237,10 @@ void vk_renderer_destroy(vk_renderer_t *renderer, VkDevice device)
 {
    vkDestroyPipeline(device, renderer->pipe, NULL);
    vk_buffer_free(device, &renderer->vbo);
-   vk_buffer_free(device, &renderer->ubo);
-   vk_buffer_free(device, &renderer->ssbo);
+   if(renderer->ubo.info.buffer)
+      vk_buffer_free(device, &renderer->ubo);
+   if(renderer->ssbo.info.buffer)
+      vk_buffer_free(device, &renderer->ssbo);
    vk_texture_free(device, &renderer->default_texture);
 
    memset(&renderer->vk_renderer_data_start, 0, sizeof(*renderer) - offsetof(vk_renderer_t, vk_renderer_data_start));

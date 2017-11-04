@@ -19,7 +19,7 @@ static LRESULT CALLBACK wndproc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
       break;
 
    case WM_DESTROY:
-//       DestroyWindow(hWnd);
+       DestroyWindow(hWnd);
       input.pad.meta.exit = true;
       PostQuitMessage(0);
       break;
@@ -70,6 +70,7 @@ void platform_destroy()
    for (int i = 0; i < video.screen_count; i++)
    {
       video.screens[i].hinstance = NULL;
+//      DestroyWindow(video.screens[i].hwnd);
       video.screens[i].hwnd = NULL;
    }
 }

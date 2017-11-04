@@ -142,11 +142,14 @@ void vk_texture_init(vk_context_t *vk, vk_texture_t *out)
 
 void vk_texture_free(VkDevice device, vk_texture_t *texture)
 {
-   vkDestroyImageView(device, texture->info.imageView, NULL);
-   vkDestroyImage(device, texture->image, NULL);
-   vkDestroyImage(device, texture->staging.image, NULL);
-   vk_device_memory_free(device, &texture->mem);
-   vk_device_memory_free(device, &texture->staging.mem);
+   if(texture->info.imageView)
+   {
+      vkDestroyImageView(device, texture->info.imageView, NULL);
+      vkDestroyImage(device, texture->image, NULL);
+      vkDestroyImage(device, texture->staging.image, NULL);
+      vk_device_memory_free(device, &texture->mem);
+      vk_device_memory_free(device, &texture->staging.mem);
+   }
    vk_buffer_free(device, &texture->ubo);
    texture->info.imageView = VK_NULL_HANDLE;
    texture->image = VK_NULL_HANDLE;
