@@ -112,20 +112,20 @@ int main(int argc, char** argv)
       if(input.pad_pressed.buttons.start)
          display_message(600, 160, 60, ~0, "start pressed at frame : %i", frames);
 
-      module_run_info_t info = {};
-      uint32_t sound_buffer[40000 + 2064];
+//      module_run_info_t info = {};
+//      uint32_t sound_buffer[40000 + 2064];
 
-      do
-      {
-         info.screen.ptr = video.frame.data;
-         info.pitch = video.frame.pitch;
-         info.max_samples = 40000;
-         info.sound_buffer.u32 = sound_buffer;
-         info.pad = &input.pad;
-         module_run(&info);
-         //         debug_log("info.max_samples : %i", info.max_samples);
-      }
-      while (!info.frame_completed);
+//      do
+//      {
+//         info.screen.ptr = video.frame.data;
+//         info.pitch = video.frame.pitch;
+//         info.max_samples = 40000;
+//         info.sound_buffer.u32 = sound_buffer;
+//         info.pad = &input.pad;
+//         module_run(&info);
+//         //         debug_log("info.max_samples : %i", info.max_samples);
+//      }
+//      while (!info.frame_completed);
 
 //      audio.play(info.sound_buffer.ptr, info.max_samples);
 
@@ -143,10 +143,10 @@ int main(int argc, char** argv)
       {
 
 //         snprintf(video.fps, sizeof(video.fps), "fps: %f", frames / diff);
-////         debug_log("\r%s", video.fps);
+//         debug_log("\r%s", video.fps);
+//         fflush(stdout);
          frames = 0;
          start_time = end_time;
-//         fflush(stdout);
       }
 
 

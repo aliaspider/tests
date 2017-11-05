@@ -102,7 +102,7 @@ else ifeq ($(platform),win)
    ifeq ($(WindowsSdkDir),)
       WindowsSdkDir := $(call reg_query,InstallationFolder,HKEY_CURRENT_USER\SOFTWARE\Microsoft\Microsoft SDKs\Windows\v10.0)
    endif
-   WindowsSDKVersion := $(firstword $(foreach folder,$(subst $(subst \,/,$(WindowsSdkDir)Include/),,$(wildcard $(call fix_path,$(WindowsSdkDir)Include\*))),$(if $(wildcard $(call fix_path,$(WindowsSdkDir)Include/$(folder)/um/Windows.h)),$(folder),)))$(BACKSLASH)
+   WindowsSDKVersion := $(firstword $(foreach folder,$(subst $(subst \,/,$(WindowsSdkDir)Include/),,$(wildcard $(call fix_path,$(WindowsSdkDir)Include\*))),$(if $(wildcard $(call fix_path,$(WindowsSdkDir)Include/$(folder)/um/Windows.h)),$(folder),)))
 #   VSINSTALLDIR ?= $(patsubst %Common7\Tools\,%,$(VS140COMNTOOLS))
 #   VCINSTALLDIR ?= $(VSINSTALLDIR)VC$(BACKSLASH)
 #   INCLUDE ?=$(VCINSTALLDIR)INCLUDE;$(VCINSTALLDIR)ATLMFC\INCLUDE;$(WindowsSdkDir)include\$(WindowsSDKVersion)ucrt;$(WindowsSdkDir)include\$(WindowsSDKVersion)shared;$(WindowsSdkDir)include\$(WindowsSDKVersion)um;
@@ -113,7 +113,7 @@ else ifeq ($(platform),win)
    CFLAGS += -DHAVE_D3D12
    CFLAGS += $(shell pkg-config.exe freetype2 --cflags)
    CFLAGS += -I$(VULKAN_SDK)/Include -DVK_USE_PLATFORM_WIN32_KHR
-   LIBS +=  -L"$(WindowsSdkDir)lib\$(WindowsSDKVersion)um\x64" -ld3d12 -ldxgi
+   LIBS +=  -L"$(WindowsSdkDir)lib\$(WindowsSDKVersion)\um\x64" -ld3d12 -ldxgi -ld3dcompiler
 #   LIBS +=  "$(WindowsSdkDir)lib\$(WindowsSDKVersion)um\x64\d3d12.lib"
    LIBS +=  -L$(VULKAN_SDK)/Lib
 #   LIBS +=  -lvulkan-1
@@ -121,7 +121,8 @@ else ifeq ($(platform),win)
    LIBS +=  -lgdi32 -ldinput -ldxguid -ldinput8 -ldsound
 #   CFLAGS += -idirafter"$(WindowsSdkDir)include\$(WindowsSDKVersion)ucrt"
 #   CFLAGS += -idirafter"$(WindowsSdkDir)include\$(WindowsSDKVersion)shared"
-   CFLAGS += -idirafter"$(WindowsSdkDir)include\$(WindowsSDKVersion)um"
+   CFLAGS += -idirafter"$(WindowsSdkDir)include\$(WindowsSDKVersion)"
+#   CFLAGS += -idirafter"$(WindowsSdkDir)include\$(WindowsSDKVersion)um"
 #   LIBS +=  -L"$(WindowsSdkDir)lib\$(WindowsSDKVersion)ucrt\x64"
 
 endif
