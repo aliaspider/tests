@@ -18,7 +18,6 @@ struct Vertex
 };
 D3D12_VIEWPORT m_viewport;
 D3D12_RECT m_scissorRect;
-ID3D12Resource* m_renderTargets[2];
 ID3D12CommandAllocator* m_commandAllocator;
 ID3D12RootSignature* m_rootSignature;
 ID3D12DescriptorHeap* m_rtvHeap;
@@ -35,18 +34,23 @@ ID3D12Fence* m_fence;
 UINT64 m_fenceValue;
 
 
+
+static ID3D12Debug* debugController;
+static IDXGIFactory1* factory;
+static IDXGIAdapter1* adapter;
+static ID3D12Device* device;
+static ID3D12CommandQueue* command_queue;
+static IDXGISwapChain3* swapchain;
+static ID3D12Resource* renderTargets[2];
+
 static void video_init()
 {
    DEBUG_LINE();
-   ID3D12Debug* debugController;
    D3D12_GetDebugInterface(&debugController);
    D3D12_EnableDebugLayer(debugController);
 
-   IDXGIFactory1* factory;
    DXGI_CreateFactory(&factory);
 
-   IDXGIAdapter1* adapter;
-   ID3D12Device* device;
    int i;
    while(SUCCEEDED(DXGI_EnumAdapters(factory, i++, &adapter)))
    {
@@ -55,7 +59,6 @@ static void video_init()
        DXGI_ReleaseAdapter(adapter);
    }
 
-   ID3D12CommandQueue* command_queue;
    {
       D3D12_COMMAND_QUEUE_DESC desc =
       {
@@ -65,7 +68,6 @@ static void video_init()
       D3D12_CreateCommandQueue(device, &desc, &command_queue);
    }
 
-   IDXGISwapChain3* swapchain;
    {
       DXGI_SWAP_CHAIN_DESC desc =
       {
@@ -74,7 +76,7 @@ static void video_init()
          .BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM,
          .SampleDesc.Count = 1,
          .BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
-         .BufferCount = countof(m_renderTargets),
+         .BufferCount = countof(renderTargets),
          .OutputWindow = video.screens[0].hwnd,
          .Windowed = true,
          .SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD
@@ -85,6 +87,14 @@ static void video_init()
 
    int frame_index = DXGI_GetCurrentBackBufferIndex(swapchain);
    DEBUG_INT(frame_index);
+
+   {
+
+   }
+
+
+
+
 
 
 
