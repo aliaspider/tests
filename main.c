@@ -20,11 +20,14 @@ module_info_t module;
 int main(int argc, char** argv)
 {
    debug_log("main\n");
-#ifdef HAVE_D3D12
+#ifdef HAVE_D3D12_
    video = video_d3d12;
+#elif defined(HAVE_D3D9)
+   video = video_d3d9;
 #else
    video = video_vulkan;
 #endif
+
 #ifdef __WIN32__
    audio = audio_win;
    input = input_dinput;

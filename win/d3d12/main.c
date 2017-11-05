@@ -11,28 +11,28 @@
 #include "input.h"
 
 #ifdef DEBUG
-D3D12Debug debugController;
+static D3D12Debug debugController;
 #endif
-DXGIFactory factory;
-DXGIAdapter adapter;
-D3D12Device device;
-D3D12CommandQueue command_queue;
-DXGISwapChain swapchain;
-int frame_index;
-D3D12Resource renderTargets[2];
-D3D12DescriptorHeap rtvHeap;
-UINT rtvDescriptorSize;
-D3D12CommandAllocator commandAllocator;
-D3D12RootSignature rootSignature;
-D3D12PipelineState pipelineState;
-D3D12GraphicsCommandList commandList;
-D3D12Resource vertexBuffer;
-D3D12Fence fence;
-HANDLE fenceEvent;
-UINT64 fenceValue;
-D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
-D3D12_VIEWPORT viewport;
-D3D12_RECT scissorRect;
+static DXGIFactory factory;
+static DXGIAdapter adapter;
+static D3D12Device device;
+static D3D12CommandQueue command_queue;
+static DXGISwapChain swapchain;
+static int frame_index;
+static D3D12Resource renderTargets[2];
+static D3D12DescriptorHeap rtvHeap;
+static UINT rtvDescriptorSize;
+static D3D12CommandAllocator commandAllocator;
+static D3D12RootSignature rootSignature;
+static D3D12PipelineState pipelineState;
+static D3D12GraphicsCommandList commandList;
+static D3D12Resource vertexBuffer;
+static D3D12Fence fence;
+static HANDLE fenceEvent;
+static UINT64 fenceValue;
+static D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
+static D3D12_VIEWPORT viewport;
+static D3D12_RECT scissorRect;
 
 static void video_init()
 {
