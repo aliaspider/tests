@@ -10,23 +10,9 @@
 #include "video.h"
 #include "input.h"
 
-typedef ID3D12Debug* D3D12Debug;
-typedef IDXGIFactory1* DXGIFactory;
-typedef IDXGIAdapter1* DXGIAdapter;
-typedef ID3D12Device* D3D12Device;
-typedef ID3D12CommandQueue* D3D12CommandQueue;
-typedef IDXGISwapChain3* DXGISwapChain;
-typedef ID3D12Resource* D3D12Resource;
-typedef ID3D12DescriptorHeap* D3D12DescriptorHeap;
-typedef ID3D12CommandAllocator* D3D12CommandAllocator;
-typedef ID3D12RootSignature* D3D12RootSignature;
-typedef ID3D12PipelineState* D3D12PipelineState;
-typedef ID3D12GraphicsCommandList* D3D12GraphicsCommandList;
-typedef ID3D12Resource* D3D12Resource;
-typedef ID3D12Fence* D3D12Fence;
-
-
+#ifdef DEBUG
 D3D12Debug debugController;
+#endif
 DXGIFactory factory;
 DXGIAdapter adapter;
 D3D12Device device;
@@ -52,9 +38,10 @@ static void video_init()
 {
 
    DEBUG_LINE();
+#ifdef DEBUG
    D3D12_GetDebugInterface(&debugController);
    D3D12_EnableDebugLayer(debugController);
-
+#endif
    DXGI_CreateFactory(&factory);
 
    int i = 0;
@@ -338,6 +325,8 @@ static void video_render()
 
    command_queue->lpVtbl->ExecuteCommandLists(command_queue, 1, (ID3D12CommandList**)&commandList);
    swapchain->lpVtbl->Present(swapchain, 0, 0);
+//   DXGI_PRESENT_PARAMETERS pp = {0};
+//   swapchain->lpVtbl->Present1(swapchain, 0, 0, &pp);
 
    video_wait_for_previous_frame();
 }

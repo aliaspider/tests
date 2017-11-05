@@ -35,7 +35,7 @@ int main(int argc, char** argv)
 #endif
 #endif
 
-   video.screen_count = 2;
+   video.screen_count = 1;
    video.screens[0].x = 600;
    video.screens[0].y = 400;
    video.screens[0].width = 640;
@@ -143,8 +143,7 @@ int main(int argc, char** argv)
       {
 
 //         snprintf(video.fps, sizeof(video.fps), "fps: %f", frames / diff);
-//         debug_log("\r%s", video.fps);
-//         fflush(stdout);
+         debug_log("\r%s", video.fps); fflush(stdout);
          frames = 0;
          start_time = end_time;
       }

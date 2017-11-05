@@ -25,6 +25,22 @@
 
 #define CHECK_AND_RETURN(x) HRESULT res = x;CHECK_WINERR(res);return res;
 
+typedef ID3D12Debug* D3D12Debug;
+typedef IDXGIFactory1* DXGIFactory;
+typedef IDXGIAdapter1* DXGIAdapter;
+typedef ID3D12Device* D3D12Device;
+typedef ID3D12CommandQueue* D3D12CommandQueue;
+typedef IDXGISwapChain3* DXGISwapChain;
+typedef ID3D12Resource* D3D12Resource;
+typedef ID3D12DescriptorHeap* D3D12DescriptorHeap;
+typedef ID3D12CommandAllocator* D3D12CommandAllocator;
+typedef ID3D12RootSignature* D3D12RootSignature;
+typedef ID3D12PipelineState* D3D12PipelineState;
+typedef ID3D12GraphicsCommandList* D3D12GraphicsCommandList;
+typedef ID3D12Resource* D3D12Resource;
+typedef ID3D12Fence* D3D12Fence;
+
+
 typedef D3D12_BLEND_DESC D3D12BlendDesc;
 typedef D3D12_GRAPHICS_PIPELINE_STATE_DESC D3D12GraphicsPipelineStateDesc;
 
