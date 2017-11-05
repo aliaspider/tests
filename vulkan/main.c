@@ -307,7 +307,7 @@ void display_message(int frames, int x, int y, unsigned screen_mask, const char 
    ptr->options.y = y;
 }
 
-void video_init()
+static void video_init()
 {
    debug_log("video init\n");
    debug_log("color test : \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s \e[%im%s "
@@ -359,7 +359,7 @@ void video_init()
           test_image.staging.mem.size - test_image.staging.mem.layout.offset);
 }
 
-void video_render()
+static void video_render()
 {
    uint32_t       image_indices[MAX_SCREENS];
    VkSwapchainKHR swapchains[MAX_SCREENS];
@@ -445,7 +445,7 @@ void video_render()
 #endif
 }
 
-void video_destroy()
+static void video_destroy()
 {
    int i;
 
@@ -465,7 +465,7 @@ void video_destroy()
    debug_log("video destroy\n");
 }
 
-void video_register_draw_command(int screen_id, draw_command_t fn)
+static void video_register_draw_command(int screen_id, draw_command_t fn)
 {
    vk_register_draw_command(&RTarget[screen_id].draw_list, fn);
 }

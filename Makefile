@@ -32,6 +32,9 @@ else ifeq ($(platform),win)
    OBJS += win/platform.o
    OBJS += win/audio.o
    OBJS += win/input.o
+
+   OBJS += win/dx12/main.o
+
 endif
 OBJS += vulkan/console.o
 OBJS += vulkan/font.o
@@ -105,14 +108,21 @@ else ifeq ($(platform),win)
 #   INCLUDE ?=$(VCINSTALLDIR)INCLUDE;$(VCINSTALLDIR)ATLMFC\INCLUDE;$(WindowsSdkDir)include\$(WindowsSDKVersion)ucrt;$(WindowsSdkDir)include\$(WindowsSDKVersion)shared;$(WindowsSdkDir)include\$(WindowsSDKVersion)um;
 #   LIB ?=$(VCINSTALLDIR)LIB\amd64;$(VCINSTALLDIR)ATLMFC\LIB\amd64;$(WindowsSdkDir)lib\$(WindowsSDKVersion)ucrt\x64;$(WindowsSdkDir)lib\$(WindowsSDKVersion)um\x64;
 #   LIBPATH ?=$(VCINSTALLDIR)LIB\amd64;$(VCINSTALLDIR)ATLMFC\LIB\amd64;
-#   CFLAGS += -idirafter"$(WindowsSdkDir)include\$(WindowsSDKVersion)ucrt"
-#   CFLAGS += -idirafter"$(WindowsSdkDir)include\$(WindowsSDKVersion)shared"
+
+
+   CFLAGS += -DHAVE_DX12
    CFLAGS += $(shell pkg-config.exe freetype2 --cflags)
    CFLAGS += -I$(VULKAN_SDK)/Include -DVK_USE_PLATFORM_WIN32_KHR
-   LIBS +=  -L$(VULKAN_SDK)/Lib -lvulkan-1 -lgdi32 -ldinput -ldxguid -ldinput8 -ldsound
-#   CFLAGS += -idirafter"$(WindowsSdkDir)include\$(WindowsSDKVersion)um"
-#   LIBS +=  -L"$(WindowsSdkDir)lib\$(WindowsSDKVersion)ucrt\x64" -L"$(WindowsSdkDir)lib\$(WindowsSDKVersion)um\x64"
-
+   LIBS +=  -L"$(WindowsSdkDir)lib\$(WindowsSDKVersion)um\x64" -ld3d12 -ldxgi
+#   LIBS +=  "$(WindowsSdkDir)lib\$(WindowsSDKVersion)um\x64\d3d12.lib"
+   LIBS +=  -L$(VULKAN_SDK)/Lib
+#   LIBS +=  -lvulkan-1
+   LIBS +=  -lvulkan
+   LIBS +=  -lgdi32 -ldinput -ldxguid -ldinput8 -ldsound
+#   CFLAGS += -idirafter"$(WindowsSdkDir)include\$(WindowsSDKVersion)ucrt"
+#   CFLAGS += -idirafter"$(WindowsSdkDir)include\$(WindowsSDKVersion)shared"
+   CFLAGS += -idirafter"$(WindowsSdkDir)include\$(WindowsSDKVersion)um"
+#   LIBS +=  -L"$(WindowsSdkDir)lib\$(WindowsSDKVersion)ucrt\x64"
 
 endif
 

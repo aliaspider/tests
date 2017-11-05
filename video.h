@@ -95,5 +95,6 @@ typedef struct video_t
 
 
 extern const video_t video_vulkan;
+extern const video_t video_dx12;
 extern video_t video;
 
