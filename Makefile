@@ -33,7 +33,7 @@ else ifeq ($(platform),win)
    OBJS += win/audio.o
    OBJS += win/input.o
 
-   OBJS += win/dx12/main.o
+   OBJS += win/d3d12/main.o
 
 endif
 OBJS += vulkan/console.o
@@ -110,7 +110,7 @@ else ifeq ($(platform),win)
 #   LIBPATH ?=$(VCINSTALLDIR)LIB\amd64;$(VCINSTALLDIR)ATLMFC\LIB\amd64;
 
 
-   CFLAGS += -DHAVE_DX12
+   CFLAGS += -DHAVE_D3D12
    CFLAGS += $(shell pkg-config.exe freetype2 --cflags)
    CFLAGS += -I$(VULKAN_SDK)/Include -DVK_USE_PLATFORM_WIN32_KHR
    LIBS +=  -L"$(WindowsSdkDir)lib\$(WindowsSDKVersion)um\x64" -ld3d12 -ldxgi

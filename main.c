@@ -20,8 +20,8 @@ module_info_t module;
 int main(int argc, char** argv)
 {
    debug_log("main\n");
-#ifdef HAVE_DX12
-   video = video_dx12;
+#ifdef HAVE_D3D12
+   video = video_d3d12;
 #else
    video = video_vulkan;
 #endif

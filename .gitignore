@@ -57,6 +57,7 @@ dkms.conf
 *.creator.user
 *.files
 *.includes
+*.autosave
 
 objs/*
 *.vert.inc
