@@ -10,22 +10,38 @@
 #include "video.h"
 #include "input.h"
 
-ID3D12Debug* debugController;
-IDXGIFactory1* factory;
-IDXGIAdapter1* adapter;
-ID3D12Device* device;
-ID3D12CommandQueue* command_queue;
-IDXGISwapChain3* swapchain;
+typedef ID3D12Debug* D3D12Debug;
+typedef IDXGIFactory1* DXGIFactory;
+typedef IDXGIAdapter1* DXGIAdapter;
+typedef ID3D12Device* D3D12Device;
+typedef ID3D12CommandQueue* D3D12CommandQueue;
+typedef IDXGISwapChain3* DXGISwapChain;
+typedef ID3D12Resource* D3D12Resource;
+typedef ID3D12DescriptorHeap* D3D12DescriptorHeap;
+typedef ID3D12CommandAllocator* D3D12CommandAllocator;
+typedef ID3D12RootSignature* D3D12RootSignature;
+typedef ID3D12PipelineState* D3D12PipelineState;
+typedef ID3D12GraphicsCommandList* D3D12GraphicsCommandList;
+typedef ID3D12Resource* D3D12Resource;
+typedef ID3D12Fence* D3D12Fence;
+
+
+D3D12Debug debugController;
+DXGIFactory factory;
+DXGIAdapter adapter;
+D3D12Device device;
+D3D12CommandQueue command_queue;
+DXGISwapChain swapchain;
 int frame_index;
-ID3D12Resource* renderTargets[2];
-ID3D12DescriptorHeap* rtvHeap;
+D3D12Resource renderTargets[2];
+D3D12DescriptorHeap rtvHeap;
 UINT rtvDescriptorSize;
-ID3D12CommandAllocator* commandAllocator;
-ID3D12RootSignature* rootSignature;
-ID3D12PipelineState* pipelineState;
-ID3D12GraphicsCommandList* commandList;
-ID3D12Resource* vertexBuffer;
-ID3D12Fence* fence;
+D3D12CommandAllocator commandAllocator;
+D3D12RootSignature rootSignature;
+D3D12PipelineState pipelineState;
+D3D12GraphicsCommandList commandList;
+D3D12Resource vertexBuffer;
+D3D12Fence fence;
 HANDLE fenceEvent;
 UINT64 fenceValue;
 D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
