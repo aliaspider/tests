@@ -37,6 +37,7 @@ else ifeq ($(platform),win)
    OBJS += win/d3d12/main.o
 
 endif
+OBJS += gl/main.o
 OBJS += vulkan/console.o
 OBJS += vulkan/font.o
 OBJS += vulkan/font_mono.o
@@ -114,7 +115,7 @@ else ifeq ($(platform),win)
    CFLAGS += -DHAVE_D3D9 -DHAVE_D3D12
    CFLAGS += $(shell pkg-config.exe freetype2 --cflags)
    CFLAGS += -I$(VULKAN_SDK)/Include -DVK_USE_PLATFORM_WIN32_KHR
-   LIBS +=  -L"$(WindowsSdkDir)lib\$(WindowsSDKVersion)\um\x64" -ld3d9 -ld3d12 -ldxgi -ld3dcompiler
+   LIBS +=  -L"$(WindowsSdkDir)lib\$(WindowsSDKVersion)\um\x64" -ld3d9 -ld3d12 -ldxgi -ld3dcompiler -lopengl32
 #   LIBS +=  "$(WindowsSdkDir)lib\$(WindowsSDKVersion)um\x64\d3d12.lib"
    LIBS +=  -L$(VULKAN_SDK)/Lib
 #   LIBS +=  -lvulkan-1

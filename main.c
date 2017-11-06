@@ -27,6 +27,7 @@ int main(int argc, char** argv)
 #else
    video = video_vulkan;
 #endif
+   video = video_gl;
 
 #ifdef __WIN32__
    audio = audio_win;
@@ -140,7 +141,7 @@ int main(int argc, char** argv)
                    (end_time.tv_nsec - start_time.tv_nsec) / 1000000000.0f;
       frames++;
 
-      snprintf(video.fps, sizeof(video.fps), "fps: %f", frames / diff);
+      snprintf(video.fps, sizeof(video.fps), "fps: %f \tframetime : %fms", frames / diff, 1000.0 * diff/frames);
 
       if (diff > 0.5f)
       {
