@@ -173,7 +173,7 @@ static void video_render()
    float clearcolor[4] = {0.5, 0.2, 1.0, 1.0};
    ctx.ClearRenderTargetView(context, renderTargetView, clearcolor);
 
-   ctx.Draw(context, 0, 0);
+   ctx.Draw(context, 3, 0);
    dxgi.Present(swapChain, 0, 0);
 
 
