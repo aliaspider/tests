@@ -44,10 +44,10 @@ static void video_init()
 
    hRC = wglCreateContext(hDC);
    wglMakeCurrent(hDC, hRC);
-   glGetProcAddress(NULL);
+   glGetProcAddress(NULL); /* will init all pfns */
 
 
-      if(0)
+   if(0)
    {
       const int iPixelFormatAttribList[] =
       {
@@ -78,9 +78,7 @@ static void video_init()
       hRC = wglCreateContextAttribsARB(hDC, 0, iContextAttribs);
       assert(hRC);
       wglMakeCurrent(hDC, hRC);
-//      GL_PROCS
    }
-   wglMakeCurrent(hDC, hRC);
 
    float fTriangle[9]; // Data to render triangle (3 vertices, each has 3 floats)
    float fQuad[12]; // Data to render quad using triangle strips (4 vertices, each has 3 floats)
