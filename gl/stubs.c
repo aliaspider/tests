@@ -39,14 +39,28 @@
 
 
 #define GL_PROCS \
-   GL_PROC(BOOL, WINAPI, wglSwapIntervalEXT, int, interval);\
-   GL_PROC(BOOL, WINAPI, wglChoosePixelFormatARB, HDC, hdc, const int *,piAttribIList, const FLOAT *,pfAttribFList, UINT, nMaxFormats, int *,piFormats, UINT *,nNumFormats);\
-   GL_PROC(HGLRC, WINAPI, wglCreateContextAttribsARB, HDC, hDC, HGLRC, hShareContext, const int *,attribList);\
-   GL_PROC(void, APIENTRY, glGenBuffers ,GLsizei, n, GLuint*,buffers);\
-   GL_PROC(void, APIENTRY, glBindBuffer, GLenum, target, GLuint, buffer);\
-   GL_PROC(void, APIENTRY, glBufferData, GLenum, target, GLsizeiptr, size, const void *,data, GLenum, usage); \
-   GL_PROC(void, APIENTRY, glVertexAttribPointer, GLuint, index, GLint, size, GLenum, type, GLboolean, normalized, GLsizei, stride, const void *,pointer); \
-   GL_PROC(void, APIENTRY, glEnableVertexAttribArray, GLuint, index);
+   GL_PROC(BOOL,   WINAPI,   wglSwapIntervalEXT, int, interval);\
+   GL_PROC(BOOL,   WINAPI,   wglChoosePixelFormatARB, HDC, hdc, const int *,piAttribIList, const FLOAT *,pfAttribFList, UINT, nMaxFormats, int *,piFormats, UINT *,nNumFormats);\
+   GL_PROC(HGLRC,  WINAPI,   wglCreateContextAttribsARB, HDC, hDC, HGLRC, hShareContext, const int *,attribList);\
+   GL_PROC(void,   APIENTRY, glGenBuffers ,GLsizei, n, GLuint*,buffers);\
+   GL_PROC(void,   APIENTRY, glBindBuffer, GLenum, target, GLuint, buffer);\
+   GL_PROC(void,   APIENTRY, glBufferData, GLenum, target, GLsizeiptr, size, const void *,data, GLenum, usage); \
+   GL_PROC(void,   APIENTRY, glVertexAttribPointer, GLuint, index, GLint, size, GLenum, type, GLboolean, normalized, GLsizei, stride, const void *,pointer); \
+   GL_PROC(void,   APIENTRY, glEnableVertexAttribArray, GLuint, index); \
+   GL_PROC(void,   APIENTRY, glGenVertexArrays, GLsizei, n, GLuint*, arrays); \
+   GL_PROC(void,   APIENTRY, glBindVertexArray, GLuint, array); \
+   GL_PROC(void,   APIENTRY, glShaderSource, GLuint, shader, GLsizei, count, const GLchar *const*,string, const GLint *,length); \
+   GL_PROC(GLuint, APIENTRY, glCreateShader, GLenum, type); \
+   GL_PROC(void,   APIENTRY, glCompileShader, GLuint, shader); \
+   GL_PROC(void,   APIENTRY, glGetShaderiv, GLuint, shader, GLenum, pname, GLint*, params); \
+   GL_PROC(void,   APIENTRY, glAttachShader, GLuint, program, GLuint, shader); \
+   GL_PROC(GLuint, APIENTRY, glCreateProgram); \
+   GL_PROC(void,   APIENTRY, glLinkProgram, GLuint, program); \
+   GL_PROC(void,   APIENTRY, glGetProgramiv, GLuint, program, GLenum, pname, GLint*, params); \
+   GL_PROC(void,   APIENTRY, glUseProgram, GLuint, program); \
+   GL_PROC(void,   APIENTRY, glGetShaderInfoLog, GLuint, shader, GLsizei, bufSize, GLsizei*, length, GLchar*, infoLog);
+
+
 
 #if defined(GL_GLEXT_PROTOTYPES) || defined(WGL_WGLEXT_PROTOTYPES)
 #define PFN_NAME(fn) p##fn

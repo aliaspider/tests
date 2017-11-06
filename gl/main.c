@@ -13,12 +13,11 @@
 #include "video.h"
 #include "input.h"
 
-
-UINT uiVBO[2];
-
 HGLRC hRC;
 HDC hDC;
 
+UINT uiVBO[4];
+UINT uiVAO[2];
 
 void* glGetProcAddress(const char* name);
 
@@ -77,52 +76,151 @@ static void video_init()
       assert(hRC);
       wglMakeCurrent(hDC, hRC);
    }
+   wglSwapIntervalEXT(2);
+   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
-   float fTriangle[9]; // Data to render triangle (3 vertices, each has 3 floats)
-   float fQuad[12]; // Data to render quad using triangle strips (4 vertices, each has 3 floats)
+   float fTriangle[9];
+   float fQuad[12];
+   float fTriangleColor[9];
+   float fQuadColor[12];
 
-      glClearColor(0.0f, 0.5f, 1.0f, 1.0f);
+	// Setup triangle vertices
+	fTriangle[0] = -0.4f; fTriangle[1] = 0.1f; fTriangle[2] = 0.0f;
+	fTriangle[3] = 0.4f; fTriangle[4] = 0.1f; fTriangle[5] = 0.0f;
+	fTriangle[6] = 0.0f; fTriangle[7] = 0.7f; fTriangle[8] = 0.0f;
 
-      // Setup triangle vertices
-      fTriangle[0] = -0.4f; fTriangle[1] = 0.1f; fTriangle[2] = 0.0f;
-      fTriangle[3] = 0.4f; fTriangle[4] = 0.1f; fTriangle[5] = 0.0f;
-      fTriangle[6] = 0.0f; fTriangle[7] = 0.7f; fTriangle[8] = 0.0f;
+	// Setup triangle color
 
-      // Setup quad vertices
+	fTriangleColor[0] = 1.0f; fTriangleColor[1] = 0.0f; fTriangleColor[2] = 0.0f;
+	fTriangleColor[3] = 0.0f; fTriangleColor[4] = 1.0f; fTriangleColor[5] = 0.0f;
+	fTriangleColor[6] = 0.0f; fTriangleColor[7] = 0.0f; fTriangleColor[8] = 1.0f;
 
-      fQuad[0] = -0.2f; fQuad[1] = -0.1f; fQuad[2] = 0.0f;
-      fQuad[3] = -0.2f; fQuad[4] = -0.6f; fQuad[5] = 0.0f;
-      fQuad[6] = 0.2f; fQuad[7] = -0.1f; fQuad[8] = 0.0f;
-      fQuad[9] = 0.2f; fQuad[10] = -0.6f; fQuad[11] = 0.0f;
+	// Setup quad vertices
 
-      // Now we create two VBOs
-      glGenBuffers(2, uiVBO);
+	fQuad[0] = -0.2f; fQuad[1] = -0.1f; fQuad[2] = 0.0f;
+	fQuad[3] = -0.2f; fQuad[4] = -0.6f; fQuad[5] = 0.0f;
+	fQuad[6] = 0.2f; fQuad[7] = -0.1f; fQuad[8] = 0.0f;
+	fQuad[9] = 0.2f; fQuad[10] = -0.6f; fQuad[11] = 0.0f;
 
-      glBindBuffer(GL_ARRAY_BUFFER, uiVBO[0]);
-      glBufferData(GL_ARRAY_BUFFER, 9*sizeof(float), fTriangle, GL_STATIC_DRAW);
+	// Setup quad color
 
-      glBindBuffer(GL_ARRAY_BUFFER, uiVBO[1]);
-      glBufferData(GL_ARRAY_BUFFER, 12*sizeof(float), fQuad, GL_STATIC_DRAW);
+	fQuadColor[0] = 1.0f; fQuadColor[1] = 0.0f; fQuadColor[2] = 0.0f;
+	fQuadColor[3] = 0.0f; fQuadColor[4] = 1.0f; fQuadColor[8] = 0.0f;
+	fQuadColor[6] = 0.0f; fQuadColor[7] = 0.0f; fQuadColor[5] = 1.0f;
+	fQuadColor[9] = 1.0f; fQuadColor[10] = 1.0f; fQuadColor[11] = 0.0f;
 
-      wglSwapIntervalEXT(2);
+	glGenVertexArrays(2, uiVAO); // Generate two VAOs, one for triangle and one for quad
+	glGenBuffers(4, uiVBO); // And four VBOs
+
+	// Setup whole triangle
+	glBindVertexArray(uiVAO[0]);
+
+	glBindBuffer(GL_ARRAY_BUFFER, uiVBO[0]);
+	glBufferData(GL_ARRAY_BUFFER, 9*sizeof(float), fTriangle, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+	glBindBuffer(GL_ARRAY_BUFFER, uiVBO[1]);
+	glBufferData(GL_ARRAY_BUFFER, 9*sizeof(float), fTriangleColor, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+	// Setup whole quad
+	glBindVertexArray(uiVAO[1]);
+
+	glBindBuffer(GL_ARRAY_BUFFER, uiVBO[2]);
+	glBufferData(GL_ARRAY_BUFFER, 12*sizeof(float), fQuad, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+	glBindBuffer(GL_ARRAY_BUFFER, uiVBO[3]);
+	glBufferData(GL_ARRAY_BUFFER, 12*sizeof(float), fQuadColor, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+	// Load shaders and create shader program
+
+   GLint success;
+
+   GLuint vs = glCreateShader(GL_VERTEX_SHADER);
+#define SHADER_SOURCE(x) "#version 330\n" #x
+   const char* vs_code = SHADER_SOURCE(
+                              layout (location = 0) in vec3 inPosition;
+                              layout (location = 1) in vec3 inColor;
+                              smooth out vec3 theColor;
+                              void main()
+                              {
+                                 gl_Position = vec4(inPosition.yxz, 1.0);
+                                 theColor = inColor;
+                              }
+                           );
+   glShaderSource(vs, 1, &vs_code, NULL);
+   glCompileShader(vs);
+   glGetShaderiv(vs, GL_COMPILE_STATUS, &success);
+   if(!success)
+   {
+      char infolog[512];
+      glGetShaderInfoLog(vs, sizeof(infolog), NULL, infolog);
+      DEBUG_STR(infolog);
+      assert(0);
+   }
+
+   GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
+#define SHADER_SOURCE(x) "#version 330\n" #x
+   const char* fs_code = SHADER_SOURCE(
+                            smooth in vec3 theColor;
+                            out vec4 outputColor;
+                            void main()
+                            {
+                               outputColor = vec4(theColor, 1.0);
+                            }
+                         );
+   glShaderSource(fs, 1, &fs_code, NULL);
+   glCompileShader(fs);
+   glGetShaderiv(fs, GL_COMPILE_STATUS, &success);
+   if(!success)
+   {
+      char infolog[512];
+      glGetShaderInfoLog(vs, sizeof(infolog), NULL, infolog);
+      DEBUG_STR(infolog);
+      assert(0);
+   }
+   GLuint program = glCreateProgram();
+   glAttachShader(program, vs);
+   glAttachShader(program, fs);
+   glLinkProgram(program);
+   glGetProgramiv(program, GL_LINK_STATUS, &success);
+   if(!success)
+   {
+      char infolog[512];
+      glGetShaderInfoLog(vs, sizeof(infolog), NULL, infolog);
+      DEBUG_STR(infolog);
+      assert(0);
+   }
+   glUseProgram(program);
 }
 
 
 static void video_render()
 {
 //   DEBUG_LINE();
-   // We just clear color
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	glEnableVertexAttribArray(0);
-	// Triangle render
-	glBindBuffer(GL_ARRAY_BUFFER, uiVBO[0]);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+//	glEnableVertexAttribArray(0);
+//	// Triangle render
+//	glBindBuffer(GL_ARRAY_BUFFER, uiVBO[0]);
+//	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+//	glDrawArrays(GL_TRIANGLES, 0, 3);
+
+//	// Quad render using triangle strip
+//	glBindBuffer(GL_ARRAY_BUFFER, uiVBO[1]);
+//	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+//	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+	glBindVertexArray(uiVAO[0]);
 	glDrawArrays(GL_TRIANGLES, 0, 3);
 
-	// Quad render using triangle strip
-	glBindBuffer(GL_ARRAY_BUFFER, uiVBO[1]);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glBindVertexArray(uiVAO[1]);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
    SwapBuffers(hDC);
