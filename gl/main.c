@@ -38,8 +38,6 @@ static void video_init()
    };
    int iPixelFormat = ChoosePixelFormat(hDC, &pfd);
    assert(iPixelFormat);
-   (void)iPixelFormat;
-
    SetPixelFormat(hDC, iPixelFormat, &pfd);
 
    hRC = wglCreateContext(hDC);

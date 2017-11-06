@@ -48,7 +48,13 @@
    GL_PROC(void, APIENTRY, glVertexAttribPointer, GLuint, index, GLint, size, GLenum, type, GLboolean, normalized, GLsizei, stride, const void *,pointer); \
    GL_PROC(void, APIENTRY, glEnableVertexAttribArray, GLuint, index);
 
-#define GL_PROC(type,api,fn,...) static type (api * p##fn)(MERGE_TYPE(__VA_ARGS__))
+#if defined(GL_GLEXT_PROTOTYPES) || defined(WGL_WGLEXT_PROTOTYPES)
+#define PFN_NAME(fn) p##fn
+#else
+#define PFN_NAME(fn) fn
+#endif
+
+#define GL_PROC(type,api,fn,...) static type (api * PFN_NAME(fn))(MERGE_TYPE(__VA_ARGS__))
 GL_PROCS
 #undef GL_PROC
 
@@ -56,7 +62,7 @@ void* glGetProcAddress(const char* name)
 {
    if(!name)
    {
-#define GL_PROC(type,api,fn,...) p##fn = (void*)wglGetProcAddress(#fn)
+#define GL_PROC(type,api,fn,...) PFN_NAME(fn) = (void*)wglGetProcAddress(#fn)
   GL_PROCS
 #undef GL_PROC
         return NULL;
@@ -64,12 +70,13 @@ void* glGetProcAddress(const char* name)
    return wglGetProcAddress(name);
 }
 
+
+#if defined(GL_GLEXT_PROTOTYPES) || defined(WGL_WGLEXT_PROTOTYPES)
 #define GL_PROC(type,api,fn,...) \
    type api fn (MERGE_TYPE(__VA_ARGS__)) \
 {\
-   return p##fn(DROP_TYPE( __VA_ARGS__));\
+   return PFN_NAME(fn)(DROP_TYPE( __VA_ARGS__));\
 }
-
 GL_PROCS
-
 #undef GL_PROC
+#endif
