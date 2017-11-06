@@ -18,6 +18,10 @@ static inline ULONG Release(void* obj)
    return ((IUnknown*)obj)->lpVtbl->Release(obj);
 }
 
+#define __uuidof(type) &IID_##type
+
+#define CHECK_AND_RETURN(x) HRESULT res = x;CHECK_WINERR(res);return res;
+
 //char err_str[256];
 //FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, HRESULT_CODE(hr), 0, err_str, sizeof(err_str), NULL);
 //printf("%s\n", err_str);

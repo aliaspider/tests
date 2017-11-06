@@ -21,10 +21,6 @@
 #endif
 #include "common.h"
 
-#define __uuidof(type) &IID_##type
-
-#define CHECK_AND_RETURN(x) HRESULT res = x;CHECK_WINERR(res);return res;
-
 typedef ID3D12Debug* D3D12Debug;
 typedef IDXGIFactory1* DXGIFactory;
 typedef IDXGIAdapter1* DXGIAdapter;
