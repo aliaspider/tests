@@ -156,14 +156,27 @@ static void video_init()
    d3d.CreateVertexShader(device, D3D_GetBufferPointer(vs_code), D3D_GetBufferSize(vs_code), NULL,
                           &vs);
    d3d.CreatePixelShader(device, D3D_GetBufferPointer(ps_code), D3D_GetBufferSize(ps_code), NULL, &ps);
-   d3d.CreateInputLayout(device, inputElementDesc, countof(inputElementDesc),D3D_GetBufferPointer(vs_code), D3D_GetBufferSize(vs_code), &layout);
+   d3d.CreateInputLayout(device, inputElementDesc, countof(inputElementDesc),
+                         D3D_GetBufferPointer(vs_code), D3D_GetBufferSize(vs_code), &layout);
+   Release(vs_code);
+   Release(ps_code);
 
+   ctx.IASetInputLayout(context, layout);
+   ctx.VSSetShader(context, vs, NULL, 0);
+   ctx.PSSetShader(context, ps, NULL, 0);
 
 }
 
 
 static void video_render()
 {
+   float clearcolor[4] = {0.5, 0.2, 1.0, 1.0};
+   ctx.ClearRenderTargetView(context, renderTargetView, clearcolor);
+
+   ctx.Draw(context, 0, 0);
+   dxgi.Present(swapChain, 0, 0);
+
+
 
 }
 
