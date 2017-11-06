@@ -3,7 +3,8 @@
 #include <string.h>
 #include <assert.h>
 #include <stdarg.h>
-//#define GL_GLEXT_PROTOTYPES
+#define GL_GLEXT_PROTOTYPES
+#define WGL_WGLEXT_PROTOTYPES
 #include <GL/GL.h>
 #include <GL/glext.h>
 #include <GL/wglext.h>
@@ -17,28 +18,9 @@ UINT uiVBO[2];
 
 HGLRC hRC;
 HDC hDC;
-#define GL_PROCS \
-   GL_PROC(PFNWGLCHOOSEPIXELFORMATARBPROC, wglChoosePixelFormatARB); \
-   GL_PROC(PFNWGLCREATECONTEXTATTRIBSARBPROC, wglCreateContextAttribsARB); \
-   GL_PROC(PFNGLGENBUFFERSPROC, glGenBuffers); \
-   GL_PROC(PFNGLBINDBUFFERPROC, glBindBuffer); \
-   GL_PROC(PFNGLBUFFERDATAPROC, glBufferData); \
-   GL_PROC(PFNGLVERTEXATTRIBPOINTERPROC, glVertexAttribPointer); \
-   GL_PROC(PFNGLENABLEVERTEXATTRIBARRAYPROC, glEnableVertexAttribArray);
-//GL_PROC(PFNPROC, );
-//GL_PROC(PFNPROC, );
-//GL_PROC(PFNPROC, );
-//GL_PROC(PFNPROC, );
-//GL_PROC(PFNPROC, );
 
-//BOOL WINAPI wglChoosePixelFormatARB (HDC hdc, const int *piAttribIList, const FLOAT *pfAttribFList, UINT nMaxFormats, int *piFormats, UINT *nNumFormats)
-//{
 
-//}
-
-#define GL_PROC(type, name) type name
-GL_PROCS
-#undef GL_PROC
+void* glGetProcAddress(const char* name);
 
 static void video_init()
 {
@@ -62,8 +44,7 @@ static void video_init()
 
    hRC = wglCreateContext(hDC);
    wglMakeCurrent(hDC, hRC);
-#define GL_PROC(type, name) name = (void*)wglGetProcAddress(#name)
-   GL_PROCS
+   glGetProcAddress(NULL);
 
 
       if(0)
@@ -99,7 +80,6 @@ static void video_init()
       wglMakeCurrent(hDC, hRC);
 //      GL_PROCS
    }
-#undef GL_PROC
    wglMakeCurrent(hDC, hRC);
 
    float fTriangle[9]; // Data to render triangle (3 vertices, each has 3 floats)
@@ -128,6 +108,7 @@ static void video_init()
       glBindBuffer(GL_ARRAY_BUFFER, uiVBO[1]);
       glBufferData(GL_ARRAY_BUFFER, 12*sizeof(float), fQuad, GL_STATIC_DRAW);
 
+      wglSwapIntervalEXT(2);
 }
 
 

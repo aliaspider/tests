@@ -38,6 +38,7 @@ else ifeq ($(platform),win)
 
 endif
 OBJS += gl/main.o
+OBJS += gl/stubs.o
 OBJS += vulkan/console.o
 OBJS += vulkan/font.o
 OBJS += vulkan/font_mono.o
