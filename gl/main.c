@@ -76,8 +76,8 @@ static void video_init()
       assert(hRC);
       wglMakeCurrent(hDC, hRC);
    }
-   wglSwapIntervalEXT(2);
-   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+   wglSwapIntervalEXT(0);
+   glClearColor(0.0f, 0.0f, 0.5f, 1.0f);
 
    float fTriangle[9];
    float fQuad[12];
