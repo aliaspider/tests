@@ -40,6 +40,28 @@ typedef ID3D12Fence* D3D12Fence;
 typedef D3D12_BLEND_DESC D3D12BlendDesc;
 typedef D3D12_GRAPHICS_PIPELINE_STATE_DESC D3D12GraphicsPipelineStateDesc;
 
+typedef struct
+{
+   ID3D12DeviceVtbl device;
+   ID3D12CommandQueueVtbl commandQueue;
+
+}D3D12Vtbl;
+
+typedef struct
+{
+   IDXGIFactory1Vtbl factory;
+   IDXGIAdapter1Vtbl adapter;
+   IDXGISwapChain3Vtbl swapchain;
+}DXGIVtbl;
+
+typedef struct
+{
+   ID3D10BlobVtbl blob;
+}D3DVtbl;
+
+extern D3D12Vtbl D3D12;
+extern DXGIVtbl DXGI;
+extern D3DVtbl D3D;
 
 static inline HRESULT D3D12_CreateCommandQueue(ID3D12Device* device, const D3D12_COMMAND_QUEUE_DESC *desc, ID3D12CommandQueue **out)
 {
