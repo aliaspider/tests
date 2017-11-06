@@ -27,7 +27,9 @@ static inline ULONG Release(void* obj)
    __FILE__, __LINE__, __FUNCTION__, HRESULT_SEVERITY(hr), HRESULT_FACILITY(hr), HRESULT_CODE(hr), hr, hr);\
    fflush(stdout);assert(0);}}while(0)
 
-#define DEBUG_WINERR(x) do{printf("(0x%X, 0x%X, 0x%X) 0x%08X\n", HRESULT_SEVERITY(hr), HRESULT_FACILITY(hr), HRESULT_CODE(hr), hr);fflush(stdout);}while(0)
+#define DEBUG_WINERR(x) do{HRESULT hr = x; if(FAILED(hr)){\
+   printf("error at %s:%i:%s: (%li, %li, %li) 0x%08lX(%li)\n", \
+   __FILE__, __LINE__, __FUNCTION__, HRESULT_SEVERITY(hr), HRESULT_FACILITY(hr), HRESULT_CODE(hr), hr, hr);fflush(stdout);}}while(0)
 
 #if defined(__DINPUT_INCLUDED__) || defined(DIRECTINPUT_HEADER_VERSION) || defined(__DSOUND_INCLUDED__) || defined(DS_OK) || defined (DIRECT3D_VERSION)
 

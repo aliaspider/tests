@@ -112,12 +112,12 @@ static inline void D3D12_GetCPUDescriptorHandleForHeapStart(ID3D12DescriptorHeap
          heap->lpVtbl->GetCPUDescriptorHandleForHeapStart)(heap, out);
 }
 
-void* D3D_GetBufferPointer(ID3DBlob* buffer)
+static inline void* D3D_GetBufferPointer(ID3DBlob* buffer)
 {
    return buffer->lpVtbl->GetBufferPointer(buffer);
 }
 
-size_t D3D_GetBufferSize(ID3DBlob* buffer)
+static inline size_t D3D_GetBufferSize(ID3DBlob* buffer)
 {
    return buffer->lpVtbl->GetBufferSize(buffer);
 }

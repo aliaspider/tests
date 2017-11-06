@@ -1,12 +1,24 @@
 #pragma once
 
 #include <d3d9.h>
+//#include <d3dcompiler.h>
+#ifdef __MINGW32__
+#define __REQUIRED_RPCNDR_H_VERSION__ 475
+#define _In_
+#define _In_opt_
+#define _Null_
+#define _Out_writes_bytes_opt_(s)
+#endif
+#include <um/d3dcompiler.h>
 
 #include "common.h"
 
 typedef IDirect3D9* Direct3D9;
 typedef IDirect3DDevice9* Direct3DDevice9;
-
+typedef IDirect3DVertexBuffer9* Direct3DVertexBuffer9;
+typedef IDirect3DVertexShader9* Direct3DVertexShader9;
+typedef IDirect3DPixelShader9* Direct3DPixelShader9;
+typedef ID3DBlob* D3DBlob;
 
 #define THIS__ d3d
 #define TYPE__ IDirect3D9*
@@ -154,3 +166,23 @@ WRAP(CreateQuery, D3DQUERYTYPE, Type, IDirect3DQuery9**, ppQuery)
 #undef THIS__
 #undef TYPE__
 #undef PREFIX__
+
+#define THIS__ buffer
+#define TYPE__ IDirect3DVertexBuffer9*
+#define PREFIX__ D3D9_VertexBuffer
+WRAP(Lock, UINT, OffsetToLock, UINT, SizeToLock, void**, ppbData, DWORD, Flags)
+WRAP(Unlock)
+WRAP(GetDesc, D3DVERTEXBUFFER_DESC*, pDesc)
+#undef THIS__
+#undef TYPE__
+#undef PREFIX__
+
+static inline void* D3D_GetBufferPointer(D3DBlob buffer)
+{
+   return buffer->lpVtbl->GetBufferPointer(buffer);
+}
+
+static inline size_t D3D_GetBufferSize(D3DBlob buffer)
+{
+   return buffer->lpVtbl->GetBufferSize(buffer);
+}
