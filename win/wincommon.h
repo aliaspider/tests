@@ -1,5 +1,9 @@
 #pragma once
 
+//#include <windows.h>
+#include <minwindef.h>
+#include <Unknwn.h>
+
 typedef int8_t s8;
 typedef uint8_t u8;
 typedef int16_t s16;
@@ -8,6 +12,11 @@ typedef __LONG32 s32;
 typedef unsigned __LONG32 u32;
 typedef int64_t s64;
 typedef uint64_t u64;
+
+static inline ULONG Release(void* obj)
+{
+   return ((IUnknown*)obj)->lpVtbl->Release(obj);
+}
 
 //char err_str[256];
 //FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, HRESULT_CODE(hr), 0, err_str, sizeof(err_str), NULL);
@@ -20,7 +29,7 @@ typedef uint64_t u64;
 
 #define DEBUG_WINERR(x) do{printf("(0x%X, 0x%X, 0x%X) 0x%08X\n", HRESULT_SEVERITY(hr), HRESULT_FACILITY(hr), HRESULT_CODE(hr), hr);fflush(stdout);}while(0)
 
-#if defined(__DINPUT_INCLUDED__) || defined(DIRECTINPUT_HEADER_VERSION) || defined(__DSOUND_INCLUDED__) || defined(DS_OK)
+#if defined(__DINPUT_INCLUDED__) || defined(DIRECTINPUT_HEADER_VERSION) || defined(__DSOUND_INCLUDED__) || defined(DS_OK) || defined (DIRECT3D_VERSION)
 
 #define DROP_TYPE(...) DROP_TYPE_(CNT_ARGS(__VA_ARGS__),__VA_ARGS__)
 #define DROP_TYPE_(n,...) DROP_TYPE__(n,__VA_ARGS__)
@@ -34,6 +43,7 @@ typedef uint64_t u64;
 #define DROP_TYPE_12(ptype,pname,...) ,pname DROP_TYPE_10(__VA_ARGS__)
 #define DROP_TYPE_14(ptype,pname,...) ,pname DROP_TYPE_12(__VA_ARGS__)
 #define DROP_TYPE_16(ptype,pname,...) ,pname DROP_TYPE_14(__VA_ARGS__)
+#define DROP_TYPE_18(ptype,pname,...) ,pname DROP_TYPE_16(__VA_ARGS__)
 
 #define MERGE_TYPE(...) MERGE_TYPE_(CNT_ARGS(__VA_ARGS__),__VA_ARGS__)
 #define MERGE_TYPE_(n,...) MERGE_TYPE__(n,__VA_ARGS__)
@@ -47,6 +57,7 @@ typedef uint64_t u64;
 #define MERGE_TYPE_12(ptype,pname,...) ,ptype pname MERGE_TYPE_10(__VA_ARGS__)
 #define MERGE_TYPE_14(ptype,pname,...) ,ptype pname MERGE_TYPE_12(__VA_ARGS__)
 #define MERGE_TYPE_16(ptype,pname,...) ,ptype pname MERGE_TYPE_14(__VA_ARGS__)
+#define MERGE_TYPE_18(ptype,pname,...) ,ptype pname MERGE_TYPE_16(__VA_ARGS__)
 
 #define CONCAT_(a,b) a##b
 #define CONCAT(a,b) CONCAT_(a,b)
