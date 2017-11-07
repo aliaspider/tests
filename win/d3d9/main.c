@@ -102,7 +102,7 @@ static void video_render()
    D3D9_BeginScene(device);
    D3D9_SetTransform(device, D3DTS_VIEW, &identity);
    D3D9_SetTransform(device, D3DTS_PROJECTION, &identity);
-//   d3d9_
+////   d3d9_
    D3D9_SetVertexShader(device, vs);
    D3D9_SetPixelShader(device, ps);
    D3D9_DrawPrimitive(device, D3DPT_TRIANGLELIST, 0, 3);

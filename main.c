@@ -40,8 +40,11 @@ int main(int argc, char** argv)
    video = video_vulkan;
 #endif
    video = video_gl;
+//   video = video_d3d9;
 //   video = video_d3d10;
 //   video = video_d3d11;
+//   video = video_d3d12;
+//   video = video_null;
 
 #ifdef __WIN32__
    audio = audio_win;

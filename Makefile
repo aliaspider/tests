@@ -49,6 +49,7 @@ OBJS :=
 
 OBJS += main.o
 OBJS += console.o
+OBJS += video.o
 OBJS += ui/hitbox.o
 OBJS += ui/slider.o
 OBJS += ui/button.o
@@ -113,7 +114,7 @@ else
 endif
 
 CFLAGS += -Wall -Werror=implicit-function-declaration -Werror=incompatible-pointer-types
-CFLAGS += -Werror
+CFLAGS += -Werror -Wno-error=unused-variable
 CFLAGS += -fms-extensions
 CFLAGS += -I.
 

@@ -100,5 +100,6 @@ extern const video_t video_d3d9;
 extern const video_t video_d3d10;
 extern const video_t video_d3d11;
 extern const video_t video_d3d12;
+extern const video_t video_null;
 extern video_t video;
 
