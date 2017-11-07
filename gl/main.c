@@ -10,6 +10,10 @@
 #ifdef __WIN32__
 #include <GL/wglext.h>
 #endif
+#ifdef HAVE_X11
+#include <GL/glx.h>
+#include <GL/glxext.h>
+#endif
 
 #include "common.h"
 #include "video.h"
@@ -83,6 +87,152 @@ static void video_init()
    }
 
    wglSwapIntervalEXT(0);
+#elif defined(HAVE_X11)
+   static const int visual_attribs[] = {
+      GLX_X_RENDERABLE     , True,
+      GLX_DRAWABLE_TYPE    , GLX_WINDOW_BIT,
+      GLX_RENDER_TYPE      , GLX_RGBA_BIT,
+      GLX_X_VISUAL_TYPE    , GLX_TRUE_COLOR,
+      GLX_RED_SIZE         , 8,
+      GLX_GREEN_SIZE       , 8,
+      GLX_BLUE_SIZE        , 8,
+      GLX_ALPHA_SIZE       , 8,
+      GLX_DEPTH_SIZE       , 0,
+      GLX_STENCIL_SIZE     , 0,
+      GLX_DOUBLEBUFFER     , True,
+      GLX_SAMPLE_BUFFERS   , 0,
+      GLX_SAMPLES          , 0,
+      None
+   };
+   int fbcount;
+   GLXFBConfig* fbc = glXChooseFBConfig(video.screens[0].display, DefaultScreen(video.screens[0].display), visual_attribs, &fbcount);
+   if (!fbc)
+   {
+     printf( "Failed to retrieve a framebuffer config\n" );
+     exit(1);
+   }
+   printf( "Found %d matching FB configs.\n", fbcount );
+
+   printf( "Getting XVisualInfos\n" );
+   int best_fbc = -1, worst_fbc = -1, best_num_samp = -1, worst_num_samp = 999;
+
+   int i;
+   for (i=0; i<fbcount; ++i)
+   {
+     XVisualInfo *vi = glXGetVisualFromFBConfig( video.screens[0].display, fbc[i] );
+     if ( vi )
+     {
+       int samp_buf, samples;
+       glXGetFBConfigAttrib( video.screens[0].display, fbc[i], GLX_SAMPLE_BUFFERS, &samp_buf );
+       glXGetFBConfigAttrib( video.screens[0].display, fbc[i], GLX_SAMPLES       , &samples  );
+
+       printf( "  Matching fbconfig %d, visual ID 0x%2lx: SAMPLE_BUFFERS = %d,"
+               " SAMPLES = %d\n",
+               i, vi -> visualid, samp_buf, samples );
+
+       if ( best_fbc < 0 || (samp_buf && samples > best_num_samp) )
+         best_fbc = i, best_num_samp = samples;
+       if ( worst_fbc < 0 || !samp_buf || samples < worst_num_samp )
+         worst_fbc = i, worst_num_samp = samples;
+     }
+     XFree( vi );
+   }
+
+   GLXFBConfig bestFbc = fbc[ best_fbc ];
+
+   // Be sure to free the FBConfig list allocated by glXChooseFBConfig()
+   XFree( fbc );
+
+   // Get a visual
+   XVisualInfo *vi = glXGetVisualFromFBConfig( video.screens[0].display, bestFbc );
+   printf( "Chosen visual ID = 0x%lx\n", vi->visualid );
+
+   printf( "Creating colormap\n" );
+   XSetWindowAttributes swa;
+   Colormap cmap;
+   swa.colormap = cmap = XCreateColormap( video.screens[0].display,
+                                          RootWindow( video.screens[0].display, vi->screen ),
+                                          vi->visual, AllocNone );
+   swa.background_pixmap = None ;
+   swa.border_pixel      = 0;
+   swa.event_mask        = StructureNotifyMask;
+
+   printf( "Creating window\n" );
+   Window win = XCreateWindow( video.screens[0].display, RootWindow( video.screens[0].display, vi->screen ),
+                               0, 0, 100, 100, 0, vi->depth, InputOutput,
+                               vi->visual,
+                               CWBorderPixel|CWColormap|CWEventMask, &swa );
+   if ( !win )
+   {
+     printf( "Failed to create window.\n" );
+     exit(1);
+   }
+
+   // Done with the visual info data
+   XFree( vi );
+
+   XStoreName( video.screens[0].display, win, "GL 3.0 Window" );
+
+   printf( "Mapping window\n" );
+   XMapWindow( video.screens[0].display, win );
+
+   // Get the default screen's GLX extension list
+   const char *glxExts = glXQueryExtensionsString( video.screens[0].display,
+                                                   DefaultScreen( video.screens[0].display ) );
+
+   // NOTE: It is not necessary to create or make current to a context before
+   // calling glXGetProcAddressARB
+   PFNGLXCREATECONTEXTATTRIBSARBPROC glXCreateContextAttribsARB = 0;
+   glXCreateContextAttribsARB = (PFNGLXCREATECONTEXTATTRIBSARBPROC)
+            glXGetProcAddressARB( (const GLubyte *) "glXCreateContextAttribsARB" );
+
+   GLXContext ctx = 0;
+//   ctx = glXCreateNewContext( display, bestFbc, GLX_RGBA_TYPE, 0, True );
+     int context_attribs[] =
+       {
+         GLX_CONTEXT_MAJOR_VERSION_ARB, 3,
+         GLX_CONTEXT_MINOR_VERSION_ARB, 0,
+         //GLX_CONTEXT_FLAGS_ARB        , GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
+         None
+       };
+
+     printf( "Creating context\n" );
+     ctx = glXCreateContextAttribsARB( video.screens[0].display, bestFbc, 0,
+                                       True, context_attribs );
+
+     printf( "Created GL 3.0 context\n" );
+
+   // Verifying that context is a direct context
+   if ( ! glXIsDirect ( video.screens[0].display, ctx ) )
+   {
+     printf( "Indirect GLX rendering context obtained\n" );
+   }
+   else
+   {
+     printf( "Direct GLX rendering context obtained\n" );
+   }
+
+   printf( "Making context current\n" );
+   glXMakeCurrent( video.screens[0].display, win, ctx );
+
+   glClearColor( 0, 0.5, 1, 1 );
+   glClear( GL_COLOR_BUFFER_BIT );
+   glXSwapBuffers ( video.screens[0].display, win );
+
+   sleep( 1 );
+
+   glClearColor ( 1, 0.5, 0, 1 );
+   glClear ( GL_COLOR_BUFFER_BIT );
+   glXSwapBuffers ( video.screens[0].display, win );
+
+   sleep( 1 );
+
+   glXMakeCurrent( video.screens[0].display, 0, 0 );
+   glXDestroyContext( video.screens[0].display, ctx );
+
+   XDestroyWindow( video.screens[0].display, win );
+   XFreeColormap( video.screens[0].display, cmap );
+
 #endif
    glClearColor(0.0f, 0.0f, 0.5f, 1.0f);
 

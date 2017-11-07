@@ -39,7 +39,7 @@ int main(int argc, char** argv)
 #else
    video = video_vulkan;
 #endif
-//   video = video_gl;
+   video = video_gl;
 //   video = video_d3d9;
 //   video = video_d3d10;
 //   video = video_d3d11;
