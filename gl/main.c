@@ -7,7 +7,9 @@
 #define WGL_WGLEXT_PROTOTYPES
 #include <GL/GL.h>
 #include <GL/glext.h>
+#ifdef __WIN32__
 #include <GL/wglext.h>
+#endif
 
 #include "common.h"
 #include "video.h"

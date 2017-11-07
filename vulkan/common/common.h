@@ -1,6 +1,8 @@
 #pragma once
 
+#ifdef HAVE_VULKAN
 #include <vulkan/vulkan.h>
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>

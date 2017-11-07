@@ -1,8 +1,9 @@
 #pragma once
 
 #include "hitbox.h"
+#ifdef HAVE_VULKAN
 #include "vulkan/common/texture.h"
-
+#endif
 #ifdef BUTTON_INTERNAL
 #define const
 #endif
@@ -22,7 +23,9 @@ struct button_t
       };
       hitbox_t hitbox;
    };
+#ifdef HAVE_VULKAN
    vk_texture_t* texture;
+#endif
 };
 
 #ifdef BUTTON_INTERNAL

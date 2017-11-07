@@ -61,6 +61,7 @@ static void video_init()
    D3D9_SetFVF(device, D3DFVF_XYZ|D3DFVF_DIFFUSE);
    D3D9_SetStreamSource(device, 0, vbo, 0, sizeof(vertex_t));
 
+#if defined(HAVE_D3D10) || defined(HAVE_D3D11) || defined(HAVE_D3D12)
    D3DBlob vs_code;
    D3DBlob ps_code;
 #ifdef DEBUG
@@ -87,7 +88,7 @@ static void video_init()
    }
    D3D9_CreateVertexShader(device, D3D_GetBufferPointer(vs_code), &vs);
    D3D9_CreatePixelShader(device, D3D_GetBufferPointer(ps_code), &ps);
-
+#endif
 //   D3D9_SetVertexShader(device, vs);
 //   D3D9_SetPixelShader(device, ps);
 }

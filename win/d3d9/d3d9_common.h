@@ -9,16 +9,18 @@
 #define _Null_
 #define _Out_writes_bytes_opt_(s)
 #endif
-#include <um/d3dcompiler.h>
-
 #include "common.h"
+
+#if defined(HAVE_D3D10) || defined(HAVE_D3D11) || defined(HAVE_D3D12)
+#include <um/d3dcompiler.h>
+typedef ID3DBlob* D3DBlob;
+#endif
 
 typedef IDirect3D9* Direct3D9;
 typedef IDirect3DDevice9* Direct3DDevice9;
 typedef IDirect3DVertexBuffer9* Direct3DVertexBuffer9;
 typedef IDirect3DVertexShader9* Direct3DVertexShader9;
 typedef IDirect3DPixelShader9* Direct3DPixelShader9;
-typedef ID3DBlob* D3DBlob;
 
 #define THIS__ d3d
 #define TYPE__ IDirect3D9*
@@ -176,7 +178,7 @@ WRAP(GetDesc, D3DVERTEXBUFFER_DESC*, pDesc)
 #undef THIS__
 #undef TYPE__
 #undef PREFIX__
-
+#if defined(HAVE_D3D10) || defined(HAVE_D3D11) || defined(HAVE_D3D12)
 static inline void* D3D_GetBufferPointer(D3DBlob buffer)
 {
    return buffer->lpVtbl->GetBufferPointer(buffer);
@@ -186,3 +188,4 @@ static inline size_t D3D_GetBufferSize(D3DBlob buffer)
 {
    return buffer->lpVtbl->GetBufferSize(buffer);
 }
+#endif

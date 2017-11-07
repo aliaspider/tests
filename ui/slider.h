@@ -1,8 +1,9 @@
 #pragma once
 
 #include "hitbox.h"
+#ifdef HAVE_VULKAN
 #include "vulkan/slider.h"
-
+#endif
 #ifdef SLIDER_INTERNAL
 #define const
 #endif

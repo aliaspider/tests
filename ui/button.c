@@ -5,8 +5,9 @@
 #include "button.h"
 #include "common.h"
 #include "input.h"
+#ifdef HAVE_VULKAN
 #include "vulkan/sprite.h"
-
+#endif
 //static void button_hit(button_t *button)
 //{
 
@@ -29,6 +30,7 @@ void button_destroy(button_t *button)
 
 void button_update(button_t *button)
 {
+#ifdef HAVE_VULKAN
    sprite_t sprite =
    {
       .pos.x = button->x,
@@ -42,4 +44,5 @@ void button_update(button_t *button)
       .color = button->clicked? 0xFFFFFFFF :button->hitbox.hit? 0xFF0000FF : 0xFF404040,
    };
    vk_sprite_add(&sprite, button->texture);
+#endif
 }

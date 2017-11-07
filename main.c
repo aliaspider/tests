@@ -2,20 +2,32 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <time.h>
-
+#ifdef __MINGW32__
+#include <pthread.h>
+#include <pthread_time.h>
+#endif
 #include "common.h"
 #include "interface.h"
 #include "platform.h"
 #include "video.h"
 #include "audio.h"
 #include "input.h"
+#ifdef HAVE_VULKAN
 #include "vulkan/font.h"
+#endif
 #include "ui/hitbox.h"
 
 video_t video;
 audio_t audio;
 input_t input;
 module_info_t module;
+
+#ifndef HAVE_VULKAN
+void display_message(int frames, int x, int y, unsigned screen_mask, const char *fmt, ...)
+{
+}
+#endif
+
 
 int main(int argc, char** argv)
 {
@@ -28,8 +40,8 @@ int main(int argc, char** argv)
    video = video_vulkan;
 #endif
    video = video_gl;
-   video = video_d3d10;
-   video = video_d3d11;
+//   video = video_d3d10;
+//   video = video_d3d11;
 
 #ifdef __WIN32__
    audio = audio_win;
@@ -63,12 +75,12 @@ int main(int argc, char** argv)
    platform_init();
 
    {
-      module_init_info_t info =
-      {
-         .filename = argv[1]
-      };
+//      module_init_info_t info =
+//      {
+//         .filename = argv[1]
+//      };
 
-      module_init(&info, &module);
+//      module_init(&info, &module);
    }
 
    video.init();
@@ -159,7 +171,7 @@ int main(int argc, char** argv)
 
    debug_log("\n");
 
-   module_destroy();
+//   module_destroy();
    input.destroy();
 //   audio.destroy();
    video.destroy();

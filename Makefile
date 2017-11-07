@@ -1,9 +1,38 @@
+ifeq ($(platform),win)
+   SPACE :=
+   SPACE := $(SPACE) $(SPACE)
+   BACKSLASH :=
+   BACKSLASH := \$(BACKSLASH)
+   filter_out1 = $(filter-out $(firstword $1),$1)
+   filter_out2 = $(call filter_out1,$(call filter_out1,$1))
+
+   reg_query = $(call filter_out2,$(subst $2,,$(shell reg query "$2" -v "$1" 2>nul)))
+   fix_path = $(subst $(SPACE),\ ,$(subst \,/,$1))
+   WindowsSdkDir := $(call reg_query,InstallationFolder,HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\Microsoft SDKs\Windows\v10.0)
+   ifeq ($(WindowsSdkDir),)
+      WindowsSdkDir := $(call reg_query,InstallationFolder,HKEY_CURRENT_USER\SOFTWARE\Wow6432Node\Microsoft\Microsoft SDKs\Windows\v10.0)
+   endif
+   ifeq ($(WindowsSdkDir),)
+      WindowsSdkDir := $(call reg_query,InstallationFolder,HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Microsoft SDKs\Windows\v10.0)
+   endif
+   ifeq ($(WindowsSdkDir),)
+      WindowsSdkDir := $(call reg_query,InstallationFolder,HKEY_CURRENT_USER\SOFTWARE\Microsoft\Microsoft SDKs\Windows\v10.0)
+   endif
+   WindowsSDKVersion := $(firstword $(foreach folder,$(subst $(subst \,/,$(WindowsSdkDir)Include/),,$(wildcard $(call fix_path,$(WindowsSdkDir)Include\*))),$(if $(wildcard $(call fix_path,$(WindowsSdkDir)Include/$(folder)/um/Windows.h)),$(folder),)))
+endif
 
 TARGET = test
 MODULE = module.a
 #MODULE = gambatte/gambatte_module.a
 #MODULE = snes9x/snes9x_module.a
 DEBUG = 0
+
+HAVE_VULKAN = 1
+HAVE_D3D10 = 1
+HAVE_D3D11 = 1
+ifneq ($(WindowsSDKVersion),)
+   HAVE_D3D12 = 1
+endif
 
 platform = linux
 #platform = win
@@ -23,7 +52,6 @@ OBJS += console.o
 OBJS += ui/hitbox.o
 OBJS += ui/slider.o
 OBJS += ui/button.o
-OBJS += utils/png_file.o
 ifeq ($(platform),linux)
    OBJS += linux/platform.o
    OBJS += linux/audio_alsa.o
@@ -34,37 +62,45 @@ else ifeq ($(platform),win)
    OBJS += win/input.o
 
    OBJS += win/d3d9/main.o
-   OBJS += win/d3d10/main.o
-   OBJS += win/d3d11/main.o
-   OBJS += win/d3d12/main.o
+   ifeq ($(HAVE_D3D10),1)
+      OBJS += win/d3d10/main.o
+   endif
+   ifeq ($(HAVE_D3D11),1)
+      OBJS += win/d3d11/main.o
+   endif
+   ifeq ($(HAVE_D3D12),1)
+      OBJS += win/d3d12/main.o
+   endif
 
 endif
 OBJS += gl/main.o
 OBJS += gl/stubs.o
-OBJS += vulkan/console.o
-OBJS += vulkan/font.o
-OBJS += vulkan/font_mono.o
-OBJS += vulkan/frame.o
-OBJS += vulkan/main.o
-OBJS += vulkan/slider.o
-OBJS += vulkan/sprite.o
-OBJS += vulkan/common/buffer.o
-OBJS += vulkan/common/context.o
-OBJS += vulkan/common/memory.o
-OBJS += vulkan/common/render_target.o
-OBJS += vulkan/common/renderer.o
-OBJS += vulkan/common/resource.o
-OBJS += vulkan/common/stubs.o
-OBJS += vulkan/common/texture.o
-OBJS += vulkan/common/utils.o
-
+ifeq ($(HAVE_VULKAN),1)
+   OBJS += utils/png_file.o
+   OBJS += vulkan/console.o
+   OBJS += vulkan/font.o
+   OBJS += vulkan/font_mono.o
+   OBJS += vulkan/frame.o
+   OBJS += vulkan/main.o
+   OBJS += vulkan/slider.o
+   OBJS += vulkan/sprite.o
+   OBJS += vulkan/common/buffer.o
+   OBJS += vulkan/common/context.o
+   OBJS += vulkan/common/memory.o
+   OBJS += vulkan/common/render_target.o
+   OBJS += vulkan/common/renderer.o
+   OBJS += vulkan/common/resource.o
+   OBJS += vulkan/common/stubs.o
+   OBJS += vulkan/common/texture.o
+   OBJS += vulkan/common/utils.o
+   HAS_SHADERS += vulkan/font.o
+   HAS_SHADERS += vulkan/font_mono.o
+   HAS_SHADERS += vulkan/frame.o
+   HAS_SHADERS += vulkan/slider.o
+   HAS_SHADERS += vulkan/sprite.o
+endif
 OBJS := $(addprefix $(BUILD_DIR)/,$(OBJS))
 
-HAS_SHADERS += vulkan/font.o
-HAS_SHADERS += vulkan/font_mono.o
-HAS_SHADERS += vulkan/frame.o
-HAS_SHADERS += vulkan/slider.o
-HAS_SHADERS += vulkan/sprite.o
 
 HAS_SHADERS := $(basename $(HAS_SHADERS))
 $(foreach obj,$(HAS_SHADERS),$(eval $(BUILD_DIR)/$(obj).o: $(obj).vert.inc $(obj).frag.inc $(obj).geom.inc))
@@ -88,51 +124,45 @@ ifeq ($(platform),linux)
    LIBS += -lvulkan -lX11 -lasound
    CFLAGS += $(shell freetype-config --cflags)
 else ifeq ($(platform),win)
-   SPACE :=
-   SPACE := $(SPACE) $(SPACE)
-   BACKSLASH :=
-   BACKSLASH := \$(BACKSLASH)
-   filter_out1 = $(filter-out $(firstword $1),$1)
-   filter_out2 = $(call filter_out1,$(call filter_out1,$1))
-
-   reg_query = $(call filter_out2,$(subst $2,,$(shell reg query "$2" -v "$1" 2>nul)))
-   fix_path = $(subst $(SPACE),\ ,$(subst \,/,$1))
-   WindowsSdkDir := $(call reg_query,InstallationFolder,HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\Microsoft SDKs\Windows\v10.0)
-   ifeq ($(WindowsSdkDir),)
-      WindowsSdkDir := $(call reg_query,InstallationFolder,HKEY_CURRENT_USER\SOFTWARE\Wow6432Node\Microsoft\Microsoft SDKs\Windows\v10.0)
+   ifneq ($(WindowsSDKVersion),)
+#      VSINSTALLDIR ?= $(patsubst %Common7\Tools\,%,$(VS140COMNTOOLS))
+#      VCINSTALLDIR ?= $(VSINSTALLDIR)VC$(BACKSLASH)
+#      INCLUDE ?=$(VCINSTALLDIR)INCLUDE;$(VCINSTALLDIR)ATLMFC\INCLUDE;$(WindowsSdkDir)include\$(WindowsSDKVersion)ucrt;$(WindowsSdkDir)include\$(WindowsSDKVersion)shared;$(WindowsSdkDir)include\$(WindowsSDKVersion)um;
+#      LIB ?=$(VCINSTALLDIR)LIB\amd64;$(VCINSTALLDIR)ATLMFC\LIB\amd64;$(WindowsSdkDir)lib\$(WindowsSDKVersion)ucrt\x64;$(WindowsSdkDir)lib\$(WindowsSDKVersion)um\x64;
+#      LIBPATH ?=$(VCINSTALLDIR)LIB\amd64;$(VCINSTALLDIR)ATLMFC\LIB\amd64;
+      CFLAGS += -idirafter"$(WindowsSdkDir)include\$(WindowsSDKVersion)"
+      LIBS +=  -L"$(WindowsSdkDir)lib\$(WindowsSDKVersion)\um\x64"
+      CFLAGS += -DHAVE_D3D12
+      LIBS +=  -ld3d12
+#      CFLAGS += -idirafter"$(WindowsSdkDir)include\$(WindowsSDKVersion)ucrt"
+#      CFLAGS += -idirafter"$(WindowsSdkDir)include\$(WindowsSDKVersion)shared"
+#      CFLAGS += -idirafter"$(WindowsSdkDir)include\$(WindowsSDKVersion)um"
+#      LIBS +=  -L"$(WindowsSdkDir)lib\$(WindowsSDKVersion)ucrt\x64"
+#      LIBS +=  "$(WindowsSdkDir)lib\$(WindowsSDKVersion)um\x64\d3d12.lib"
    endif
-   ifeq ($(WindowsSdkDir),)
-      WindowsSdkDir := $(call reg_query,InstallationFolder,HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Microsoft SDKs\Windows\v10.0)
+   ifeq ($(HAVE_D3D10),1)
+      CFLAGS += -DHAVE_D3D10
+      LIBS +=  -ld3d10 -ldxgi -ld3dcompiler
    endif
-   ifeq ($(WindowsSdkDir),)
-      WindowsSdkDir := $(call reg_query,InstallationFolder,HKEY_CURRENT_USER\SOFTWARE\Microsoft\Microsoft SDKs\Windows\v10.0)
+   ifeq ($(HAVE_D3D11),1)
+      CFLAGS += -DHAVE_D3D11
+      LIBS +=  -ld3d11
    endif
-   WindowsSDKVersion := $(firstword $(foreach folder,$(subst $(subst \,/,$(WindowsSdkDir)Include/),,$(wildcard $(call fix_path,$(WindowsSdkDir)Include\*))),$(if $(wildcard $(call fix_path,$(WindowsSdkDir)Include/$(folder)/um/Windows.h)),$(folder),)))
-#   VSINSTALLDIR ?= $(patsubst %Common7\Tools\,%,$(VS140COMNTOOLS))
-#   VCINSTALLDIR ?= $(VSINSTALLDIR)VC$(BACKSLASH)
-#   INCLUDE ?=$(VCINSTALLDIR)INCLUDE;$(VCINSTALLDIR)ATLMFC\INCLUDE;$(WindowsSdkDir)include\$(WindowsSDKVersion)ucrt;$(WindowsSdkDir)include\$(WindowsSDKVersion)shared;$(WindowsSdkDir)include\$(WindowsSDKVersion)um;
-#   LIB ?=$(VCINSTALLDIR)LIB\amd64;$(VCINSTALLDIR)ATLMFC\LIB\amd64;$(WindowsSdkDir)lib\$(WindowsSDKVersion)ucrt\x64;$(WindowsSdkDir)lib\$(WindowsSDKVersion)um\x64;
-#   LIBPATH ?=$(VCINSTALLDIR)LIB\amd64;$(VCINSTALLDIR)ATLMFC\LIB\amd64;
-
-
-   CFLAGS += -DHAVE_D3D9 -DHAVE_D3D12
+   ifeq ($(HAVE_VULKAN),1)
+      CFLAGS += -DHAVE_VULKAN
+      CFLAGS += -I$(VULKAN_SDK)/Include -DVK_USE_PLATFORM_WIN32_KHR
+      LIBS +=  -L$(VULKAN_SDK)/Lib
+      LIBS +=  -lvulkan
+   #   LIBS +=  -lvulkan-1
+   endif
+   LIBS +=  -ld3d9 -lopengl32
+   CFLAGS += -DHAVE_D3D9
    CFLAGS += $(shell pkg-config.exe freetype2 --cflags)
-   CFLAGS += -I$(VULKAN_SDK)/Include -DVK_USE_PLATFORM_WIN32_KHR
-   LIBS +=  -L"$(WindowsSdkDir)lib\$(WindowsSDKVersion)\um\x64" -ld3d9 -ld3d10 -ld3d11 -ld3d12 -ldxgi -ld3dcompiler -lopengl32
-#   LIBS +=  "$(WindowsSdkDir)lib\$(WindowsSDKVersion)um\x64\d3d12.lib"
-   LIBS +=  -L$(VULKAN_SDK)/Lib
-#   LIBS +=  -lvulkan-1
-   LIBS +=  -lvulkan
    LIBS +=  -lgdi32 -ldinput -ldxguid -ldinput8 -ldsound
-#   CFLAGS += -idirafter"$(WindowsSdkDir)include\$(WindowsSDKVersion)ucrt"
-#   CFLAGS += -idirafter"$(WindowsSdkDir)include\$(WindowsSDKVersion)shared"
-   CFLAGS += -idirafter"$(WindowsSdkDir)include\$(WindowsSDKVersion)"
-#   CFLAGS += -idirafter"$(WindowsSdkDir)include\$(WindowsSDKVersion)um"
-#   LIBS +=  -L"$(WindowsSdkDir)lib\$(WindowsSDKVersion)ucrt\x64"
 
 endif
 
-LIBS += -lfreetype -lpng
+#LIBS += -lfreetype -lpng
 
 #CFLAGS += -DPRINTF_WRAPPED
 #LDFLAGS += -Wl,--wrap,printf

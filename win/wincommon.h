@@ -1,9 +1,12 @@
 #pragma once
 
 //#include <windows.h>
-#include <minwindef.h>
+//#include <minwindef.h>
 #include <Unknwn.h>
 
+#ifndef __LONG32
+#define __LONG32 long
+#endif
 typedef int8_t s8;
 typedef uint8_t u8;
 typedef int16_t s16;

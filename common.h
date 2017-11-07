@@ -46,6 +46,30 @@ typedef int64_t s64;
 typedef uint64_t u64;
 #endif
 
+typedef enum
+{
+   BLACK = 30,
+   RED,
+   GREEN,
+   YELLOW,
+   BLUE,
+   MAGENTA,
+   CYAN,
+   LIGHT_GRAY,
+
+   CONSOLE_COLOR_RESET = 39,
+
+   DARK_GRAY = 90,
+   LIGHT_RED,
+   LIGHT_GREEN,
+   LIGHT_YELLOW,
+   LIGHT_BLUE,
+   LIGHT_MAGENTA,
+   LIGHT_CYAN,
+   WHITE,
+   CONSOLE_COLORS_MAX
+} console_colors_t;
+
 const char* console_get(void);
 int console_get_len(void);
 extern int console_update_counter;

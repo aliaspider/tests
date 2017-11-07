@@ -74,6 +74,7 @@ void slider_update(slider_t *slider)
 {
    slider->start = (1.0 - slider->size) * (slider->pos > 0.0 ? slider->pos < 1.0 ? slider->pos : 1.0 : 0.0);
    slider_update_hitbox(slider);
-
+#ifdef HAVE_VULKAN
    vk_slider_add(slider->x, slider->y, slider->width, slider->height, slider->start, slider->size);
+#endif
 }

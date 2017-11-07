@@ -5,8 +5,9 @@
 #include "platform.h"
 #include "video.h"
 #include "common.h"
+#ifdef HAVE_VULKAN
 #include "vulkan/font.h"
-
+#endif
 static IDirectInput8* dinput;
 static IDirectInputDevice8* keyboards[MAX_SCREENS];
 static IDirectInputDevice8* mice[MAX_SCREENS];
@@ -22,7 +23,7 @@ static void print_mouse_state(screen_t* screen)
    char mouse_state[512];
    snprintf(mouse_state, sizeof(mouse_state), "0x%08lX 0x%08lX 0x%08lX 0x%08lX", origin_pos.x, origin_pos.y,
             origin_state.lX, origin_state.lY);
-
+#ifdef HAVE_VULKAN
    font_render_options_t options =
    {
       .x = 40,
@@ -31,6 +32,7 @@ static void print_mouse_state(screen_t* screen)
       .max_height = screen->height,
    };
    vk_font_draw_text(mouse_state, &options);
+#endif
 
 }
 
