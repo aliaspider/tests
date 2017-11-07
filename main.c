@@ -39,7 +39,7 @@ int main(int argc, char** argv)
 #else
    video = video_vulkan;
 #endif
-   video = video_gl;
+//   video = video_gl;
 //   video = video_d3d9;
 //   video = video_d3d10;
 //   video = video_d3d11;
@@ -56,7 +56,7 @@ int main(int argc, char** argv)
 #endif
 #endif
 
-   video.screen_count = 1;
+   video.screen_count = 2;
    video.screens[0].x = 600;
    video.screens[0].y = 400;
    video.screens[0].width = 640;
@@ -78,12 +78,12 @@ int main(int argc, char** argv)
    platform_init();
 
    {
-//      module_init_info_t info =
-//      {
-//         .filename = argv[1]
-//      };
+      module_init_info_t info =
+      {
+         .filename = argv[1]
+      };
 
-//      module_init(&info, &module);
+      module_init(&info, &module);
    }
 
    video.init();
@@ -158,13 +158,13 @@ int main(int argc, char** argv)
                    (end_time.tv_nsec - start_time.tv_nsec) / 1000000000.0f;
       frames++;
 
-      snprintf(video.fps, sizeof(video.fps), "fps: %f \tframetime : %fms", frames / diff, 1000.0 * diff/frames);
 
+      snprintf(video.fps, sizeof(video.fps), "fps: %f \tframetime : %fms", frames / diff, 1000.0 * diff/frames);
       if (diff > 0.5f)
       {
 
 //         snprintf(video.fps, sizeof(video.fps), "fps: %f", frames / diff);
-         debug_log("\r%s", video.fps); fflush(stdout);
+//         debug_log("\r%s", video.fps); fflush(stdout);
          frames = 0;
          start_time = end_time;
       }
@@ -174,7 +174,7 @@ int main(int argc, char** argv)
 
    debug_log("\n");
 
-//   module_destroy();
+   module_destroy();
    input.destroy();
 //   audio.destroy();
    video.destroy();

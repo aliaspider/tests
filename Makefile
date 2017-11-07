@@ -118,11 +118,16 @@ CFLAGS += -Werror -Wno-error=unused-variable
 CFLAGS += -fms-extensions
 CFLAGS += -I.
 
+ifeq ($(HAVE_VULKAN),1)
+   CFLAGS += -DHAVE_VULKAN
+   LIBS += -lvulkan
+endif
+
 ifeq ($(platform),linux)
    CFLAGS += -DVK_USE_PLATFORM_XLIB_KHR
    CFLAGS += -DVK_USE_PLATFORM_XLIB_XRANDR_EXT
    CFLAGS += -DHAVE_X11
-   LIBS += -lvulkan -lX11 -lasound
+   LIBS += -lX11 -lasound -lGL
    CFLAGS += $(shell freetype-config --cflags)
 else ifeq ($(platform),win)
    ifneq ($(WindowsSDKVersion),)
@@ -150,10 +155,8 @@ else ifeq ($(platform),win)
       LIBS +=  -ld3d11
    endif
    ifeq ($(HAVE_VULKAN),1)
-      CFLAGS += -DHAVE_VULKAN
       CFLAGS += -I$(VULKAN_SDK)/Include -DVK_USE_PLATFORM_WIN32_KHR
       LIBS +=  -L$(VULKAN_SDK)/Lib
-      LIBS +=  -lvulkan
    #   LIBS +=  -lvulkan-1
    endif
    LIBS +=  -ld3d9 -lopengl32
@@ -163,7 +166,7 @@ else ifeq ($(platform),win)
 
 endif
 
-#LIBS += -lfreetype -lpng
+LIBS += -lfreetype -lpng
 
 #CFLAGS += -DPRINTF_WRAPPED
 #LDFLAGS += -Wl,--wrap,printf
