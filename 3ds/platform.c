@@ -40,27 +40,25 @@ void platform_init()
 
    gfxSet3D(false);
    consoleInit(GFX_BOTTOM, NULL);
+#ifdef DEBUG
    wait_for_input();
+#endif
 
    socInit(soc_buffer, sizeof(soc_buffer));
-   httpcInit(0);
-   amInit();
 }
 
 void platform_destroy()
 {
    DEBUG_LINE();
-   amExit();
-   httpcExit();
    socExit();
+   gfxExit();
 
    u8 param[0x300];
    u8 hmac[0x20];
    APT_PrepareToDoApplicationJump(0, 0x000400000BC00000ULL, MEDIATYPE_SD);
    APT_DoApplicationJump(param, sizeof(param), hmac);
 
-   wait_for_input();
-   gfxExit();
+   svcSleepThread(1000000000);
 }
 
 void platform_update()
