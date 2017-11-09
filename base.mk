@@ -2,12 +2,13 @@
 all: build
 
 
-platform = linux
+#platform ?= linux
 #platform = win
 
 ifeq ($(platform),linux)
 
    HAVE_VULKAN = 1
+   HAVE_OPENGL = 1
 endif
 
 ifeq ($(platform),win)
@@ -44,6 +45,7 @@ ifeq ($(platform),win)
 
 
    HAVE_VULKAN = 1
+   HAVE_OPENGL = 1
    HAVE_D3D10 = 1
    HAVE_D3D11 = 1
 
@@ -67,10 +69,10 @@ ifeq ($(DEBUG), 1)
 else
    APP_UNIQUE_ID        = 0xBC000
 endif
-APP_ICON             = ctr/icon.png
-APP_BANNER           = ctr/banner.png
-APP_AUDIO            = ctr/silent.wav
-APP_RSF              = ctr/tools/template.rsf
+APP_ICON             = 3ds/ctr/icon.png
+APP_BANNER           = 3ds/ctr/banner.png
+APP_AUDIO            = 3ds/ctr/silent.wav
+APP_RSF              = 3ds/ctr/tools/template.rsf
 APP_SYSTEM_MODE      = 64MB
 APP_SYSTEM_MODE_EXT  = 124MB
 
@@ -82,8 +84,8 @@ APP_DESCRIPTION   := $(shell echo "$(APP_DESCRIPTION)" | cut -c1-256)
 APP_AUTHOR        := $(shell echo "$(APP_AUTHOR)" | cut -c1-128)
 APP_PRODUCT_CODE  := $(shell echo $(APP_PRODUCT_CODE) | cut -c1-16)
 APP_UNIQUE_ID     := $(shell echo $(APP_UNIQUE_ID) | cut -c1-7)
-MAKEROM_ARGS_COMMON = -rsf $(APP_RSF) -exefslogo -elf $(TARGET).elf -icon $(TARGET).icn -banner $(TARGET).bnr -DAPP_TITLE="$(APP_TITLE)" -DAPP_PRODUCT_CODE="$(APP_PRODUCT_CODE)" -DAPP_UNIQUE_ID=$(APP_UNIQUE_ID) -DAPP_SYSTEM_MODE=$(APP_SYSTEM_MODE) -DAPP_SYSTEM_MODE_EXT=$(APP_SYSTEM_MODE_EXT)
-INCDIRS := -I$(DEVKITPRO)/libctru/include -I$(DEVKITPRO)/portlibs/armv6k/include
+MAKEROM_ARGS_COMMON = -rsf $(APP_RSF) -exefslogo -elf $(BUILD_DIR)/$(TARGET).elf -icon $(BUILD_DIR)/$(TARGET).icn -banner $(BUILD_DIR)/$(TARGET).bnr -DAPP_TITLE="$(APP_TITLE)" -DAPP_PRODUCT_CODE="$(APP_PRODUCT_CODE)" -DAPP_UNIQUE_ID=$(APP_UNIQUE_ID) -DAPP_SYSTEM_MODE=$(APP_SYSTEM_MODE) -DAPP_SYSTEM_MODE_EXT=$(APP_SYSTEM_MODE_EXT)
+CFLAGS += -I$(DEVKITPRO)/libctru/include -I$(DEVKITPRO)/portlibs/armv6k/include
 LIBDIRS := -L. -L$(DEVKITPRO)/libctru/lib -L $(DEVKITPRO)/portlibs/armv6k/lib
 
 ARCH  := -march=armv6k -mtune=mpcore -mfloat-abi=hard -marm -mfpu=vfp -mtp=soft
@@ -122,15 +124,17 @@ NM      := arm-none-eabi-nm
 LD      := $(CXX)
 
 ifneq ($(findstring Linux,$(shell uname -a)),)
-	MAKEROM    = ctr/tools/makerom-linux
-	BANNERTOOL = ctr/tools/bannertool-linux
+	MAKEROM    = 3ds/ctr/tools/makerom-linux
+	BANNERTOOL = 3ds/ctr/tools/bannertool-linux
 else ifneq ($(findstring Darwin,$(shell uname -a)),)
-	MAKEROM    = ctr/tools/makerom-mac
-	BANNERTOOL = ctr/tools/bannertool-mac
+	MAKEROM    = 3ds/ctr/tools/makerom-mac
+	BANNERTOOL = 3ds/ctr/tools/bannertool-mac
 else
-	MAKEROM    = ctr/tools/makerom.exe
-	BANNERTOOL = ctr/tools/bannertool.exe
+	MAKEROM    = 3ds/ctr/tools/makerom.exe
+	BANNERTOOL = 3ds/ctr/tools/bannertool.exe
 endif
 
+EXT := .elf
 endif
 
+$(info $(platform))

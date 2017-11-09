@@ -93,7 +93,7 @@ typedef struct video_t
    bool filter;
 }video_t;
 
-
+extern const video_t video_3ds;
 extern const video_t video_vulkan;
 extern const video_t video_gl;
 extern const video_t video_d3d9;

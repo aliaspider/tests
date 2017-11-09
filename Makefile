@@ -7,6 +7,12 @@ DEBUG = 0
 
 include base.mk
 
+APP_TITLE            = TESTS
+APP_DESCRIPTION      = TESTS
+APP_AUTHOR           = various
+APP_PRODUCT_CODE     = TESTS
+APP_UNIQUE_ID        = 0xBC010
+
 
 BUILD_DIR = objs/$(platform)
 
@@ -41,10 +47,14 @@ else ifeq ($(platform),win)
    ifeq ($(HAVE_D3D12),1)
       OBJS += win/d3d12/main.o
    endif
-
+else ifeq ($(platform),3ds)
+   OBJS += 3ds/platform.o
+   OBJS += 3ds/video.o
 endif
-OBJS += gl/main.o
-OBJS += gl/stubs.o
+ifeq ($(HAVE_OPENGL),1)
+   OBJS += gl/main.o
+   OBJS += gl/stubs.o
+endif
 ifeq ($(HAVE_VULKAN),1)
    OBJS += utils/png_file.o
    OBJS += vulkan/console.o

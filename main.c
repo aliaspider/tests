@@ -1,11 +1,18 @@
 
 #include <stdio.h>
 #include <stdbool.h>
-#include <time.h>
+
 #ifdef __MINGW32__
 #include <pthread.h>
 #include <pthread_time.h>
 #endif
+
+#ifdef _3DS
+#include <3ds.h>
+#else
+#include <time.h>
+#endif
+
 #include "common.h"
 #include "interface.h"
 #include "platform.h"
@@ -32,7 +39,9 @@ void display_message(int frames, int x, int y, unsigned screen_mask, const char 
 int main(int argc, char** argv)
 {
    debug_log("main\n");
-#ifdef HAVE_D3D12_
+#if defined(_3DS)
+   video = video_3ds;
+#elif defined(HAVE_D3D12)
    video = video_d3d12;
 #elif defined(HAVE_D3D9)
    video = video_d3d9;
@@ -91,8 +100,12 @@ int main(int argc, char** argv)
    input.init();
 
    int frames = 0;
+#ifdef _3DS
+   u64 start_time = svcGetSystemTick();
+#else
    struct timespec start_time;
    clock_gettime(CLOCK_MONOTONIC, &start_time);
+#endif
 
    while (true)
    {
@@ -151,11 +164,15 @@ int main(int argc, char** argv)
 //      audio.play(info.sound_buffer.ptr, info.max_samples);
 
       video.render();
-
+#ifdef _3DS
+   u64 end_time = svcGetSystemTick();
+   float diff = (end_time - start_time) / 268123480.0f;
+#else
       struct timespec end_time;
       clock_gettime(CLOCK_MONOTONIC, &end_time);
       float diff = (end_time.tv_sec - start_time.tv_sec) +
                    (end_time.tv_nsec - start_time.tv_nsec) / 1000000000.0f;
+#endif
       frames++;
 
 
