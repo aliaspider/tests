@@ -121,7 +121,7 @@ static void video_init()
    ctr.rgb32 = module.screen_format == screen_format_ARGB8888;
    ctr.texture_width = module.output_width;
    ctr.texture_pitch = 256;
-   ctr.texture_height = module.output_height;
+   ctr.texture_height = 256;//module.output_height;
    ctr.texture_linear =
       linearMemAlign(ctr.texture_pitch * ctr.texture_height * (ctr.rgb32 ? 4 : 2), 128);
    ctr.texture_swizzled =
@@ -134,8 +134,8 @@ static void video_init()
    ctr.frame_coords->y1 = CTR_TOP_FRAMEBUFFER_HEIGHT;
    ctr.frame_coords->u0 = 0;
    ctr.frame_coords->v0 = 0;
-   ctr.frame_coords->u1 = CTR_TOP_FRAMEBUFFER_WIDTH;
-   ctr.frame_coords->v1 = CTR_TOP_FRAMEBUFFER_HEIGHT;
+   ctr.frame_coords->u1 = module.output_width;
+   ctr.frame_coords->v1 = module.output_height;
    GSPGPU_FlushDataCache(ctr.frame_coords, sizeof(ctr_vertex_t));
 
    ctr_set_scale_vector(&ctr.scale_vector,
