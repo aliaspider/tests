@@ -4,6 +4,7 @@
 #include "platform.h"
 #include "common.h"
 #include "video.h"
+#include "input.h"
 
 platform_t platform;
 bool __ctru_speedup = true;
@@ -64,5 +65,6 @@ void platform_destroy()
 
 void platform_update()
 {
-
+   if(!aptMainLoop())
+      input.pad.meta.exit = true;
 }

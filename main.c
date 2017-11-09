@@ -165,7 +165,7 @@ int main(int argc, char** argv)
 
 //      audio.play(info.sound_buffer.ptr, info.max_samples);
 
-//      video.render();
+      video.render();
 #ifdef _3DS
    u64 end_time = svcGetSystemTick();
    float diff = (end_time - start_time) / 268123480.0f;
