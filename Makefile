@@ -50,6 +50,8 @@ else ifeq ($(platform),win)
 else ifeq ($(platform),3ds)
    OBJS += 3ds/platform.o
    OBJS += 3ds/video.o
+   OBJS += 3ds/audio.o
+   OBJS += 3ds/input.o
 endif
 ifeq ($(HAVE_OPENGL),1)
    OBJS += gl/main.o

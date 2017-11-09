@@ -2,7 +2,7 @@
 all: build
 
 
-#platform ?= linux
+platform ?= linux
 #platform = win
 
 ifeq ($(platform),linux)
@@ -64,11 +64,7 @@ APP_TITLE            = CTRRUN
 APP_DESCRIPTION      = CTRRUN
 APP_AUTHOR           = various
 APP_PRODUCT_CODE     = CTRRUN
-ifeq ($(DEBUG), 1)
-   APP_UNIQUE_ID        = 0xBC001
-else
-   APP_UNIQUE_ID        = 0xBC000
-endif
+APP_UNIQUE_ID        = 0xBC100
 APP_ICON             = 3ds/ctr/icon.png
 APP_BANNER           = 3ds/ctr/banner.png
 APP_AUDIO            = 3ds/ctr/silent.wav
@@ -137,4 +133,4 @@ endif
 EXT := .elf
 endif
 
-$(info $(platform))
+$(info platform : $(platform))

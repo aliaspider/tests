@@ -9,6 +9,7 @@ typedef struct
 
 extern const audio_t audio_win;
 extern const audio_t audio_alsa;
+extern const audio_t audio_3ds;
 extern audio_t audio;
 
 

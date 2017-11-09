@@ -41,6 +41,8 @@ int main(int argc, char** argv)
    debug_log("main\n");
 #if defined(_3DS)
    video = video_3ds;
+   audio = audio_3ds;
+   input = input_3ds;
 #elif defined(HAVE_D3D12)
    video = video_d3d12;
 #elif defined(HAVE_D3D9)
@@ -89,7 +91,7 @@ int main(int argc, char** argv)
    {
       module_init_info_t info =
       {
-         .filename = argv[1]
+         .filename = argv? argv[1] : "zz.gb",
       };
 
       module_init(&info, &module);
@@ -146,24 +148,24 @@ int main(int argc, char** argv)
       if(input.pad_pressed.buttons.start)
          display_message(600, 160, 60, ~0, "start pressed at frame : %i", frames);
 
-//      module_run_info_t info = {};
-//      uint32_t sound_buffer[40000 + 2064];
+      module_run_info_t info = {};
+      static uint32_t sound_buffer[40000 + 2064];
 
-//      do
-//      {
-//         info.screen.ptr = video.frame.data;
-//         info.pitch = video.frame.pitch;
-//         info.max_samples = 40000;
-//         info.sound_buffer.u32 = sound_buffer;
-//         info.pad = &input.pad;
-//         module_run(&info);
-//         //         debug_log("info.max_samples : %i", info.max_samples);
-//      }
-//      while (!info.frame_completed);
+      do
+      {
+         info.screen.ptr = video.frame.data;
+         info.pitch = video.frame.pitch;
+         info.max_samples = 40000;
+         info.sound_buffer.u32 = sound_buffer;
+         info.pad = &input.pad;
+         module_run(&info);
+         //         debug_log("info.max_samples : %i", info.max_samples);
+      }
+      while (!info.frame_completed);
 
 //      audio.play(info.sound_buffer.ptr, info.max_samples);
 
-      video.render();
+//      video.render();
 #ifdef _3DS
    u64 end_time = svcGetSystemTick();
    float diff = (end_time - start_time) / 268123480.0f;
@@ -176,12 +178,12 @@ int main(int argc, char** argv)
       frames++;
 
 
-      snprintf(video.fps, sizeof(video.fps), "fps: %f \tframetime : %fms", frames / diff, 1000.0 * diff/frames);
+      snprintf(video.fps, sizeof(video.fps), "%.3f frames/s %fms", frames / diff, 1000.0 * diff/frames);
       if (diff > 0.5f)
       {
 
 //         snprintf(video.fps, sizeof(video.fps), "fps: %f", frames / diff);
-//         debug_log("\r%s", video.fps); fflush(stdout);
+         debug_log("\r%s", video.fps); fflush(stdout);
          frames = 0;
          start_time = end_time;
       }
