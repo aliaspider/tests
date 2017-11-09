@@ -111,7 +111,6 @@ int main(int argc, char** argv)
 
    while (true)
    {
-      platform_update();
       {
          uint64_t old_mask = input.pad.mask;
          pointer_t old_pointer = input.pointer;
@@ -127,6 +126,7 @@ int main(int argc, char** argv)
          input.pointer.touch2_released = !input.pointer.touch2 && old_pointer.touch2;
          input.pointer.touch3_released = !input.pointer.touch3 && old_pointer.touch3;
       }
+      platform_update();
 
       hitbox_check();
 

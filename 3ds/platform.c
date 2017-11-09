@@ -47,22 +47,29 @@ void platform_init()
    socInit(soc_buffer, sizeof(soc_buffer));
 }
 
+static u64 chainload_tid = 0x000400000BC00000ULL;
 void platform_destroy()
 {
    DEBUG_LINE();
    socExit();
    gfxExit();
 
-   u8 param[0x300];
-   u8 hmac[0x20];
-   APT_PrepareToDoApplicationJump(0, 0x000400000BC00000ULL, MEDIATYPE_SD);
-   APT_DoApplicationJump(param, sizeof(param), hmac);
+   if(chainload_tid)
+   {
+      u8 param[0x300];
+      u8 hmac[0x20];
+      APT_PrepareToDoApplicationJump(0, chainload_tid, MEDIATYPE_SD);
+      APT_DoApplicationJump(param, sizeof(param), hmac);
 
-   svcSleepThread(1000000000);
+      svcSleepThread(1000000000);
+   }
 }
 
 void platform_update()
 {
    if(!aptMainLoop())
+   {
+      chainload_tid = 0;
       input.pad.meta.exit = true;
+   }
 }
