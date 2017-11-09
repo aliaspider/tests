@@ -89,12 +89,16 @@ int main(int argc, char** argv)
    platform_init();
 
    {
+//      const char* default_filename = "zz.gb";
+      const char* default_filename = "smw.sfc";
       module_init_info_t info =
       {
-         .filename = argv? argv[1] : "zz.gb",
+         .filename = argv? argv[1] : default_filename,
       };
 
       module_init(&info, &module);
+      if(!module.output_width)
+         input.pad.meta.exit = 1;
    }
 
    video.init();
@@ -109,7 +113,7 @@ int main(int argc, char** argv)
    clock_gettime(CLOCK_MONOTONIC, &start_time);
 #endif
 
-   while (true)
+   while (!input.pad.meta.exit)
    {
       {
          uint64_t old_mask = input.pad.mask;
@@ -141,9 +145,6 @@ int main(int argc, char** argv)
          video.filter = !video.filter;
          display_message(60, 0, video.screens[0].height - 30, 1, "\e[%imFiltering %s", RED, video.filter ? "ON" : "OFF");
       }
-
-      if (input.pad.meta.exit)
-         break;
 
       if(input.pad_pressed.buttons.start)
          display_message(600, 160, 60, ~0, "start pressed at frame : %i", frames);

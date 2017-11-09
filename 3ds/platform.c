@@ -8,6 +8,7 @@
 
 platform_t platform;
 bool __ctru_speedup = true;
+u32 __stacksize__ = 0x100000;
 void wait_for_input(void)
 {
    printf("\n\nPress Start.\n\n");
