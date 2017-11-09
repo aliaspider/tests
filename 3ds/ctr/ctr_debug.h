@@ -14,10 +14,10 @@ void dump_result_value(Result val);
 #endif
 
 #define DEBUG_HOLD() do{printf("%s@%s:%d.\n",__FUNCTION__, __FILE__, __LINE__);fflush(stdout);wait_for_input();}while(0)
-#define DEBUG_LINE() do{printf("%s@%s:%d.\n",__FUNCTION__,__FILE__, __LINE__);fflush(stdout);}while(0)
-#define DEBUG_STR(X) printf( "%s: %s\n", #X, (char*)(X))
+//#define DEBUG_LINE() do{printf("%s@%s:%d.\n",__FUNCTION__,__FILE__, __LINE__);fflush(stdout);}while(0)
+//#define DEBUG_STR(X) printf( "%s: %s\n", #X, (char*)(X))
 #define DEBUG_VAR(X) printf( "%-20s: 0x%08lX\n", #X, (u32)(X))
-#define DEBUG_INT(X) printf( "%-20s: %10i\n", #X, (s32)(X))
+//#define DEBUG_INT(X) printf( "%-20s: %10i\n", #X, (s32)(X))
 #define DEBUG_VAR64(X) printf( #X"\r\t\t\t\t : 0x%016llX\n", (u64)(X))
 #define DEBUG_RESULT(X) do{Result res_ = X; if(res_)dump_result_value(res_);}while(0)
 #define DEBUG_ERROR(X) do{int res_ = X; if(res_ < 0){printf("@%s:%s:%d --> error : %i\n",__FUNCTION__,__FILE__, __LINE__, res_);fflush(stdout);}}while(0)

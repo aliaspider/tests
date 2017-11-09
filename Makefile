@@ -48,8 +48,10 @@ else ifeq ($(platform),win)
       OBJS += win/d3d12/main.o
    endif
 else ifeq ($(platform),3ds)
+   OBJS += 3ds/ctr/gpu_old.o
    OBJS += 3ds/platform.o
    OBJS += 3ds/video.o
+   OBJS += 3ds/sprite.o
    OBJS += 3ds/audio.o
    OBJS += 3ds/input.o
 endif

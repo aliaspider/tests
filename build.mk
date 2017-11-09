@@ -66,7 +66,7 @@ $(BUILD_DIR)/%.a:
 ifeq ($(platform),3ds)
 $(BUILD_DIR)/%.o: %.vsh %.gsh
 	$(DEVKITPRO)/devkitARM/bin/picasso $^ -o $*.shbin
-	$(DEVKITPRO)/devkitARM/bin/bin2s $*.shbin | $(PREFIX)as -o $@
+	$(DEVKITPRO)/devkitARM/bin/bin2s $*.shbin | $(AS) -o $@
 	rm $*.shbin
 
 $(BUILD_DIR)/%.o: %.vsh
