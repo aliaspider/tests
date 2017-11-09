@@ -1,25 +1,3 @@
-ifeq ($(platform),win)
-   SPACE :=
-   SPACE := $(SPACE) $(SPACE)
-   BACKSLASH :=
-   BACKSLASH := \$(BACKSLASH)
-   filter_out1 = $(filter-out $(firstword $1),$1)
-   filter_out2 = $(call filter_out1,$(call filter_out1,$1))
-
-   reg_query = $(call filter_out2,$(subst $2,,$(shell reg query "$2" -v "$1" 2>nul)))
-   fix_path = $(subst $(SPACE),\ ,$(subst \,/,$1))
-   WindowsSdkDir := $(call reg_query,InstallationFolder,HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\Microsoft SDKs\Windows\v10.0)
-   ifeq ($(WindowsSdkDir),)
-      WindowsSdkDir := $(call reg_query,InstallationFolder,HKEY_CURRENT_USER\SOFTWARE\Wow6432Node\Microsoft\Microsoft SDKs\Windows\v10.0)
-   endif
-   ifeq ($(WindowsSdkDir),)
-      WindowsSdkDir := $(call reg_query,InstallationFolder,HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Microsoft SDKs\Windows\v10.0)
-   endif
-   ifeq ($(WindowsSdkDir),)
-      WindowsSdkDir := $(call reg_query,InstallationFolder,HKEY_CURRENT_USER\SOFTWARE\Microsoft\Microsoft SDKs\Windows\v10.0)
-   endif
-   WindowsSDKVersion := $(firstword $(foreach folder,$(subst $(subst \,/,$(WindowsSdkDir)Include/),,$(wildcard $(call fix_path,$(WindowsSdkDir)Include\*))),$(if $(wildcard $(call fix_path,$(WindowsSdkDir)Include/$(folder)/um/Windows.h)),$(folder),)))
-endif
 
 TARGET = test
 MODULE = module.a
@@ -27,23 +5,14 @@ MODULE = module.a
 #MODULE = snes9x/snes9x_module.a
 DEBUG = 0
 
-HAVE_VULKAN = 1
-HAVE_D3D10 = 1
-HAVE_D3D11 = 1
-ifneq ($(WindowsSDKVersion),)
-   HAVE_D3D12 = 1
-endif
+include base.mk
 
-platform = linux
-#platform = win
 
 BUILD_DIR = objs/$(platform)
 
 ifeq ($(DEBUG),1)
    BUILD_DIR := $(BUILD_DIR)-debug
 endif
-
-all: $(TARGET)
 
 OBJS :=
 
@@ -131,11 +100,6 @@ ifeq ($(platform),linux)
    CFLAGS += $(shell freetype-config --cflags)
 else ifeq ($(platform),win)
    ifneq ($(WindowsSDKVersion),)
-#      VSINSTALLDIR ?= $(patsubst %Common7\Tools\,%,$(VS140COMNTOOLS))
-#      VCINSTALLDIR ?= $(VSINSTALLDIR)VC$(BACKSLASH)
-#      INCLUDE ?=$(VCINSTALLDIR)INCLUDE;$(VCINSTALLDIR)ATLMFC\INCLUDE;$(WindowsSdkDir)include\$(WindowsSDKVersion)ucrt;$(WindowsSdkDir)include\$(WindowsSDKVersion)shared;$(WindowsSdkDir)include\$(WindowsSDKVersion)um;
-#      LIB ?=$(VCINSTALLDIR)LIB\amd64;$(VCINSTALLDIR)ATLMFC\LIB\amd64;$(WindowsSdkDir)lib\$(WindowsSDKVersion)ucrt\x64;$(WindowsSdkDir)lib\$(WindowsSDKVersion)um\x64;
-#      LIBPATH ?=$(VCINSTALLDIR)LIB\amd64;$(VCINSTALLDIR)ATLMFC\LIB\amd64;
       CFLAGS += -idirafter"$(WindowsSdkDir)include\$(WindowsSDKVersion)"
       LIBS +=  -L"$(WindowsSdkDir)lib\$(WindowsSDKVersion)\um\x64"
       CFLAGS += -DHAVE_D3D12
@@ -171,41 +135,4 @@ LIBS += -lfreetype -lpng
 #CFLAGS += -DPRINTF_WRAPPED
 #LDFLAGS += -Wl,--wrap,printf
 
-$(BUILD_DIR)/$(TARGET): $(OBJS) $(MODULE) .lastbuild
-	touch .lastbuild
-	$(CXX) $(OBJS) -L$(dir $(MODULE)) -l:$(notdir $(MODULE)) $(LDFLAGS) $(LIBDIRS) $(LIBS) -Wall -o $@
-
-$(TARGET): $(BUILD_DIR)/$(TARGET)
-	cp $< $@
-
-$(BUILD_DIR)/%.o: %.c
-	@mkdir -p $(dir $@)
-	$(CC) $< $(CFLAGS) -MT $@ -MMD -MP -MF $(BUILD_DIR)/$*.depend -c -o $@
-
-%.vert.inc: %.vert
-	glslc -c -mfmt=c $< -o $@
-
-%.frag.inc: %.frag
-	glslc -c -mfmt=c $< -o $@
-
-%.geom.inc: %.geom
-	glslc -c -mfmt=c $< -o $@
-
-%.vert.inc: %.slang
-	glslc -c -mfmt=c -fshader-stage=vertex -DVERTEX_SHADER $< -o $@
-
-%.frag.inc: %.slang
-	glslc -c -mfmt=c -fshader-stage=fragment -DFRAGMENT_SHADER $< -o $@
-
-%.geom.inc: %.slang
-	glslc -c -mfmt=c -fshader-stage=geometry -DGEOMETRY_SHADER $< -o $@
-
-.lastbuild: ;
-
-clean:
-#	rm -rf objs
-	rm -f $(OBJS) $(OBJS:.o=.depend)
-	rm -f $(BUILD_DIR)/$(TARGET) $(TARGET) $(SPIRV_OBJS) .lastbuild
-
-
--include $(OBJS:.o=.depend)
+include build.mk
